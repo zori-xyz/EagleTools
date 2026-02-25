@@ -33,3 +33,6 @@ downloads/
 # Coverage
 .coverage
 htmlcov/
+*.zip
+app.zip
+
