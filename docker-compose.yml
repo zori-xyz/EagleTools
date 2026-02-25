@@ -6,30 +6,60 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-eagletools}
       POSTGRES_USER: ${POSTGRES_USER:-eagletools}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eagletools_pass}
-    ports:
-      - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: eagletools_redis
-    ports:
-      - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: eagletools_web
+    command: uvicorn app.web.app:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+  bot:
+    build: .
+    container_name: eagletools_bot
+    command: python -m app.bot.main
+    env_file:
+      - .env
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: eagletools_worker
+    command: arq app.infra.queue.arq.WorkerSettings
+    env_file:
+      - .env
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
 
 volumes:
   pg_data:
   redis_data:
+  app_data:

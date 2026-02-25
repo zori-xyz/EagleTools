@@ -45,27 +45,43 @@ def _ref_link_for(tg_id: int) -> str:
     bot = _bot_username()
     if not bot:
         return ""
-    # IMPORTANT: payload format must match bot /start parser and internal referrals/accept usage
-    # We use inviter_tg_id directly: ref_<inviter_tg_id>
+    # payload format must match bot /start parser and internal referrals/accept usage:
+    # ref_<inviter_tg_id>
     return f"https://t.me/{bot}?start=ref_{tg_id}"
 
 
-def _premium_active(user: User | None) -> bool:
-    if not user:
-        return False
+def _premium_active(user: User) -> bool:
     now = datetime.now(timezone.utc)
     pu = _dt_to_utc_aware(getattr(user, "premium_until", None))
     return bool(pu and pu > now)
 
 
+def _ui_name(user: User) -> str:
+    # requirement: only name, no фамилия
+    first_name = str(getattr(user, "first_name", "") or "").strip()
+    if first_name:
+        return first_name
+    username = str(getattr(user, "username", "") or "").strip()
+    if username:
+        return username
+    return "User"
+
+
+def _ui_username(user: User) -> str:
+    return str(getattr(user, "username", "") or "").strip()
+
+
+def _ui_photo_url(user: User) -> str:
+    return str(getattr(user, "photo_url", "") or "").strip()
+
+
 @router.get("/profile")
 async def profile(
     session: AsyncSession = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     st = await get_quota_state(session, user)
 
-    plan = str(getattr(st, "plan", "free") or "free")
     daily_limit = int(getattr(st, "daily_limit", 0) or 0)
     used_today = int(getattr(st, "used_today", 0) or 0)
     referrals = int(getattr(st, "referrals", 0) or 0)
@@ -77,16 +93,21 @@ async def profile(
     is_unlimited = bool(st_unlimited) if st_unlimited is not None else _premium_active(user)
 
     left_today = None if is_unlimited else max(0, daily_limit - used_today)
-    premium_until = _iso(getattr(user, "premium_until", None)) if user else None
+    premium_until = _iso(getattr(user, "premium_until", None))
 
-    # Policy:
-    # - show referral link for everyone (free + premium). Premium can also invite; harmless to show.
-    ref_link = _ref_link_for(int(getattr(user, "tg_id", 0))) if user else ""
+    # show referral link for everyone (free + premium)
+    ref_link = _ref_link_for(int(getattr(user, "tg_id", 0)))
 
-    # Optional: how many invites left until next reward (example: +3 days per 3 invites)
+    # invites left until next reward (example: +3 days per 3 invites)
     reward_need = (3 - (referrals % 3)) % 3 if referrals > 0 else 0
 
     return {
+        # --- UI поля для Mini App ---
+        "user_name": _ui_name(user),
+        "user_username": _ui_username(user),
+        "user_photo_url": _ui_photo_url(user),
+
+        # --- текущая логика (сохранена) ---
         "plan": "premium" if is_unlimited else "free",
         "premium_until": premium_until,
         "daily_limit": daily_limit,
@@ -100,10 +121,7 @@ async def profile(
 
 
 @router.get("/me")
-async def me(user: User | None = Depends(get_current_user)) -> dict[str, Any]:
-    if not user:
-        return {"ok": True, "user": None}
-
+async def me(user: User = Depends(get_current_user)) -> dict[str, Any]:
     return {
         "ok": True,
         "user": {
@@ -111,6 +129,9 @@ async def me(user: User | None = Depends(get_current_user)) -> dict[str, Any]:
             "tg_id": int(getattr(user, "tg_id")),
             "username": str(getattr(user, "username", "") or ""),
             "first_name": str(getattr(user, "first_name", "") or ""),
+            "last_name": str(getattr(user, "last_name", "") or ""),
+            "photo_url": str(getattr(user, "photo_url", "") or ""),
+            "language_code": str(getattr(user, "language_code", "") or ""),
             "plan": "premium" if _premium_active(user) else "free",
             "premium_until": _iso(getattr(user, "premium_until", None)),
         },

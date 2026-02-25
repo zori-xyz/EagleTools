@@ -40,11 +40,6 @@
   const dict = {
     ru: {
       subtitle: "Links → files",
-      tab_tools: "Инструменты",
-      tab_recent: "История",
-      tab_profile: "Профиль",
-      tab_help: "Помощь",
-      btn_clear: "Очистить",
       btn_download: "Скачать",
       btn_make_mp3: "MP3",
       recent_title: "История загрузок",
@@ -206,6 +201,23 @@
     return window.BOT_USERNAME || "EagleToolsBot";
   }
 
+  function setAvatar(elOrId, url, fallbackText = "👤") {
+    const el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+    if (!el) return;
+
+    const u = (url || "").trim();
+    if (!u) {
+      el.classList.remove("has-photo");
+      el.style.backgroundImage = "";
+      el.textContent = fallbackText;
+      return;
+    }
+
+    el.textContent = "";
+    el.classList.add("has-photo");
+    el.style.backgroundImage = `url("${u}")`;
+  }
+
   async function renderProfile() {
     const p = await fetchProfile();
     if (!p) return;
@@ -218,6 +230,10 @@
 
     setText("profileName", p.user_name || "User");
     setText("profileUsername", p.user_username ? `@${p.user_username}` : "");
+
+    // avatar in profile panel + header button (if exists in DOM)
+    setAvatar("profileAvatar", p.user_photo_url || "");
+    setAvatar("headerAvatar", p.user_photo_url || "");
 
     const badge = document.getElementById("profilePlanBadge");
     if (badge) {

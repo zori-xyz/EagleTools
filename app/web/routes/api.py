@@ -12,11 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.config import settings
 from app.domain.services.jobs import create_job, get_job
 from app.domain.services.media.saver import SaveError, SaveResult, cleanup_save_result, save_media_from_url
-from app.domain.services.media.soundcloud import (
-    SoundCloudError,
-    cleanup_soundcloud_result,
-    download_soundcloud_track_to_mp3,
-)
+from app.domain.services.media.soundcloud import SoundCloudError, cleanup_soundcloud_result, download_soundcloud_track_to_mp3
 from app.domain.services.quota import QuotaExceeded, consume_quota
 from app.infra.db.schema import JobKind, User
 from app.infra.db.session import get_session
@@ -91,12 +87,12 @@ def _ensure_under_results(out_path: Path) -> Path:
 async def _record_save_job(
     session: AsyncSession,
     *,
-    user: User | None,
+    user: User,
     file_id: str,
     save_result: SaveResult | None = None,
 ) -> None:
     """Сохраняем job в БД с metadata из SaveResult (если есть)."""
-    user_id = int(user.id) if user else None
+    user_id = int(user.id)
 
     title = None
     source_url = None
@@ -126,7 +122,7 @@ async def api_save_job(
     payload: UrlOnly,
     tool: str = Query(default="save"),
     session: AsyncSession = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> FileOut:
     return await api_save(
         UrlIn(url=payload.url, tool=tool),
@@ -139,7 +135,7 @@ async def api_save_job(
 async def api_save(
     payload: UrlIn,
     session: AsyncSession = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> FileOut:
     tool = (payload.tool or "save").lower().strip()
 
@@ -162,9 +158,7 @@ async def api_save(
             try:
                 await consume_quota(session, user=user, cost=1)
             except QuotaExceeded:
-                # ВАЖНО: откатываем инкремент (consume_quota больше не коммитит)
                 await session.rollback()
-                # файл уже есть => удаляем, чтобы не раздавать "бесплатно"
                 try:
                     out_path.unlink(missing_ok=True)
                 finally:
@@ -173,13 +167,12 @@ async def api_save(
 
             await _record_save_job(session, user=user, file_id=out_path.name, save_result=None)
 
-            # ВАЖНО: коммитим и quota, и job одной транзакцией
+            # коммитим quota + job одной транзакцией
             await session.commit()
             return FileOut(file_id=out_path.name, filename=out_path.name)
 
         except SoundCloudError as e:
             await session.rollback()
-            # НЕ тратим quota на ошибки
             raise _http400(f"soundcloud_failed:{str(e)}")
         except HTTPException:
             await session.rollback()
@@ -201,7 +194,6 @@ async def api_save(
         )
         out_path = _ensure_under_results(Path(res.filepath))
 
-        # quota списываем ТОЛЬКО после успеха
         try:
             await consume_quota(session, user=user, cost=1)
         except QuotaExceeded:
@@ -250,19 +242,18 @@ async def api_file(file_id: str):
 async def api_stt(
     payload: SttIn,
     session: AsyncSession = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> SttOut:
     src = _safe_resolve_under(RESULTS_DIR, payload.file_id)
     if not src.exists() or not src.is_file():
         raise HTTPException(status_code=404, detail="input_file_not_found")
 
     try:
-        user_id = int(user.id) if user else None
         job = await create_job(
             session,
             kind=JobKind.stt,
             file_id=payload.file_id,
-            user_id=user_id,
+            user_id=int(user.id),
         )
         await session.commit()
     except HTTPException:
@@ -280,10 +271,15 @@ async def api_stt(
 async def api_stt_status(
     job_id: int,
     session: AsyncSession = Depends(get_session),
-    user: User | None = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> SttStatusOut:
     job = await get_job(session, job_id)
     if not job:
+        raise HTTPException(status_code=404, detail="job_not_found")
+
+    # ownership check
+    job_user_id = getattr(job, "user_id", None)
+    if job_user_id is not None and int(job_user_id) != int(user.id):
         raise HTTPException(status_code=404, detail="job_not_found")
 
     return SttStatusOut(

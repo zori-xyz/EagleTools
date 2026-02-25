@@ -26,9 +26,18 @@ class TgWebAppUser:
     language_code: str | None = None
 
 
-def _get_bot_token() -> str:
+# -------------------------
+# Telegram WebApp initData
+# -------------------------
+
+def _get_telegram_secret() -> str:
+    """
+    Telegram WebApp signature secret:
+      secret_key = sha256(bot_token)
+    So we need bot token here (or an explicit configured secret == bot token).
+    """
     for name in (
-        "telegram_webapp_secret",  # prefer explicit secret
+        "telegram_webapp_secret",  # preferred explicit
         "telegram_bot_token",
         "bot_token",
         "TELEGRAM_WEBAPP_SECRET",
@@ -38,11 +47,11 @@ def _get_bot_token() -> str:
         val = getattr(settings, name, None)
         if val:
             return str(val).strip()
-    raise RuntimeError("Telegram secret/token is not configured (TELEGRAM_WEBAPP_SECRET or TELEGRAM_BOT_TOKEN).")
+    raise RuntimeError("Telegram token/secret is not configured (TELEGRAM_WEBAPP_SECRET or TELEGRAM_BOT_TOKEN).")
 
 
 def _dev_tg_id() -> int | None:
-    val = getattr(settings, "dev_tg_user_id", None)
+    val = getattr(settings, "dev_tg_user_id", None) or getattr(settings, "DEV_TG_USER_ID", None)
     if val is None:
         return None
     try:
@@ -51,13 +60,21 @@ def _dev_tg_id() -> int | None:
         raise HTTPException(status_code=500, detail="bad_dev_tg_user_id")
 
 
-def _looks_like_initdata(s: str) -> bool:
-    # Реальное initData почти всегда содержит hash= и auth_date=
-    s = (s or "").strip()
-    return ("hash=" in s) and ("auth_date=" in s)
+def _looks_like_initdata(raw: str) -> bool:
+    raw = (raw or "").strip()
+    return ("hash=" in raw) and ("auth_date=" in raw)
 
 
-def _verify_telegram_init_data(init_data: str, secret: str) -> dict[str, str]:
+def _verify_init_data(init_data: str, token: str) -> dict[str, str]:
+    """
+    https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
+
+    - Parse query string into key/value pairs
+    - Extract 'hash'
+    - data_check_string = '\n'.join('k=v' sorted by k)
+    - secret_key = sha256(bot_token)
+    - computed_hash = hmac_sha256(secret_key, data_check_string)
+    """
     try:
         pairs = parse_qsl(init_data, keep_blank_values=True)
     except Exception:
@@ -69,8 +86,7 @@ def _verify_telegram_init_data(init_data: str, secret: str) -> dict[str, str]:
         raise HTTPException(status_code=401, detail="missing_hash")
 
     data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
-
-    secret_key = hashlib.sha256(secret.encode("utf-8")).digest()
+    secret_key = hashlib.sha256(token.encode("utf-8")).digest()
     computed_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(computed_hash, received_hash):
@@ -79,7 +95,7 @@ def _verify_telegram_init_data(init_data: str, secret: str) -> dict[str, str]:
     return data
 
 
-def _parse_user(data: dict[str, str]) -> TgWebAppUser:
+def _parse_tg_user(data: dict[str, str]) -> TgWebAppUser:
     raw_user = data.get("user")
     if not raw_user:
         raise HTTPException(status_code=401, detail="missing_user")
@@ -106,65 +122,78 @@ def _parse_user(data: dict[str, str]) -> TgWebAppUser:
 async def get_tg_user(
     x_tg_initdata: str | None = Header(default=None, alias="X-TG-INITDATA"),
 ) -> TgWebAppUser:
-    """
-    Auth gate dependency.
-    Dev-bypass:
-      - if DEV_TG_USER_ID is set AND initData missing OR not похож на initData -> пропускаем
-      - если initData похоже на настоящее -> валидируем
-    """
     raw = (x_tg_initdata or "").strip()
     dev_id = _dev_tg_id()
 
+    # dev bypass: only if initData missing OR not похож на initData
     if dev_id is not None and (not raw or not _looks_like_initdata(raw)):
         return TgWebAppUser(tg_id=dev_id)
 
     if not raw:
         raise HTTPException(status_code=401, detail="missing_initdata")
 
-    secret = _get_bot_token()
-    data = _verify_telegram_init_data(raw, secret)
-    return _parse_user(data)
+    token = _get_telegram_secret()
+    data = _verify_init_data(raw, token)
+    return _parse_tg_user(data)
+
+
+# -------------------------
+# DB user resolver (tg_id)
+# -------------------------
+
+def _apply_profile_upsert(user: User, tg: TgWebAppUser) -> bool:
+    """
+    Update user profile fields if columns exist AND new value is not None/empty.
+    Returns True if something changed.
+    """
+    changed = False
+
+    def set_if_present(attr: str, value: str | None) -> None:
+        nonlocal changed
+        if value is None:
+            return
+        if isinstance(value, str) and not value.strip():
+            return
+        if not hasattr(user, attr):
+            return
+        cur = getattr(user, attr, None)
+        if cur != value:
+            setattr(user, attr, value)
+            changed = True
+
+    set_if_present("username", tg.username)
+    set_if_present("first_name", tg.first_name)
+    set_if_present("last_name", tg.last_name)
+    set_if_present("photo_url", tg.photo_url)
+    set_if_present("language_code", tg.language_code)
+
+    return changed
 
 
 async def get_current_user(
     session: AsyncSession = Depends(get_session),
-    x_tg_initdata: str | None = Header(default=None, alias="X-TG-INITDATA"),
-) -> User | None:
+    tg: TgWebAppUser = Depends(get_tg_user),
+) -> User:
     """
-    DB user resolver.
-
-    Dev-bypass:
-      - если DEV_TG_USER_ID задан и initData отсутствует/мусорный -> возвращаем/создаём dev user в БД
+    Strict auth dependency:
+      - validates initData (or dev bypass)
+      - resolves User by tg_id
+      - creates if absent
+      - upserts Telegram profile fields (if schema supports)
     """
-    raw = (x_tg_initdata or "").strip()
-    dev_id = _dev_tg_id()
-
-    if dev_id is not None and (not raw or not _looks_like_initdata(raw)):
-        tg_id = dev_id
-        username = ""
-        first_name = ""
-    else:
-        if not raw:
-            return None
-        secret = _get_bot_token()
-        data = _verify_telegram_init_data(raw, secret)
-        tg = _parse_user(data)
-        tg_id = tg.tg_id
-        username = tg.username or ""
-        first_name = tg.first_name or ""
-
-    res = await session.execute(select(User).where(User.tg_id == tg_id))
+    res = await session.execute(select(User).where(User.tg_id == int(tg.tg_id)))
     user = res.scalar_one_or_none()
 
     if user is None:
-        user = User(tg_id=tg_id)
-        # если в модели есть поля username/first_name — заполним, иначе пропустим
-        if hasattr(user, "username"):
-            setattr(user, "username", username)
-        if hasattr(user, "first_name"):
-            setattr(user, "first_name", first_name)
-
+        user = User(tg_id=int(tg.tg_id))
         session.add(user)
+        _apply_profile_upsert(user, tg)
+        await session.commit()
+        await session.refresh(user)
+        return user
+
+    changed = _apply_profile_upsert(user, tg)
+    if changed:
         await session.commit()
         await session.refresh(user)
 

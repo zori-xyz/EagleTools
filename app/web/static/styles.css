@@ -1137,3 +1137,32 @@ html[data-theme="light"] .modal__linkIcon{
     min-height: 100dvh;
   }
 }
+
+/* ========== HEADER AVATAR ========== */
+
+.header__avatar{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  font-size:16px;
+}
+
+.header__avatar.has-photo{
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  font-size:0;
+}
+
+
+/* ========== PROFILE AVATAR PHOTO MODE ========== */
+
+.profile-hero__avatar.has-photo{
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  font-size:0;
+}
