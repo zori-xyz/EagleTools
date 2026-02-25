@@ -1,0 +1,33 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+fix = true
+select = ["E","F","I","B","UP","N","SIM","S","W"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[project]
+name = "eagletools"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "jinja2>=3.1",
+  "python-multipart>=0.0.9",
+  "pydantic>=2.6",
+  "pydantic-settings>=2.2",
+  "yt-dlp>=2025.1.1"
+]
+
+[tool.uvicorn]
+factory = false

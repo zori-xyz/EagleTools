@@ -1,0 +1,186 @@
+.
+├── .DS_Store
+├── .env
+├── .idea
+│   ├── .gitignore
+│   ├── EagleTools_v1.iml
+│   ├── inspectionProfiles
+│   │   ├── Project_Default.xml
+│   │   └── profiles_settings.xml
+│   ├── misc.xml
+│   ├── modules.xml
+│   └── workspace.xml
+├── Dockerfile.bot
+├── Dockerfile.web
+├── Dockerfile.worker
+├── EagleTools_CODE_ONLY.tar.gz
+├── EagleTools_STATE_CONTINUE.tar.gz
+├── PROJECT_TREE.txt
+├── alembic
+│   ├── README
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions
+│       └── 001_add_metadata.py
+├── alembic.ini
+├── app
+│   ├── __init__.py
+│   ├── bot
+│   │   ├── __init__.py
+│   │   ├── fsm
+│   │   │   └── states.py
+│   │   ├── i18n
+│   │   │   ├── __init__.py
+│   │   │   ├── en.yml
+│   │   │   └── ru.yml
+│   │   ├── internal_api.py
+│   │   ├── keyboards
+│   │   │   ├── admin.py
+│   │   │   ├── audio_format.py
+│   │   │   ├── back.py
+│   │   │   ├── main.py
+│   │   │   ├── nav.py
+│   │   │   ├── profile.py
+│   │   │   ├── settings.py
+│   │   │   ├── smart.py
+│   │   │   └── tools.py
+│   │   ├── middlewares
+│   │   ├── render
+│   │   │   └── panel.py
+│   │   └── routers
+│   │       ├── __init__.py
+│   │       ├── admin
+│   │       │   ├── __init__.py
+│   │       │   ├── broadcast.py
+│   │       │   ├── monetization.py
+│   │       │   ├── panel.py
+│   │       │   └── stats.py
+│   │       └── public
+│   │           ├── __init__.py
+│   │           ├── audio_format.py
+│   │           ├── navigation.py
+│   │           ├── profile.py
+│   │           ├── settings.py
+│   │           ├── smart_router.py
+│   │           ├── start.py
+│   │           └── tools.py
+│   ├── common
+│   │   ├── config.py
+│   │   ├── logging.py
+│   │   └── pidlock.py
+│   ├── domain
+│   │   ├── __init__.py
+│   │   ├── models
+│   │   │   ├── __init__.py
+│   │   │   ├── ad.py
+│   │   │   ├── job.py
+│   │   │   ├── usage.py
+│   │   │   └── user.py
+│   │   └── services
+│   │       ├── __init__.py
+│   │       ├── bot_api.py
+│   │       ├── capabilities.py
+│   │       ├── gc
+│   │       │   ├── __init__.py
+│   │       │   └── results_gc.py
+│   │       ├── jobs.py
+│   │       ├── limits.py
+│   │       ├── media
+│   │       │   ├── __init__.py
+│   │       │   ├── audio_convert.py
+│   │       │   ├── saver.py
+│   │       │   ├── soundcloud.py
+│   │       │   └── stt.py
+│   │       ├── panel.py
+│   │       ├── progress.py
+│   │       ├── queue.py
+│   │       ├── quota.py
+│   │       ├── referrals.py
+│   │       ├── telegram_auth.py
+│   │       ├── timer.py
+│   │       ├── ui.py
+│   │       ├── user_queue.py
+│   │       ├── user_repo.py
+│   │       └── users.py
+│   ├── infra
+│   │   ├── __init__.py
+│   │   ├── ads
+│   │   │   ├── __init__.py
+│   │   │   └── service.py
+│   │   ├── db
+│   │   │   ├── __init__.py
+│   │   │   ├── alembic_settings.py
+│   │   │   ├── base.py
+│   │   │   ├── engine.py
+│   │   │   ├── init_db.py
+│   │   │   ├── migrations
+│   │   │   │   ├── README
+│   │   │   │   ├── env.py
+│   │   │   │   ├── script.py.mako
+│   │   │   │   └── versions
+│   │   │   │       ├── 00db08e4c8e1_init_schema.py
+│   │   │   │       ├── 17875c46a9dd_add_title_and_metadata_to_jobs.py
+│   │   │   │       ├── 671c5b6d253f_add_title_and_metadata_to_jobs.py
+│   │   │   │       └── c15fa342bae1_init_schema.py
+│   │   │   ├── models
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── base.py
+│   │   │   │   ├── job.py
+│   │   │   │   ├── referral.py
+│   │   │   │   ├── subscription_event.py
+│   │   │   │   ├── usage_daily.py
+│   │   │   │   └── user.py
+│   │   │   ├── repo
+│   │   │   │   └── jobs_repo.py
+│   │   │   ├── schema.py
+│   │   │   ├── session.py
+│   │   │   └── uow.py
+│   │   ├── media
+│   │   │   ├── __init__.py
+│   │   │   └── ffmpeg.py
+│   │   ├── queue
+│   │   │   └── arq.py
+│   │   └── storage
+│   │       ├── __init__.py
+│   │       └── files.py
+│   ├── legacy_main.py
+│   ├── main
+│   │   ├── __init__.py
+│   │   ├── bot.py
+│   │   ├── legacy_web.py
+│   │   ├── smoke.py
+│   │   ├── worker.py
+│   │   └── worker_run.py
+│   └── web
+│       ├── __init__.py
+│       ├── app.py
+│       ├── deps.py
+│       ├── routes
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   ├── internal.py
+│       │   ├── profile.py
+│       │   ├── recent.py
+│       │   └── ui.py
+│       ├── static
+│       │   ├── api.js
+│       │   ├── app.js
+│       │   ├── profile.js
+│       │   └── styles.css
+│       └── templates
+│           └── index.html
+├── data
+│   ├── app.db
+│   ├── recents.json
+│   ├── referrals.json
+│   ├── stt
+│   └── users.json
+├── docker
+├── docker-compose.yml
+├── pyproject.toml
+├── requirements.stt.txt
+├── requirements.txt
+└── scripts
+    └── dev.sh
+
+40 directories, 144 files

@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtualenv
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+
+# Env
+.env
+
+# Data
+data/
+results/
+downloads/
+
+# Docker
+*.tar
+*.gz
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/

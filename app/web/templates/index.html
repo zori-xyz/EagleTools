@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EagleTools</title>
+    <link rel="stylesheet" href="../static/styles.css?v=20260225t" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- HEADER -->
+      <header class="header">
+        <div class="brand">
+          <div class="brand__icon" aria-hidden="true">🦅</div>
+          <div class="brand__text">
+            <div class="brand__title">EagleTools</div>
+            <div class="brand__subtitle" data-i18n="subtitle">Links → files</div>
+          </div>
+        </div>
+
+        <div class="header__actions">
+          <button
+            class="iconbtn iconbtn--header"
+            type="button"
+            title="Profile"
+            data-action="open-profile"
+            aria-label="Profile"
+          >
+            <span aria-hidden="true">👤</span>
+          </button>
+
+          <!-- Settings (opens modal) -->
+          <button
+            class="iconbtn iconbtn--header"
+            type="button"
+            title="Settings"
+            data-action="open-settings"
+            aria-label="Settings"
+          >
+            <span aria-hidden="true">⚙️</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- TOP TABS -->
+      <nav class="tabs" id="tabs">
+        <div class="tabs__indicator" id="tabsIndicator" aria-hidden="true"></div>
+
+        <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Tools</button>
+        <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">Recent</button>
+        <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Profile</button>
+        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Help</button>
+      </nav>
+
+      <!-- PANELS -->
+      <main class="main">
+        <!-- TOOLS -->
+        <section class="panel is-active" data-panel="tools">
+          <h1 class="h1" data-i18n="tab_tools">Tools</h1>
+
+          <div class="toolgrid">
+            <!-- TOOL: save -->
+            <article class="toolcard card" data-tool="save">
+              <div class="card__head">
+                <div class="card__title" data-i18n="links">Links</div>
+                <div class="tag">mp4</div>
+              </div>
+
+              <div class="card__row">
+                <input class="input" data-role="url" type="url" placeholder="https://..." autocomplete="off" />
+                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_download">Download</button>
+              </div>
+
+              <div class="progress" aria-hidden="true">
+                <div class="progress__bar" data-role="bar"></div>
+              </div>
+
+              <div class="result">
+                <div class="result__line muted" data-role="progress"></div>
+                <div class="result__line" data-role="result"></div>
+              </div>
+            </article>
+
+            <!-- TOOL: audio -->
+            <article class="toolcard card" data-tool="audio">
+              <div class="card__head">
+                <div class="card__title">SoundCloud</div>
+                <div class="tag">mp3</div>
+              </div>
+
+              <div class="card__row">
+                <input class="input" data-role="url" type="url" placeholder="https://..." autocomplete="off" />
+                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_make_mp3">Make MP3</button>
+              </div>
+
+              <div class="progress" aria-hidden="true">
+                <div class="progress__bar" data-role="bar"></div>
+              </div>
+
+              <div class="result">
+                <div class="result__line muted" data-role="progress"></div>
+                <div class="result__line" data-role="result"></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- RECENT -->
+        <section class="panel" data-panel="recent">
+          <h1 class="h1" data-i18n="recent_title">Recent</h1>
+
+          <div class="card">
+            <div class="card__body">
+              <div id="recentList" class="recentlist"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section class="panel" data-panel="profile">
+          <h1 class="h1" data-i18n="profile_title">Профиль</h1>
+
+          <div class="profile">
+            <!-- USER INFO CARD -->
+            <div class="card profile-hero">
+              <div class="profile-hero__bg" id="profileHeroBg"></div>
+              <div class="profile-hero__content">
+                <div class="profile-hero__avatar" aria-hidden="true" id="profileAvatar">👤</div>
+                <div class="profile-hero__name" id="profileName">User</div>
+                <div class="profile-hero__username muted" id="profileUsername">@username</div>
+                <div class="profile-hero__badge" id="profilePlanBadge">FREE</div>
+              </div>
+            </div>
+
+            <!-- USAGE CARD -->
+            <div class="card usage-card">
+              <div class="usage-card__header">
+                <div class="usage-card__icon">📊</div>
+                <div class="usage-card__title" data-i18n="usage_title">Использование</div>
+              </div>
+
+              <div class="usage-stats">
+                <div class="usage-stats__main">
+                  <div class="usage-stats__value">
+                    <span id="profileUsed">0</span>
+                    <span class="usage-stats__divider">/</span>
+                    <span id="profileLimit" class="muted">10</span>
+                  </div>
+                  <div class="usage-stats__label muted" data-i18n="requests_today">запросов сегодня</div>
+                </div>
+
+                <div class="usage-progress">
+                  <div class="usage-progress__track">
+                    <div class="usage-progress__fill" id="profileBarFill"></div>
+                  </div>
+                  <div class="usage-progress__label">
+                    <span data-i18n="remaining">Осталось:</span>
+                    <span id="profileLeft" class="usage-progress__count">10</span>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-i18n="upgrade_premium">
+                ⚡️ Получить Premium
+              </button>
+            </div>
+
+            <!-- PREMIUM INFO (for premium users) -->
+            <div class="card premium-card" id="premiumCard" style="display: none;">
+              <div class="premium-card__glow"></div>
+              <div class="premium-card__content">
+                <div class="premium-card__icon">✨</div>
+                <div class="premium-card__title">Premium Active</div>
+                <div class="premium-card__until">
+                  <span class="muted" data-i18n="valid_until">Активен до:</span>
+                  <span id="profilePremiumUntil">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- REFERRALS CARD -->
+            <div class="card refs-card">
+              <div class="refs-card__header">
+                <div class="refs-card__icon">🎁</div>
+                <div>
+                  <div class="refs-card__title" data-i18n="referrals_title">Реферальная программа</div>
+                  <div class="refs-card__subtitle muted" data-i18n="refs_subtitle">Приглашай друзей и получай бонусы</div>
+                </div>
+              </div>
+
+              <div class="refs-stats">
+                <div class="refs-stat">
+                  <div class="refs-stat__value" id="profileRefs">0</div>
+                  <div class="refs-stat__label muted" data-i18n="friends_invited">друзей приглашено</div>
+                </div>
+                <div class="refs-stat" id="rewardStat" style="display: none;">
+                  <div class="refs-stat__value" id="profileRewardNeed">3</div>
+                  <div class="refs-stat__label muted" data-i18n="until_reward">до награды</div>
+                </div>
+              </div>
+
+              <div class="refs-link">
+                <div class="refs-link__text" id="profileRefLink">—</div>
+              </div>
+
+              <div class="refs-actions">
+                <button class="btn btn--secondary" type="button" data-action="copy-ref">
+                  <span>📋</span>
+                  <span data-i18n="ref_copy_btn">Копировать</span>
+                </button>
+                <button class="btn btn--secondary" type="button" data-action="share-ref">
+                  <span>↗️</span>
+                  <span data-i18n="ref_share_btn">Поделиться</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SETTINGS CARD REMOVED (moved to modal) -->
+          </div>
+        </section>
+
+        <!-- HELP -->
+        <section class="panel" data-panel="help">
+          <h1 class="h1" data-i18n="help_title">Help</h1>
+
+          <div class="card">
+            <div class="card__body">
+              <div class="help">
+                <div class="help__title" data-i18n="how_to_use">Как пользоваться</div>
+                <ul class="help__list">
+                  <li data-i18n="help_1">Открой вкладку Tools</li>
+                  <li data-i18n="help_2">Вставь ссылку</li>
+                  <li data-i18n="help_3">Нажми Download / MP3</li>
+                  <li data-i18n="help_4">Подожди обработку</li>
+                  <li data-i18n="help_5">Скачай из результата или Recent</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal" id="settingsModal" aria-hidden="true">
+      <div class="modal__backdrop" data-action="close-settings" aria-hidden="true"></div>
+
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal__head">
+          <div class="modal__title" id="settingsTitle" data-i18n="settings">Настройки</div>
+          <button class="iconbtn iconbtn--header" type="button" data-action="close-settings" aria-label="Close">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+
+        <div class="modal__body">
+          <div class="card card--inner modal__card">
+            <div class="settings-card__title" data-i18n="settings">Настройки</div>
+
+            <div class="setting-row">
+              <div class="setting-row__label">
+                <span class="setting-row__icon">🌐</span>
+                <span data-i18n="language">Язык</span>
+              </div>
+              <div class="segmini" id="langSeg">
+                <div class="segmini__indicator" aria-hidden="true"></div>
+                <button class="segmini__btn" type="button" data-action="lang" data-value="ru">RU</button>
+                <button class="segmini__btn" type="button" data-action="lang" data-value="en">EN</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row__label">
+                <span class="setting-row__icon">🎨</span>
+                <span data-i18n="theme">Тема</span>
+              </div>
+              <div class="segmini" id="themeSeg">
+                <div class="segmini__indicator" aria-hidden="true"></div>
+                <button class="segmini__btn" type="button" data-action="theme" data-value="dark">Dark</button>
+                <button class="segmini__btn" type="button" data-action="theme" data-value="light">Light</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal__links">
+            <button class="modal__link" type="button" data-action="open-support">
+              <span class="modal__linkIcon">💬</span>
+              <span class="modal__linkText" data-i18n="support">Поддержка</span>
+              <span class="modal__chev">›</span>
+            </button>
+
+            <button class="modal__link" type="button" data-action="open-privacy">
+              <span class="modal__linkIcon">🔒</span>
+              <span class="modal__linkText" data-i18n="privacy_policy">Политика конфиденциальности</span>
+              <span class="modal__chev">›</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../static/api.js?v=20260225y"></script>
+    <script src="../static/profile.js?v=20260225y"></script>
+    <script src="../static/app.js?v=20260225y"></script>
+  </body>
+</html>
