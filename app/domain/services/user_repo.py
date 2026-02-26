@@ -4,17 +4,18 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infra.db.schema import User
+from app.infra.db.models.user import User
 
 
 class UserRepo:
     """
-    Repo для User, где user_id = Telegram user id (tg_id).
+    Минимальное состояние юзера для бота (anti-spam single-message UI):
 
-    Важно:
-    - В БД PK = users.id, но в коде бота/веба почти везде оперируем tg_id.
-    - В твоей текущей схеме есть поля mode_chat_id/mode_message_id.
-      Мы используем их и для "last screen", чтобы не требовать миграции прямо сейчас.
+    В БД (init_schema) есть поля:
+      - mode_chat_id
+      - mode_message_id
+
+    Поэтому "screen" маппим на эти поля.
     """
 
     async def get_or_create(self, session: AsyncSession, tg_id: int) -> User:
@@ -30,48 +31,27 @@ class UserRepo:
         await session.refresh(user)
         return user
 
-    # ---------- language ----------
-    async def set_language(self, session: AsyncSession, tg_id: int, language: str) -> None:
-        user = await self.get_or_create(session, tg_id)
-        # в модели сейчас поле language_code (если нет — просто игнор)
-        if hasattr(user, "language_code"):
-            setattr(user, "language_code", language)
-        await session.commit()
-
-    # ---------- last screen ----------
+    # ---------- last screen (single-message UI) ----------
     async def get_screen(self, session: AsyncSession, tg_id: int) -> tuple[int, int] | None:
         user = await self.get_or_create(session, tg_id)
-        chat_id = getattr(user, "mode_chat_id", None)
-        message_id = getattr(user, "mode_message_id", None)
-        if chat_id and message_id:
-            return int(chat_id), int(message_id)
+        if user.mode_chat_id and user.mode_message_id:
+            return int(user.mode_chat_id), int(user.mode_message_id)
         return None
 
     async def set_screen(self, session: AsyncSession, tg_id: int, chat_id: int, message_id: int) -> None:
         user = await self.get_or_create(session, tg_id)
-        setattr(user, "mode_chat_id", int(chat_id))
-        setattr(user, "mode_message_id", int(message_id))
+        user.mode_chat_id = int(chat_id)
+        user.mode_message_id = int(message_id)
         await session.commit()
 
     async def clear_screen(self, session: AsyncSession, tg_id: int) -> None:
         user = await self.get_or_create(session, tg_id)
-        setattr(user, "mode_chat_id", None)
-        setattr(user, "mode_message_id", None)
+        user.mode_chat_id = None
+        user.mode_message_id = None
         await session.commit()
 
-    # ---------- active tool ----------
-    async def set_active_tool(self, session: AsyncSession, tg_id: int, tool: str | None) -> None:
-        user = await self.get_or_create(session, tg_id)
-        setattr(user, "active_tool", tool)
-        await session.commit()
-
-    async def get_active_tool(self, session: AsyncSession, tg_id: int) -> str | None:
-        user = await self.get_or_create(session, tg_id)
-        return getattr(user, "active_tool", None)
-
-    # ---------- mode message (anti-spam) ----------
+    # ---------- mode message aliases (compat) ----------
     async def get_mode_msg(self, session: AsyncSession, tg_id: int) -> tuple[int, int] | None:
-        # сейчас это те же поля, что и screen
         return await self.get_screen(session, tg_id)
 
     async def set_mode_msg(self, session: AsyncSession, tg_id: int, chat_id: int, message_id: int) -> None:
@@ -80,12 +60,30 @@ class UserRepo:
     async def clear_mode_msg(self, session: AsyncSession, tg_id: int) -> None:
         await self.clear_screen(session, tg_id)
 
+    # ---------- active tool ----------
+    async def set_active_tool(self, session: AsyncSession, tg_id: int, tool: str | None) -> None:
+        user = await self.get_or_create(session, tg_id)
+        user.active_tool = tool or None
+        await session.commit()
+
+    async def get_active_tool(self, session: AsyncSession, tg_id: int) -> str | None:
+        user = await self.get_or_create(session, tg_id)
+        return user.active_tool
+
+    # ---------- language (optional; DB may have language_code) ----------
+    async def set_language(self, session: AsyncSession, tg_id: int, language: str) -> None:
+        user = await self.get_or_create(session, tg_id)
+        # поле в БД называется language_code (init_schema)
+        if hasattr(user, "language_code"):
+            user.language_code = (language or "").strip()[:16] or None
+            await session.commit()
+
     # ---------- audio format ----------
     async def set_audio_format(self, session: AsyncSession, tg_id: int, fmt: str) -> None:
         user = await self.get_or_create(session, tg_id)
-        setattr(user, "audio_format", fmt)
+        user.audio_format = (fmt or "mp3").lower().strip() or "mp3"
         await session.commit()
 
     async def get_audio_format(self, session: AsyncSession, tg_id: int) -> str:
         user = await self.get_or_create(session, tg_id)
-        return str(getattr(user, "audio_format", None) or "mp3")
+        return (user.audio_format or "mp3").lower().strip() or "mp3"
