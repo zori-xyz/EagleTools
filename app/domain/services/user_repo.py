@@ -9,29 +9,34 @@ from app.infra.db.models.user import User
 
 class UserRepo:
     """
-    Минимальное состояние юзера для бота (anti-spam single-message UI):
+    User storage for bot UI state.
 
-    В БД (init_schema) есть поля:
+    We identify user by Telegram ID (tg_id), DB PK 'id' is auto-generated.
+
+    IMPORTANT:
+    In current DB schema we have:
       - mode_chat_id
       - mode_message_id
+      - active_tool
+      - audio_format
 
-    Поэтому "screen" маппим на эти поля.
+    Bot's "screen" here means "single message to edit" (anti-spam),
+    so we map screen <-> (mode_chat_id, mode_message_id).
     """
 
     async def get_or_create(self, session: AsyncSession, tg_id: int) -> User:
-        q = select(User).where(User.tg_id == int(tg_id)).limit(1)
-        res = await session.execute(q)
-        user = res.scalar_one_or_none()
+        tg_id = int(tg_id)
+        user = await session.scalar(select(User).where(User.tg_id == tg_id))
         if user is not None:
             return user
 
-        user = User(tg_id=int(tg_id))
+        user = User(tg_id=tg_id)
         session.add(user)
         await session.commit()
         await session.refresh(user)
         return user
 
-    # ---------- last screen (single-message UI) ----------
+    # ---------- last screen message (anti-spam) ----------
     async def get_screen(self, session: AsyncSession, tg_id: int) -> tuple[int, int] | None:
         user = await self.get_or_create(session, tg_id)
         if user.mode_chat_id and user.mode_message_id:
@@ -50,7 +55,7 @@ class UserRepo:
         user.mode_message_id = None
         await session.commit()
 
-    # ---------- mode message aliases (compat) ----------
+    # ---------- compatibility aliases ----------
     async def get_mode_msg(self, session: AsyncSession, tg_id: int) -> tuple[int, int] | None:
         return await self.get_screen(session, tg_id)
 
@@ -63,20 +68,12 @@ class UserRepo:
     # ---------- active tool ----------
     async def set_active_tool(self, session: AsyncSession, tg_id: int, tool: str | None) -> None:
         user = await self.get_or_create(session, tg_id)
-        user.active_tool = tool or None
+        user.active_tool = (tool or None)
         await session.commit()
 
     async def get_active_tool(self, session: AsyncSession, tg_id: int) -> str | None:
         user = await self.get_or_create(session, tg_id)
         return user.active_tool
-
-    # ---------- language (optional; DB may have language_code) ----------
-    async def set_language(self, session: AsyncSession, tg_id: int, language: str) -> None:
-        user = await self.get_or_create(session, tg_id)
-        # поле в БД называется language_code (init_schema)
-        if hasattr(user, "language_code"):
-            user.language_code = (language or "").strip()[:16] or None
-            await session.commit()
 
     # ---------- audio format ----------
     async def set_audio_format(self, session: AsyncSession, tg_id: int, fmt: str) -> None:
