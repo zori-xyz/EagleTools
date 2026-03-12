@@ -1,7 +1,13 @@
+# app/bot/keyboards/audio_format.py
+from __future__ import annotations
+
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from app.bot.i18n import t
 
-def audio_format_kb() -> InlineKeyboardMarkup:
+
+def audio_format_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    s = t(lang)
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -13,7 +19,7 @@ def audio_format_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🗜 OPUS", callback_data="audiofmt:opus"),
             ],
             [
-                InlineKeyboardButton(text="⬅️ Назад", callback_data="screen:tools"),
+                InlineKeyboardButton(text=s.btn_back, callback_data="screen:tools"),
             ],
         ]
     )

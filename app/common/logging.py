@@ -13,6 +13,10 @@ def setup_logging() -> None:
         stream=sys.stdout,
     )
 
+    # Отключаем шумные SQL логи
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+
     structlog.configure(
         processors=[
             structlog.processors.add_log_level,

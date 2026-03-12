@@ -9,6 +9,11 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eagletools}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -17,46 +22,60 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.web
     container_name: eagletools_web
-    command: uvicorn app.web.app:app --host 0.0.0.0 --port 8000
     env_file:
       - .env
     volumes:
       - app_data:/app/data
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     ports:
       - "8000:8000"
 
   bot:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
     container_name: eagletools_bot
-    command: python -m app.bot.main
     env_file:
       - .env
     volumes:
       - app_data:/app/data
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
     container_name: eagletools_worker
-    command: arq app.infra.queue.arq.WorkerSettings
     env_file:
       - .env
     volumes:
       - app_data:/app/data
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

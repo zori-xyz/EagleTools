@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EagleTools</title>
-    <link rel="stylesheet" href="../static/styles.css?v=20260225t" />
+    <link rel="stylesheet" href="../static/styles.css?v=20260312" />
   </head>
 
   <body>
@@ -12,7 +12,7 @@
       <!-- HEADER -->
       <header class="header">
         <div class="brand">
-          <div class="brand__icon" aria-hidden="true">🦅</div>
+          <div class="brand__icon" aria-hidden="true"><img src="../static/logo.png" alt="EagleTools" class="brand__logo" /></div>
           <div class="brand__text">
             <div class="brand__title">EagleTools</div>
             <div class="brand__subtitle" data-i18n="subtitle">Links → files</div>
@@ -20,24 +20,12 @@
         </div>
 
         <div class="header__actions">
-          <button
-            class="iconbtn iconbtn--header"
-            type="button"
-            title="Profile"
-            data-action="open-profile"
-            aria-label="Profile"
-            >
-             <span class="header__avatar" id="headerAvatar" aria-hidden="true">👤</span>
-           </button>
-
-          <!-- Settings (opens modal) -->
-          <button
-            class="iconbtn iconbtn--header"
-            type="button"
-            title="Settings"
-            data-action="open-settings"
-            aria-label="Settings"
-          >
+          <button class="iconbtn iconbtn--header" type="button" title="Profile"
+            data-action="open-profile" aria-label="Profile">
+            <span class="header__avatar" id="headerAvatar" aria-hidden="true">👤</span>
+          </button>
+          <button class="iconbtn iconbtn--header" type="button" title="Settings"
+            data-action="open-settings" aria-label="Settings">
             <span aria-hidden="true">⚙️</span>
           </button>
         </div>
@@ -46,58 +34,49 @@
       <!-- TOP TABS -->
       <nav class="tabs" id="tabs">
         <div class="tabs__indicator" id="tabsIndicator" aria-hidden="true"></div>
-
-        <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Tools</button>
-        <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">Recent</button>
-        <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Profile</button>
-        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Help</button>
+        <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Инструменты</button>
+        <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">История</button>
+        <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Профиль</button>
+        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Помощь</button>
       </nav>
 
       <!-- PANELS -->
       <main class="main">
         <!-- TOOLS -->
         <section class="panel is-active" data-panel="tools">
-          <h1 class="h1" data-i18n="tab_tools">Tools</h1>
+          <h1 class="h1" data-i18n="tab_tools">Инструменты</h1>
 
           <div class="toolgrid">
-            <!-- TOOL: save -->
             <article class="toolcard card" data-tool="save">
               <div class="card__head">
-                <div class="card__title" data-i18n="links">Links</div>
+                <div class="card__title" data-i18n="links">Ссылки</div>
                 <div class="tag">mp4</div>
               </div>
-
               <div class="card__row">
                 <input class="input" data-role="url" type="url" placeholder="https://..." autocomplete="off" />
-                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_download">Download</button>
+                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_download">Скачать</button>
               </div>
-
               <div class="progress" aria-hidden="true">
                 <div class="progress__bar" data-role="bar"></div>
               </div>
-
               <div class="result">
                 <div class="result__line muted" data-role="progress"></div>
                 <div class="result__line" data-role="result"></div>
               </div>
             </article>
 
-            <!-- TOOL: audio -->
             <article class="toolcard card" data-tool="audio">
               <div class="card__head">
                 <div class="card__title">SoundCloud</div>
                 <div class="tag">mp3</div>
               </div>
-
               <div class="card__row">
                 <input class="input" data-role="url" type="url" placeholder="https://..." autocomplete="off" />
-                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_make_mp3">Make MP3</button>
+                <button class="btn btn--primary" data-role="run" type="button" data-i18n="btn_make_mp3">MP3</button>
               </div>
-
               <div class="progress" aria-hidden="true">
                 <div class="progress__bar" data-role="bar"></div>
               </div>
-
               <div class="result">
                 <div class="result__line muted" data-role="progress"></div>
                 <div class="result__line" data-role="result"></div>
@@ -108,8 +87,7 @@
 
         <!-- RECENT -->
         <section class="panel" data-panel="recent">
-          <h1 class="h1" data-i18n="recent_title">Recent</h1>
-
+          <h1 class="h1" data-i18n="recent_title">История загрузок</h1>
           <div class="card">
             <div class="card__body">
               <div id="recentList" class="recentlist"></div>
@@ -122,7 +100,6 @@
           <h1 class="h1" data-i18n="profile_title">Профиль</h1>
 
           <div class="profile">
-            <!-- USER INFO CARD -->
             <div class="card profile-hero">
               <div class="profile-hero__bg" id="profileHeroBg"></div>
               <div class="profile-hero__content">
@@ -133,13 +110,11 @@
               </div>
             </div>
 
-            <!-- USAGE CARD -->
             <div class="card usage-card">
               <div class="usage-card__header">
                 <div class="usage-card__icon">📊</div>
                 <div class="usage-card__title" data-i18n="usage_title">Использование</div>
               </div>
-
               <div class="usage-stats">
                 <div class="usage-stats__main">
                   <div class="usage-stats__value">
@@ -149,25 +124,22 @@
                   </div>
                   <div class="usage-stats__label muted" data-i18n="requests_today">запросов сегодня</div>
                 </div>
-
                 <div class="usage-progress">
                   <div class="usage-progress__track">
                     <div class="usage-progress__fill" id="profileBarFill"></div>
                   </div>
                   <div class="usage-progress__label">
-                    <span data-i18n="remaining">Осталось:</span>
+                    <span data-i18n="remaining">Осталось</span>
                     <span id="profileLeft" class="usage-progress__count">10</span>
                   </div>
                 </div>
               </div>
-
               <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-i18n="upgrade_premium">
                 ⚡️ Получить Premium
               </button>
             </div>
 
-            <!-- PREMIUM INFO (for premium users) -->
-            <div class="card premium-card" id="premiumCard" style="display: none;">
+            <div class="card premium-card" id="premiumCard" style="display:none;">
               <div class="premium-card__glow"></div>
               <div class="premium-card__content">
                 <div class="premium-card__icon">✨</div>
@@ -179,7 +151,6 @@
               </div>
             </div>
 
-            <!-- REFERRALS CARD -->
             <div class="card refs-card">
               <div class="refs-card__header">
                 <div class="refs-card__icon">🎁</div>
@@ -188,22 +159,19 @@
                   <div class="refs-card__subtitle muted" data-i18n="refs_subtitle">Приглашай друзей и получай бонусы</div>
                 </div>
               </div>
-
               <div class="refs-stats">
                 <div class="refs-stat">
                   <div class="refs-stat__value" id="profileRefs">0</div>
                   <div class="refs-stat__label muted" data-i18n="friends_invited">друзей приглашено</div>
                 </div>
-                <div class="refs-stat" id="rewardStat" style="display: none;">
+                <div class="refs-stat" id="rewardStat" style="display:none;">
                   <div class="refs-stat__value" id="profileRewardNeed">3</div>
                   <div class="refs-stat__label muted" data-i18n="until_reward">до награды</div>
                 </div>
               </div>
-
               <div class="refs-link">
                 <div class="refs-link__text" id="profileRefLink">—</div>
               </div>
-
               <div class="refs-actions">
                 <button class="btn btn--secondary" type="button" data-action="copy-ref">
                   <span>📋</span>
@@ -215,28 +183,114 @@
                 </button>
               </div>
             </div>
-
-            <!-- SETTINGS CARD REMOVED (moved to modal) -->
           </div>
         </section>
 
         <!-- HELP -->
         <section class="panel" data-panel="help">
-          <h1 class="h1" data-i18n="help_title">Help</h1>
+          <h1 class="h1" data-i18n="help_title">Помощь</h1>
 
-          <div class="card">
-            <div class="card__body">
-              <div class="help">
-                <div class="help__title" data-i18n="how_to_use">Как пользоваться</div>
-                <ul class="help__list">
-                  <li data-i18n="help_1">Открой вкладку Tools</li>
-                  <li data-i18n="help_2">Вставь ссылку</li>
-                  <li data-i18n="help_3">Нажми Download / MP3</li>
-                  <li data-i18n="help_4">Подожди обработку</li>
-                  <li data-i18n="help_5">Скачай из результата или Recent</li>
-                </ul>
+          <div class="help-page">
+
+            <!-- Как пользоваться Mini App -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🛠</span>
+                <span data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
+              </div>
+              <ul class="help-list">
+                <li data-i18n="help_ma_1">Открой вкладку <strong>Инструменты</strong> — вставь ссылку на видео или аудио</li>
+                <li data-i18n="help_ma_2">Поддерживаются YouTube, TikTok, Instagram, SoundCloud и другие сайты</li>
+                <li data-i18n="help_ma_3">Нажми <strong>Скачать</strong> для видео (mp4) или <strong>MP3</strong> для аудио</li>
+                <li data-i18n="help_ma_4">Файл скачается автоматически или появится ссылка в результате</li>
+                <li data-i18n="help_ma_5">Все скачанные файлы видны во вкладке <strong>История</strong></li>
+              </ul>
+            </div>
+
+            <!-- Как пользоваться ботом -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🤖</span>
+                <span data-i18n="help_bot_title">Функции бота в Telegram</span>
+              </div>
+              <div class="help-feature-grid">
+                <div class="help-feature">
+                  <div class="help-feature__icon">🎵</div>
+                  <div class="help-feature__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
+                  <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в mp3, wav или другой формат</div>
+                </div>
+                <div class="help-feature">
+                  <div class="help-feature__icon">🎙</div>
+                  <div class="help-feature__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
+                  <div class="help-feature__desc" data-i18n="help_bot_stt_desc">Отправь голосовое или аудио — бот расшифрует текст с помощью Whisper AI</div>
+                </div>
+              </div>
+              <ul class="help-list" style="margin-top:12px">
+                <li data-i18n="help_bot_1">В боте выбери режим через меню <strong>Инструменты</strong></li>
+                <li data-i18n="help_bot_2">Отправь файл — бот автоматически обработает его</li>
+              </ul>
+            </div>
+
+            <!-- Premium -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">⚡️</span>
+                <span data-i18n="help_premium_title">Преимущества Premium</span>
+              </div>
+              <ul class="help-premium-list">
+                <li data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</li>
+                <li data-i18n="help_prem_2">Приоритетная обработка заданий</li>
+                <li data-i18n="help_prem_3">Доступ ко всем будущим функциям</li>
+                <li data-i18n="help_prem_4">Поддержка развития проекта</li>
+              </ul>
+              <div style="margin-top:14px">
+                <button class="btn btn--premium" type="button" data-action="open-upgrade" data-i18n="upgrade_premium">
+                  ⚡️ Получить Premium
+                </button>
               </div>
             </div>
+
+            <!-- Реферальная система -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🎁</span>
+                <span data-i18n="help_ref_title">Реферальная система</span>
+              </div>
+              <div class="help-ref-steps">
+                <div class="help-ref-step">
+                  <div class="help-ref-step__num">1</div>
+                  <div class="help-ref-step__text" data-i18n="help_ref_1">Скопируй свою реферальную ссылку во вкладке Профиль</div>
+                </div>
+                <div class="help-ref-step">
+                  <div class="help-ref-step__num">2</div>
+                  <div class="help-ref-step__text" data-i18n="help_ref_2">Поделись ссылкой с друзьями — пусть запустят бота по ней</div>
+                </div>
+                <div class="help-ref-step">
+                  <div class="help-ref-step__num">3</div>
+                  <div class="help-ref-step__text" data-i18n="help_ref_3">За каждого друга ты получишь <strong>+5 загрузок</strong> в день</div>
+                </div>
+                <div class="help-ref-step">
+                  <div class="help-ref-step__num">4</div>
+                  <div class="help-ref-step__text" data-i18n="help_ref_4">Каждые <strong>3 приглашённых</strong> дают Premium-пользователям +3 дня премиума</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Конфиденциальность -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🔒</span>
+                <span data-i18n="help_privacy_title">Конфиденциальность</span>
+              </div>
+              <div class="help-privacy-note">
+                <span class="help-privacy-note__icon">🛡</span>
+                <span data-i18n="help_privacy_note">Мы не храним твои файлы. Все загруженные и обработанные файлы автоматически удаляются с сервера после скачивания. Мы не передаём данные третьим лицам.</span>
+              </div>
+              <button class="btn help-btn-privacy" type="button" data-action="open-privacy" data-i18n="privacy_policy">
+                🔒 Политика конфиденциальности
+              </button>
+            </div>
+
           </div>
         </section>
       </main>
@@ -247,6 +301,7 @@
       <div class="modal__backdrop" data-action="close-settings" aria-hidden="true"></div>
 
       <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal__handle" aria-hidden="true"></div>
         <div class="modal__head">
           <div class="modal__title" id="settingsTitle" data-i18n="settings">Настройки</div>
           <button class="iconbtn iconbtn--header" type="button" data-action="close-settings" aria-label="Close">
@@ -300,8 +355,8 @@
       </div>
     </div>
 
-    <script src="../static/api.js?v=20260225y"></script>
-    <script src="../static/profile.js?v=20260225y"></script>
-    <script src="../static/app.js?v=20260225y"></script>
+    <script src="../static/api.js?v=20260312"></script>
+    <script src="../static/profile.js?v=20260312"></script>
+    <script src="../static/app.js?v=20260312"></script>
   </body>
 </html>

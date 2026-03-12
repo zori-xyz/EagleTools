@@ -3,6 +3,7 @@ from .audio_convert import (
     ConvertError,
     ConvertResult,
     cleanup_tmp_dir,
+    convert_audio_from_file,
     convert_to_mp3_from_file,
     tg_download_to_path,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "ConvertError",
     "ConvertResult",
     "tg_download_to_path",
+    "convert_audio_from_file",
     "convert_to_mp3_from_file",
     "cleanup_tmp_dir",
     "SttError",

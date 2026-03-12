@@ -1,3 +1,4 @@
+# app/infra/db/session.py
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import (
@@ -32,11 +33,17 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Alias for worker compatibility
+# Aliases — все варианты которые встречаются в проекте
 SessionMaker = AsyncSessionLocal
 
+
+def get_sessionmaker() -> async_sessionmaker:
+    """Returns the session factory. Used by bot routers."""
+    return AsyncSessionLocal
+
+
 # -------------------------
-# Dependencies
+# FastAPI Dependencies
 # -------------------------
 
 async def get_db() -> AsyncSession:
@@ -44,5 +51,5 @@ async def get_db() -> AsyncSession:
         yield session
 
 
-# BACKWARD COMPATIBILITY
+# Backward compatibility aliases
 get_session = get_db

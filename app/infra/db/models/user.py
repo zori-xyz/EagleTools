@@ -1,3 +1,4 @@
+# app/infra/db/models/user.py
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,22 +16,30 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=False)
 
-    # enums-free (в БД CHECK constraint)
-    plan: Mapped[str] = mapped_column(String(16), nullable=False, default="free")
-    premium_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Telegram profile fields (updated on every Mini App open)
+    first_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    language_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
-    referred_by_id: Mapped[int] = mapped_column(
+    # Plan
+    plan: Mapped[str] = mapped_column(String(16), nullable=False, default="free")
+    premium_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Referrals
+    referred_by_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("eagle.users.id", ondelete="SET NULL"),
         nullable=True,
     )
     referrals_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    active_tool: Mapped[str] = mapped_column(String(32), nullable=True)
+    # Bot UI state
+    active_tool: Mapped[str | None] = mapped_column(String(32), nullable=True)
     audio_format: Mapped[str] = mapped_column(String(8), nullable=False, default="mp3")
-
-    mode_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
-    mode_message_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    mode_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    mode_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

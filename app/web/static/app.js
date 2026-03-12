@@ -485,6 +485,12 @@
       return;
     }
 
+    if (action === "open-upgrade") {
+      const bot = getBotUsername();
+      openTgLink(`https://t.me/${encodeURIComponent(bot)}?start=premium`);
+      return;
+    }
+
     if (action === "open-support") {
       const bot = getBotUsername();
       openTgLink(`https://t.me/${encodeURIComponent(bot)}?start=support`);

@@ -37,6 +37,22 @@ class Settings(BaseSettings):
     )
 
     # =========================
+    # PAYMENTS
+    # =========================
+
+    ton_wallet: Optional[str] = Field(default=None, validation_alias="TON_WALLET")
+
+    # =========================
+    # ADMIN
+    # =========================
+
+    # Comma-separated Telegram IDs: ADMIN_IDS=123456789,987654321
+    admin_ids: Optional[str] = Field(default=None, validation_alias="ADMIN_IDS")
+
+    # Channel for TON payment notifications: ADMIN_CHANNEL_ID=-100xxxxxxxxx
+    admin_channel_id: Optional[int] = Field(default=None, validation_alias="ADMIN_CHANNEL_ID")
+
+    # =========================
     # BOT / REFERRALS
     # =========================
 
