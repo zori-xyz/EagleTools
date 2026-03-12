@@ -26,3 +26,5 @@ redis==5.2.0
 # --- Media ---
 yt-dlp==2025.1.26
 structlog==24.4.0
+
+faster-whisper==1.1.1
