@@ -24,4 +24,4 @@ arq==0.26.1
 redis==5.2.0
 
 # --- Media ---
-yt-dlp==2025.1.26
+yt-dlp==2025.1.26structlog==24.4.0
