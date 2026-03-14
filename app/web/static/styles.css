@@ -434,28 +434,15 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 
 /* ── RECENT ── */
 .recentlist { display: flex; flex-direction: column; gap: 8px; }
-.recentitem {
   border-radius: var(--r-md); border: 1px solid var(--border);
   background: var(--surface2); overflow: hidden;
   transition: border-color .18s ease, background .18s ease, transform .15s ease, box-shadow .18s ease;
 }
-.recentitem:hover { border-color: var(--border2); background: var(--surface); transform: translateY(-1px); box-shadow: var(--sh-md); }
-html[data-theme="light"] .recentitem { background: rgba(255,255,255,.78); border-color: var(--border); }
-html[data-theme="light"] .recentitem:hover { background: rgba(255,255,255,.96); border-color: var(--border2); }
 
-.recentitem__body { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 12px 12px 12px 13px; }
-.recentitem__left { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.recentitem__thumb {
   width: 42px; height: 42px; border-radius: var(--r-sm);
   border: 1px solid var(--border); display: grid; place-items: center;
   font-size: 18px; flex-shrink: 0; background: var(--surface);
 }
-.recentitem__thumb--video { background: rgba(232,25,90,.08); border-color: rgba(232,25,90,.16); }
-.recentitem__thumb--audio { background: rgba(124,58,237,.08); border-color: rgba(124,58,237,.16); }
-.recentitem__main { min-width: 0; }
-.recentitem__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-.recentitem__sub { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 11px; color: var(--text2); }
-.recentitem__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .dot { opacity: .35; }
 
 /* Pills */
@@ -843,9 +830,6 @@ html[data-theme="light"] .icon--rose  { filter: invert(15%) sepia(90%) saturate(
 .header__avatar .icon { width: 20px; height: 20px; }
 
 /* Recent row icons */
-.recentitem__thumb .icon { width: 22px; height: 22px; }
-.recentitem__thumb--video .icon { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg) brightness(90%); }
-.recentitem__thumb--audio .icon { filter: invert(40%) sepia(60%) saturate(3000%) hue-rotate(240deg) brightness(90%); }
 
 /* iconbtn with svg */
 .iconbtn img.icon { width: 18px; height: 18px; }
@@ -897,37 +881,89 @@ html[data-theme="dark"] .help-feature__icon img.icon {
 html[data-theme="light"] .help-feature__icon img.icon {
   filter: invert(15%) sepia(90%) saturate(4000%) hue-rotate(325deg) brightness(85%);
 }
-/* ── RECENT ITEM FINAL ── */
-.recentitem { border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface2); overflow: hidden; transition: border-color .18s, background .18s, transform .15s, box-shadow .18s; }
+
+
+
+
+
+/* ── RECENT LIST ── */
+.recentlist { display: flex; flex-direction: column; gap: 8px; }
+
+.recentitem {
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  overflow: hidden;
+  transition: border-color .18s ease, background .18s ease, transform .15s ease, box-shadow .18s ease;
+}
 .recentitem:hover { border-color: var(--border2); background: var(--surface); transform: translateY(-1px); box-shadow: var(--sh-md); }
-html[data-theme="light"] .recentitem { background: rgba(255,255,255,.78); }
-html[data-theme="light"] .recentitem:hover { background: rgba(255,255,255,.96); }
+html[data-theme="light"] .recentitem { background: rgba(255,255,255,.78); border-color: var(--border); }
+html[data-theme="light"] .recentitem:hover { background: rgba(255,255,255,.96); border-color: var(--border2); }
 
-.recentitem__body { display: flex; align-items: center; gap: 10px; padding: 11px 11px 11px 13px; }
-.recentitem__left { display: flex; align-items: center; gap: 11px; min-width: 0; flex: 1; }
-
-.recentitem__thumb { width: 42px; height: 42px; border-radius: var(--r-sm); border: 1px solid var(--border); display: grid; place-items: center; flex-shrink: 0; background: var(--surface); }
+/* Body: thumb + info на всю ширину, кнопки справа */
+.recentitem__body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 10px 11px 12px;
+}
+.recentitem__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+.recentitem__thumb {
+  width: 40px; height: 40px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  background: var(--surface);
+}
 .recentitem__thumb--video { background: rgba(232,25,90,.08); border-color: rgba(232,25,90,.16); }
 .recentitem__thumb--audio { background: rgba(124,58,237,.08); border-color: rgba(124,58,237,.16); }
-.recentitem__thumb img { width: 22px; height: 22px; }
+.recentitem__thumb img { width: 20px; height: 20px; }
 html[data-theme="dark"] .recentitem__thumb--video img { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg) brightness(90%); }
 html[data-theme="dark"] .recentitem__thumb--audio img { filter: invert(40%) sepia(60%) saturate(3000%) hue-rotate(240deg) brightness(90%); }
 html[data-theme="light"] .recentitem__thumb--video img { filter: invert(15%) sepia(90%) saturate(4000%) hue-rotate(325deg); }
 html[data-theme="light"] .recentitem__thumb--audio img { filter: invert(30%) sepia(70%) saturate(2000%) hue-rotate(240deg); }
 
-.recentitem__main { min-width: 0; flex: 1; }
-.recentitem__title { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
-.recentitem__sub { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.recentitem__badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
-.recentitem__badge--done  { color: var(--ok);    background: rgba(52,211,153,.10);  border-color: rgba(52,211,153,.22); }
-.recentitem__badge--err   { color: var(--err);   background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.22); }
-.recentitem__badge--run   { color: var(--rose2); background: var(--rose-soft);      border-color: var(--rose-edge); }
-.recentitem__badge--q     { color: var(--warn);  background: rgba(251,191,36,.10);  border-color: rgba(251,191,36,.22); }
-.recentitem__when { font-size: 11px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recentitem__main { min-width: 0; flex: 1 1 0; overflow: hidden; }
+.recentitem__title {
+  font-size: 13px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 3px; color: var(--text);
+  max-width: 100%;
+}
+.recentitem__sub { display: flex; align-items: center; gap: 5px; overflow: hidden; }
+.recentitem__badge {
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 999px; border: 1px solid;
+  white-space: nowrap; flex-shrink: 0;
+}
+.recentitem__badge--done { color: var(--ok);    background: rgba(52,211,153,.10);  border-color: rgba(52,211,153,.22); }
+.recentitem__badge--err  { color: var(--err);   background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.22); }
+.recentitem__badge--run  { color: var(--rose2); background: var(--rose-soft);      border-color: var(--rose-edge); }
+.recentitem__badge--q    { color: var(--warn);  background: rgba(251,191,36,.10);  border-color: rgba(251,191,36,.22); }
+.recentitem__when {
+  font-size: 10px; color: var(--text3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex-shrink: 1; min-width: 0;
+}
 
-.recentitem__actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-.recentitem__actions .iconbtn { width: 34px; height: 34px; }
-.recentitem__actions .iconbtn img { width: 16px; height: 16px; }
+/* Кнопки справа — фиксированная ширина */
+.recentitem__actions {
+  display: flex; align-items: center; gap: 4px;
+  flex-shrink: 0;
+}
+.recentitem__actions .iconbtn { width: 32px; height: 32px; border-radius: 8px; }
+.recentitem__actions .iconbtn img { width: 15px; height: 15px; }
 html[data-theme="dark"] .recentitem__actions .iconbtn img { filter: invert(1); opacity: .7; }
-html[data-theme="dark"] .recentitem__actions .iconbtn--play img { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg) brightness(90%); opacity: 1; }
+html[data-theme="dark"] .recentitem__actions .iconbtn--play img { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg); opacity: 1; }
 html[data-theme="dark"] .recentitem__actions .iconbtn--danger img { filter: invert(60%) sepia(40%) saturate(2000%) hue-rotate(310deg); opacity: 1; }
+
+/* pill compat */
+.dot { opacity: .35; }
