@@ -426,30 +426,29 @@
 
     const badge = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
 
+    const statusLabel = status === "done" ? (t("done") || "Готово") : status === "failed" || status === "error" ? (t("err_unknown") || "Ошибка") : status === "running" ? (t("starting") || "Загружается") : (t("queued") || "В очереди");
+
     return `
       <div class="recentitem" data-id="${escapeHtml(id)}">
-        <div class="recentitem__body">
-          <div class="recentitem__left">
-            <div class="recentitem__thumb ${thumbClass}">${thumbIcon}</div>
-            <div class="recentitem__main">
-              <div class="recentitem__title">${escapeHtml(title)}</div>
-              <div class="recentitem__sub">
-                <span class="pill pill--${badge}">${escapeHtml(kind)} • ${escapeHtml(status)}</span>
-                ${when ? `<span class="dot">•</span><span>${escapeHtml(when)}</span>` : ""}
-                ${size ? `<span class="dot">•</span><span>${escapeHtml(size)}</span>` : ""}
-              </div>
+        <div class="recentitem__top">
+          <div class="recentitem__thumb ${thumbClass}">${thumbIcon}</div>
+          <div class="recentitem__main">
+            <div class="recentitem__title">${escapeHtml(title)}</div>
+            <div class="recentitem__meta">
+              <span class="recentitem__badge recentitem__badge--${badge}">${escapeHtml(statusLabel)}</span>
+              ${when ? `<span class="recentitem__when">${escapeHtml(when)}</span>` : ""}
             </div>
           </div>
-          <div class="recentitem__actions">
-            ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
-              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-              data-audio="${isAudio}" aria-label="Воспроизвести"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
-            <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" aria-label="Открыть"><img src="/static/icons/download.svg" class="icon" /></button>
-            <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Поделиться"><img src="/static/icons/share-2.svg" class="icon" /></button>
-            <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Удалить"><img src="/static/icons/trash-2.svg" class="icon" /></button>
-          </div>
+        </div>
+        <div class="recentitem__actions">
+          ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
+            data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
+            data-audio="${isAudio}" aria-label="Play"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
+          <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
+            data-url="${escapeHtml(downloadUrl)}" aria-label="Download"><img src="/static/icons/download.svg" class="icon" /></button>
+          <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
+            data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Share"><img src="/static/icons/share-2.svg" class="icon" /></button>
+          <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Delete"><img src="/static/icons/trash-2.svg" class="icon" /></button>
         </div>
       </div>
     `;
