@@ -5,43 +5,31 @@
 
   function escapeHtml(s) {
     return String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   }
 
   const t = (k) => window.EagleProfile?.t?.(k) || "";
 
   // ---------- Toast ----------
-  let toastEl = null;
-  let toastTimer = null;
-
+  let toastEl = null, toastTimer = null;
   function ensureToast() {
     if (toastEl) return toastEl;
     toastEl = document.createElement("div");
     toastEl.className = "toast";
-    toastEl.innerHTML = `
-      <div class="toast__inner">
-        <div class="toast__icon" id="toastIcon">ℹ️</div>
-        <div class="toast__msg" id="toastMsg"></div>
-      </div>
-    `;
+    toastEl.innerHTML = `<div class="toast__inner"><div class="toast__icon" id="toastIcon">ℹ️</div><div class="toast__msg" id="toastMsg"></div></div>`;
     document.body.appendChild(toastEl);
     return toastEl;
   }
-
   function toast(msg, kind = "ok", icon = "ℹ️") {
     const el = ensureToast();
-    const m = $("#toastMsg", el);
-    const ic = $("#toastIcon", el);
+    const m = $("#toastMsg", el), ic = $("#toastIcon", el);
     if (m) m.textContent = String(msg ?? "");
     if (ic) ic.textContent = icon;
     el.dataset.kind = kind || "ok";
     el.classList.add("is-on");
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("is-on"), 2200);
+    toastTimer = setTimeout(() => el.classList.remove("is-on"), 2400);
   }
 
   // ---------- API ----------
@@ -50,111 +38,155 @@
       const r = await window.EagleAPI?.getJson?.(path);
       if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
       return { ok: true, data: r };
-    } catch (e) {
-      return { ok: false, error: String(e?.message || e) };
-    }
+    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
   }
-
   async function apiPost(path, body) {
     try {
       const r = await window.EagleAPI?.postJson?.(path, body);
       if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
       return { ok: true, data: r };
-    } catch (e) {
-      return { ok: false, error: String(e?.message || e) };
-    }
+    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
   }
-
   async function apiDelete(path) {
     try {
       const r = await window.EagleAPI?.delJson?.(path);
       if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
       return { ok: true, data: r };
-    } catch (e) {
-      return { ok: false, error: String(e?.message || e) };
-    }
+    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
   }
-
   function prettyErr(r) {
     if (!r) return "Unknown error";
     if (r.error) return String(r.error);
-    if (r.data && typeof r.data === "object") {
-      const d = r.data;
-      return d.detail || d.message || JSON.stringify(d);
-    }
+    if (r.data && typeof r.data === "object") { const d = r.data; return d.detail || d.message || JSON.stringify(d); }
     return "Request failed";
   }
 
-  // ---------- Open / Share file ----------
+  // ---------- Open / Share ----------
   function openFile(url) {
     if (!url) return;
-    const fullUrl = url.startsWith("http") ? url : window.location.origin + url;
-    try {
-      if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(fullUrl);
-        return;
-      }
-    } catch {}
-    try { window.open(fullUrl, "_blank", "noopener"); } catch {}
+    const full = url.startsWith("http") ? url : window.location.origin + url;
+    try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(full); return; } } catch {}
+    try { window.open(full, "_blank", "noopener"); } catch {}
   }
-
   async function shareFile(url, title = "") {
     if (!url) return;
-    const fullUrl = url.startsWith("http") ? url : window.location.origin + url;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: title || "EagleTools", url: fullUrl });
-        return;
-      }
-    } catch {}
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      toast(t("copied") || "Ссылка скопирована", "ok", "📋");
-    } catch {
-      openFile(url);
-    }
+    const full = url.startsWith("http") ? url : window.location.origin + url;
+    try { if (navigator.share) { await navigator.share({ title: title || "EagleTools", url: full }); return; } } catch {}
+    try { await navigator.clipboard.writeText(full); toast("Ссылка скопирована", "ok", "📋"); } catch { openFile(url); }
   }
 
-  // ---------- Indicator math ----------
+  // ---------- Media Player ----------
+  let playerUrl = "", playerTitle = "", playerIsAudio = false;
+  function fmtTime(sec) {
+    if (!isFinite(sec)) return "0:00";
+    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
+  function openPlayer(url, title, isAudio) {
+    playerUrl = url; playerTitle = title || ""; playerIsAudio = isAudio;
+    const modal = $("#playerModal");
+    const video = $("#playerVideo"), audio = $("#playerAudio");
+    const videoWrap = $("#playerVideoWrap"), audioWrap = $("#playerAudioWrap");
+    const controls = $("#playerControls");
+    const titleEl = $("#playerAudioTitle");
+
+    // stop previous
+    if (video) { video.pause(); video.src = ""; }
+    if (audio) { audio.pause(); audio.src = ""; }
+
+    if (isAudio) {
+      videoWrap && (videoWrap.style.display = "none");
+      audioWrap && (audioWrap.style.display = "");
+      controls && (controls.style.display = "");
+      if (titleEl) titleEl.textContent = title || "Аудио";
+      if (audio) {
+        audio.src = url.startsWith("http") ? url : window.location.origin + url;
+        audio.load();
+        bindAudioControls(audio);
+      }
+    } else {
+      audioWrap && (audioWrap.style.display = "none");
+      videoWrap && (videoWrap.style.display = "");
+      controls && (controls.style.display = "none");
+      if (video) {
+        video.src = url.startsWith("http") ? url : window.location.origin + url;
+        video.load();
+      }
+    }
+
+    const openBtn = $("#playerOpen"), shareBtn = $("#playerShare");
+    if (openBtn) openBtn.onclick = () => openFile(playerUrl);
+    if (shareBtn) shareBtn.onclick = () => shareFile(playerUrl, playerTitle);
+
+    modal && modal.classList.add("is-open");
+  }
+
+  function closePlayer() {
+    const modal = $("#playerModal");
+    const video = $("#playerVideo"), audio = $("#playerAudio");
+    if (video) { video.pause(); video.src = ""; }
+    if (audio) { audio.pause(); audio.src = ""; }
+    modal && modal.classList.remove("is-open");
+  }
+
+  function bindAudioControls(audio) {
+    const seek = $("#playerSeek");
+    const playBtn = $("#playerPlay");
+    const backBtn = $("#playerBack");
+    const fwdBtn = $("#playerFwd");
+    const curEl = $("#playerCurrent");
+    const durEl = $("#playerDuration");
+
+    if (playBtn) {
+      playBtn.onclick = () => { if (audio.paused) audio.play(); else audio.pause(); };
+    }
+    if (backBtn) backBtn.onclick = () => { audio.currentTime = Math.max(0, audio.currentTime - 10); };
+    if (fwdBtn) fwdBtn.onclick = () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); };
+
+    audio.ontimeupdate = () => {
+      if (seek && isFinite(audio.duration)) seek.value = (audio.currentTime / audio.duration) * 100;
+      if (curEl) curEl.textContent = fmtTime(audio.currentTime);
+    };
+    audio.ondurationchange = () => { if (durEl) durEl.textContent = fmtTime(audio.duration); };
+    audio.onplay = () => { if (playBtn) playBtn.textContent = "⏸️"; };
+    audio.onpause = () => { if (playBtn) playBtn.textContent = "▶️"; };
+
+    if (seek) seek.oninput = () => { if (isFinite(audio.duration)) audio.currentTime = (seek.value / 100) * audio.duration; };
+  }
+
+  function initPlayer() {
+    $("#playerClose")?.addEventListener("click", closePlayer);
+    $("#playerBackdrop")?.addEventListener("click", closePlayer);
+  }
+
+  // ---------- Indicator ----------
   function syncIndicator(container, indicator, activeBtn) {
     if (!container || !indicator || !activeBtn) return;
-    const cRect = container.getBoundingClientRect();
-    const bRect = activeBtn.getBoundingClientRect();
-    const left = bRect.left - cRect.left;
-    const top = bRect.top - cRect.top;
-    indicator.style.left = "0px";
-    indicator.style.top = "0px";
+    const cRect = container.getBoundingClientRect(), bRect = activeBtn.getBoundingClientRect();
+    indicator.style.left = "0px"; indicator.style.top = "0px";
     indicator.style.width = `${Math.round(bRect.width)}px`;
     indicator.style.height = `${Math.round(bRect.height)}px`;
-    indicator.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    indicator.style.transform = `translate(${Math.round(bRect.left - cRect.left)}px, ${Math.round(bRect.top - cRect.top)}px)`;
   }
 
   // ---------- Tabs ----------
-  const tabsEl = $("#tabs");
-  const indEl = $("#tabsIndicator");
-
+  const tabsEl = $("#tabs"), indEl = $("#tabsIndicator");
   function setTab(name) {
-    const btns = $$("[data-tab]");
-    const panels = $$("[data-panel]");
-    btns.forEach((b) => b.classList.toggle("is-active", b.dataset.tab === name));
-    panels.forEach((p) => p.classList.toggle("is-active", p.dataset.panel === name));
-    const activeBtn = btns.find((b) => b.dataset.tab === name) || btns[0];
+    $$("[data-tab]").forEach(b => b.classList.toggle("is-active", b.dataset.tab === name));
+    $$("[data-panel]").forEach(p => p.classList.toggle("is-active", p.dataset.panel === name));
+    const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
     if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
-    if (name === "profile") {
-      window.EagleProfile?.renderProfile?.();
-      syncAllSegmini();
-    }
+    if (name === "profile") { window.EagleProfile?.renderProfile?.(); syncAllSegmini(); }
     if (name === "recent") loadRecents(false);
   }
   window.setTab = setTab;
 
   function bindTabs() {
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", e => {
       const btn = e.target.closest("[data-tab]");
-      if (!btn) return;
-      const name = btn.dataset.tab;
-      if (!name) return;
-      setTab(name);
+      if (!btn || !btn.dataset.tab) return;
+      setTab(btn.dataset.tab);
     }, true);
     const active = $("[data-tab].is-active");
     if (active) syncIndicator(tabsEl, indEl, active);
@@ -176,47 +208,33 @@
   function syncAllSegmini() { $$(".segmini").forEach(syncSegmini); }
   function setSegActive(seg, value) {
     if (!seg) return;
-    const btns = $$(".segmini__btn", seg);
-    btns.forEach((b) => b.classList.toggle("is-active", b.dataset.value === value));
+    $$(".segmini__btn", seg).forEach(b => b.classList.toggle("is-active", b.dataset.value === value));
     syncSegmini(seg);
   }
 
   // ---------- Settings modal ----------
   const modalEl = () => $("#settingsModal");
   function isModalOpen() { return modalEl()?.classList.contains("is-open"); }
-
   function openSettings() {
-    const m = modalEl();
-    if (!m) return;
+    const m = modalEl(); if (!m) return;
     const s = window.EagleProfile?.settings || { lang: "ru", theme: "dark" };
     setSegActive($("#langSeg"), s.lang);
     setSegActive($("#themeSeg"), s.theme);
-    m.classList.add("is-open");
-    m.setAttribute("aria-hidden", "false");
+    m.classList.add("is-open"); m.setAttribute("aria-hidden", "false");
     document.body.classList.add("modal-open");
     requestAnimationFrame(() => syncAllSegmini());
   }
-
   function closeSettings() {
-    const m = modalEl();
-    if (!m) return;
-    m.classList.remove("is-open");
-    m.setAttribute("aria-hidden", "true");
+    const m = modalEl(); if (!m) return;
+    m.classList.remove("is-open"); m.setAttribute("aria-hidden", "true");
     document.body.classList.remove("modal-open");
   }
 
   function getBotUsername() { return window.BOT_USERNAME || "EagleToolsBot"; }
-
   function openTgLink(url) {
     try {
-      if (window.Telegram?.WebApp?.openTelegramLink && url.startsWith("https://t.me/")) {
-        window.Telegram.WebApp.openTelegramLink(url);
-        return;
-      }
-      if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(url);
-        return;
-      }
+      if (window.Telegram?.WebApp?.openTelegramLink && url.startsWith("https://t.me/")) { window.Telegram.WebApp.openTelegramLink(url); return; }
+      if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(url); return; }
     } catch {}
     try { window.open(url, "_blank", "noopener"); } catch {}
   }
@@ -230,51 +248,28 @@
     if (bar) bar.style.width = `${val}%`;
     if (card) card.classList.toggle("is-progress", val > 0);
   }
-
-  function setProgressText(card, html) {
-    const el = getRole(card, "progress");
-    if (el) el.innerHTML = html || "";
-  }
-
+  function setProgressText(card, html) { const el = getRole(card, "progress"); if (el) el.innerHTML = html || ""; }
   function setResult(card, html) {
     const el = getRole(card, "result");
-    if (el) el.innerHTML = html || "";
+    if (el) { el.innerHTML = html || ""; el.style.display = html ? "" : "none"; }
   }
-
-  function resetCardUi(card) {
-    setProgress(card, 0);
-    setProgressText(card, "");
-    setResult(card, "");
-  }
+  function resetCardUi(card) { setProgress(card, 0); setProgressText(card, ""); setResult(card, ""); }
 
   // ---------- Helpers ----------
-  function pickFirstString(...vals) {
-    for (const v of vals) {
-      if (typeof v === "string" && v.trim()) return v.trim();
-    }
-    return "";
-  }
-
-  function extFromTool(tool) {
-    if (tool === "audio") return ".mp3";
-    return ".mp4";
-  }
-
+  function pickFirstString(...vals) { for (const v of vals) { if (typeof v === "string" && v.trim()) return v.trim(); } return ""; }
+  function extFromTool(tool) { return tool === "audio" ? ".mp3" : ".mp4"; }
   function normalizeDisplayName(name, tool) {
     const base = String(name || "").trim();
     if (!base) return "";
     if (/\.[a-z0-9]{2,5}$/i.test(base)) return base;
     return base + extFromTool(tool);
   }
-
   function extractOut(data, tool) {
     if (!data || typeof data !== "object") return null;
     const meta = data.metadata || data.meta || {};
     const out = data.out || data.result || data.file || {};
-    const fileId = pickFirstString(data.file_id, out.file_id, data.fileId, out.fileId) || "";
-    const downloadUrl =
-      pickFirstString(data.download_url, out.download_url, data.url, out.url) ||
-      (fileId ? `/api/file/${encodeURIComponent(fileId)}` : "");
+    const fileId = pickFirstString(data.file_id, out.file_id) || "";
+    const downloadUrl = pickFirstString(data.download_url, out.download_url, data.url, out.url) || (fileId ? `/api/file/${encodeURIComponent(fileId)}` : "");
     const title = pickFirstString(data.title, out.title, data.filename, out.filename, meta.title, meta.filename);
     const displayName = normalizeDisplayName(title || fileId, tool);
     if (!downloadUrl) return null;
@@ -288,22 +283,18 @@
     const tool = card?.dataset?.tool || "";
     const urlEl = getRole(card, "url");
     const url = (urlEl?.value || "").trim();
-
-    if (!url) {
-      toast(t("err_empty_url") || "Вставь ссылку", "warn", "⚠️");
-      return;
-    }
+    if (!url) { toast(t("err_empty_url") || "Вставь ссылку", "warn", "⚠️"); return; }
 
     resetCardUi(card);
-    setProgress(card, 18);
-    setProgressText(card, `<span class="muted">${escapeHtml(t("starting") || "Загрузка…")}</span>`);
+    setProgress(card, 20);
+    setProgressText(card, `<span>${t("starting") || "Загружаем…"}</span>`);
 
     const t0 = performance.now();
     const r = await apiPost(`/api/save_job?tool=${encodeURIComponent(tool)}`, { url });
 
     if (!r.ok) {
       resetCardUi(card);
-      setResult(card, `<span class="muted">${escapeHtml(prettyErr(r))}</span>`);
+      setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⛔</span><span class="result-file__name muted">${escapeHtml(prettyErr(r))}</span></div></div>`);
       toast(prettyErr(r), "err", "⛔");
       return;
     }
@@ -317,17 +308,21 @@
 
     if (out) {
       setProgress(card, 0);
-      setProgressText(card, `${escapeHtml(t("done_in") || "Готово за")} ${escapeHtml(secs)}s`);
+      setProgressText(card, `✓ Готово за ${escapeHtml(secs)}s`);
 
-      // Show result with open + share buttons
       const isAudio = tool === "audio" || out.displayName.endsWith(".mp3");
+      const icon = isAudio ? "🎵" : "🎬";
+
       setResult(card, `
         <div class="result-file">
-          <div class="result-file__name">${escapeHtml(out.displayName)}</div>
+          <div class="result-file__top">
+            <span class="result-file__icon">${icon}</span>
+            <span class="result-file__name">${escapeHtml(out.displayName)}</span>
+          </div>
           <div class="result-file__actions">
             <button class="btn btn--secondary btn--sm" type="button"
               data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}">
-              ${isAudio ? "🎵 Открыть" : "🎬 Открыть"}
+              🌐 Открыть
             </button>
             <button class="btn btn--primary btn--sm" type="button"
               data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
@@ -344,17 +339,17 @@
 
     setProgress(card, 0);
     setProgressText(card, "");
-    setResult(card, `<span class="muted">${escapeHtml(t("queued") || "В очереди")}</span>`);
+    setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⏳</span><span class="result-file__name muted">${escapeHtml(t("queued") || "В очереди")}</span></div></div>`);
     toast(t("job_created") || "Задание создано", "ok", "✅");
   }
 
   function bindToolRuns() {
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", e => {
       const btn = e.target.closest("[data-role='run']");
       if (!btn) return;
       const card = btn.closest("[data-tool]");
       if (!card) return;
-      runTool(card).catch((err) => toast(String(err?.message || err), "err", "⛔"));
+      runTool(card).catch(err => toast(String(err?.message || err), "err", "⛔"));
     }, true);
   }
 
@@ -362,21 +357,14 @@
   function fmtBytes(n) {
     const v = Number(n);
     if (!Number.isFinite(v) || v <= 0) return "";
-    const u = ["B", "KB", "MB", "GB", "TB"];
-    let i = 0, x = v;
+    const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0, x = v;
     while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; }
     return `${x.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
   }
-
   function fmtWhen(iso) {
     if (!iso) return "";
-    try {
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "";
-      return d.toLocaleString();
-    } catch { return ""; }
+    try { const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return d.toLocaleString(); } catch { return ""; }
   }
-
   function itemTitle(item) {
     const meta = item?.metadata || item?.meta || {};
     return pickFirstString(item?.title, item?.filename, meta?.title, meta?.filename);
@@ -391,44 +379,52 @@
     const size = fmtBytes(item?.size_bytes);
     const downloadUrl = item?.download_url || "";
     const canDl = !!downloadUrl;
-    const badge =
-      status === "done" ? "done" :
-      status === "failed" || status === "error" ? "err" :
-      status === "running" ? "run" : "q";
+    const ext = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio = ["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext);
+    const isVideo = ["mp4", "webm", "mov", "avi", "mkv"].includes(ext);
+    const thumbIcon = isAudio ? "🎵" : isVideo ? "🎬" : "📄";
+    const thumbClass = isAudio ? "recentitem__thumb--audio" : isVideo ? "recentitem__thumb--video" : "";
+
+    const badge = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
 
     return `
       <div class="recentitem" data-id="${escapeHtml(id)}">
-        <div class="recentitem__main">
-          <div class="recentitem__title">${escapeHtml(title)}</div>
-          <div class="recentitem__sub muted">
-            <span class="pill pill--${badge}">${escapeHtml(kind)} • ${escapeHtml(status)}</span>
-            ${when ? `<span class="dot">•</span><span>${escapeHtml(when)}</span>` : ""}
-            ${size ? `<span class="dot">•</span><span>${escapeHtml(size)}</span>` : ""}
+        <div class="recentitem__body">
+          <div class="recentitem__left">
+            <div class="recentitem__thumb ${thumbClass}">${thumbIcon}</div>
+            <div class="recentitem__main">
+              <div class="recentitem__title">${escapeHtml(title)}</div>
+              <div class="recentitem__sub">
+                <span class="pill pill--${badge}">${escapeHtml(kind)} • ${escapeHtml(status)}</span>
+                ${when ? `<span class="dot">•</span><span>${escapeHtml(when)}</span>` : ""}
+                ${size ? `<span class="dot">•</span><span>${escapeHtml(size)}</span>` : ""}
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="recentitem__actions">
-          <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
-            data-url="${escapeHtml(downloadUrl)}" aria-label="Открыть">⬇️</button>
-          <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
-            data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Поделиться">📤</button>
-          <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del"
-            aria-label="Удалить">🗑️</button>
+          <div class="recentitem__actions">
+            ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
+              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
+              data-audio="${isAudio}" aria-label="Воспроизвести">▶️</button>` : ""}
+            <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
+              data-url="${escapeHtml(downloadUrl)}" aria-label="Открыть">⬇️</button>
+            <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
+              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Поделиться">📤</button>
+            <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Удалить">🗑️</button>
+          </div>
         </div>
       </div>
     `;
   }
 
   function hash(items) {
-    try {
-      return JSON.stringify(items.map((x) => [x?.id, x?.status, x?.updated_at, x?.file_id, x?.download_url, x?.title]));
-    } catch { return String(items?.length || 0); }
+    try { return JSON.stringify(items.map(x => [x?.id, x?.status, x?.file_id, x?.download_url, x?.title])); }
+    catch { return String(items?.length || 0); }
   }
 
   function renderRecents(items) {
-    const list = $("#recentList");
-    if (!list) return;
+    const list = $("#recentList"); if (!list) return;
     if (!items || !items.length) {
-      list.innerHTML = `<div class="muted small">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
+      list.innerHTML = `<div class="muted small" style="text-align:center;padding:20px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
       return;
     }
     list.innerHTML = items.map(recentRow).join("");
@@ -436,10 +432,7 @@
 
   async function loadRecents(silent = true) {
     const r = await apiGet("/api/recent");
-    if (!r || !r.ok) {
-      if (!silent) toast(prettyErr(r), "err", "⛔");
-      return;
-    }
+    if (!r || !r.ok) { if (!silent) toast(prettyErr(r), "err", "⛔"); return; }
     const d = r.data || {};
     const items = Array.isArray(d) ? d : Array.isArray(d.items) ? d.items : [];
     const h = hash(items);
@@ -455,31 +448,15 @@
     if (action === "close-settings") { closeSettings(); return; }
 
     if (action === "open-upgrade") {
-      const bot = getBotUsername();
-      openTgLink(`https://t.me/${encodeURIComponent(bot)}?start=premium`);
+      openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=premium`);
       setTimeout(() => { try { window.Telegram?.WebApp?.close(); } catch {} }, 300);
       return;
     }
+    if (action === "open-support") { openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=support`); return; }
+    if (action === "open-privacy") { openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=privacy`); return; }
 
-    if (action === "open-support") {
-      openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=support`);
-      return;
-    }
-
-    if (action === "open-privacy") {
-      openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=privacy`);
-      return;
-    }
-
-    if (action === "open-file") {
-      openFile(el.dataset.url || "");
-      return;
-    }
-
-    if (action === "share-file") {
-      await shareFile(el.dataset.url || "", el.dataset.title || "");
-      return;
-    }
+    if (action === "open-file") { openFile(el.dataset.url || ""); return; }
+    if (action === "share-file") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "lang") {
       const v = el.dataset.value;
@@ -491,13 +468,9 @@
       }
       return;
     }
-
     if (action === "theme") {
       const v = el.dataset.value;
-      if (v === "dark" || v === "light") {
-        window.EagleProfile?.setTheme?.(v);
-        setSegActive($("#themeSeg"), v);
-      }
+      if (v === "dark" || v === "light") { window.EagleProfile?.setTheme?.(v); setSegActive($("#themeSeg"), v); }
       return;
     }
 
@@ -508,32 +481,25 @@
       catch { toast("Copy failed", "err", "⛔"); }
       return;
     }
-
     if (action === "share-ref") {
       const link = window.EagleProfile?.refLink || "";
       if (!link) return toast("—", "warn", "⚠️");
-      try {
-        if (navigator.share) await navigator.share({ text: link, url: link });
-        else await navigator.clipboard.writeText(link);
-        toast("OK", "ok", "✅");
-      } catch {}
+      try { if (navigator.share) await navigator.share({ text: link, url: link }); else await navigator.clipboard.writeText(link); toast("OK", "ok", "✅"); }
+      catch {}
       return;
     }
 
-    if (action === "recent-dl") {
-      const url = el.dataset.url || "";
-      if (!url) return;
-      openFile(url);
-      return;
-    }
-
-    if (action === "recent-share") {
+    if (action === "recent-play") {
       const url = el.dataset.url || "";
       const title = el.dataset.title || "";
+      const isAudio = el.dataset.audio === "true";
       if (!url) return;
-      await shareFile(url, title);
+      openPlayer(url, title, isAudio);
       return;
     }
+
+    if (action === "recent-dl") { openFile(el.dataset.url || ""); return; }
+    if (action === "recent-share") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "recent-del") {
       const row = el.closest(".recentitem");
@@ -541,16 +507,12 @@
       if (!id) return;
       const ok = confirm(t("confirm_delete") || "Удалить?");
       if (!ok) return;
-      row.style.transition = "opacity 0.3s";
+      row.style.transition = "opacity .3s, transform .3s";
       row.style.opacity = "0";
+      row.style.transform = "translateX(20px)";
       setTimeout(() => row.remove(), 300);
       const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
-      if (!r.ok) {
-        toast(prettyErr(r), "err", "⛔");
-        lastHash = "";
-        loadRecents(false);
-        return;
-      }
+      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
       toast(t("deleted") || "Удалено", "ok", "✅");
       lastHash = "";
       loadRecents(true);
@@ -558,7 +520,7 @@
   }
 
   function bindGlobalClick() {
-    document.addEventListener("click", async (e) => {
+    document.addEventListener("click", async e => {
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
       const action = btn.dataset.action;
@@ -574,9 +536,8 @@
     bindTabs();
     bindToolRuns();
     bindGlobalClick();
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && isModalOpen()) closeSettings();
-    });
+    initPlayer();
+    document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
     syncAllSegmini();
     loadRecents(true).catch(() => {});
     window.__EAGLE_APP_READY__ = true;
