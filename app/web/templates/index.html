@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260315" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260317" />
   </head>
-
   <body>
     <div class="app">
+
       <!-- HEADER -->
       <header class="header">
         <div class="brand">
@@ -23,10 +23,12 @@
         </div>
         <div class="header__actions">
           <button class="iconbtn iconbtn--header" type="button" data-action="open-profile" aria-label="Profile">
-            <span class="header__avatar" id="headerAvatar" aria-hidden="true">👤</span>
+            <span class="header__avatar" id="headerAvatar" aria-hidden="true">
+              <img src="/static/icons/user.svg" class="icon icon--muted" alt="" />
+            </span>
           </button>
           <button class="iconbtn iconbtn--header" type="button" data-action="open-settings" aria-label="Settings">
-            <span aria-hidden="true">⚙️</span>
+            <img src="/static/icons/settings.svg" class="icon icon--muted" alt="" />
           </button>
         </div>
       </header>
@@ -47,23 +49,26 @@
           <h1 class="h1" data-i18n="tab_tools">Инструменты</h1>
           <div class="toolgrid">
 
-            <!-- Video downloader -->
+            <!-- Video -->
             <div class="toolcard" data-tool="save">
               <div class="toolcard__header">
-                <div class="toolcard__icon toolcard__icon--video">🎬</div>
+                <div class="toolcard__icon toolcard__icon--video">
+                  <img src="/static/icons/video.svg" class="icon icon--rose" alt="" />
+                </div>
                 <div class="toolcard__meta">
                   <div class="toolcard__title" data-i18n="links">Видео</div>
-                  <div class="toolcard__desc">YouTube и другие платформы</div>
+                  <div class="toolcard__desc" data-i18n="tool_video_desc">YouTube и другие платформы</div>
                 </div>
                 <div class="toolcard__badge toolcard__badge--video">MP4</div>
               </div>
               <div class="toolcard__input-row">
                 <div class="toolcard__input-wrap">
-                  <span class="toolcard__input-icon">🔗</span>
+                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
                   <input class="input" data-role="url" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
                 </div>
-                <button class="btn btn--video" data-role="run" type="button" data-i18n="btn_download">
-                  ⬇️ Скачать
+                <button class="btn btn--video" data-role="run" type="button">
+                  <img src="/static/icons/download.svg" class="icon" alt="" />
+                  <span data-i18n="btn_download">Скачать</span>
                 </button>
               </div>
               <div class="toolcard__progress">
@@ -73,28 +78,28 @@
                 <div class="toolcard__progress-text muted" data-role="progress"></div>
               </div>
               <div class="toolcard__result" data-role="result"></div>
-              <!-- compat -->
-              <div class="progress" style="display:none"><div class="progress__bar" data-role="bar2"></div></div>
-              <div class="result" style="display:none"><div data-role="result2"></div></div>
             </div>
 
-            <!-- Audio / SoundCloud -->
+            <!-- Audio -->
             <div class="toolcard" data-tool="audio">
               <div class="toolcard__header">
-                <div class="toolcard__icon toolcard__icon--audio">🎵</div>
+                <div class="toolcard__icon toolcard__icon--audio">
+                  <img src="/static/icons/music.svg" class="icon icon--violet" alt="" />
+                </div>
                 <div class="toolcard__meta">
                   <div class="toolcard__title">SoundCloud</div>
-                  <div class="toolcard__desc">Треки и плейлисты</div>
+                  <div class="toolcard__desc" data-i18n="tool_audio_desc">Треки и плейлисты</div>
                 </div>
                 <div class="toolcard__badge toolcard__badge--audio">MP3</div>
               </div>
               <div class="toolcard__input-row">
                 <div class="toolcard__input-wrap">
-                  <span class="toolcard__input-icon">🔗</span>
+                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
                   <input class="input" data-role="url" type="url" placeholder="https://soundcloud.com/..." autocomplete="off" />
                 </div>
-                <button class="btn btn--audio-orange" data-role="run" type="button" data-i18n="btn_make_mp3">
-                  🎵 MP3
+                <button class="btn btn--audio-orange" data-role="run" type="button">
+                  <img src="/static/icons/music.svg" class="icon" alt="" />
+                  <span data-i18n="btn_make_mp3">MP3</span>
                 </button>
               </div>
               <div class="toolcard__progress">
@@ -123,6 +128,7 @@
         <section class="panel" data-panel="profile">
           <h1 class="h1" data-i18n="profile_title">Профиль</h1>
           <div class="profile">
+
             <div class="card profile-hero">
               <div class="profile-hero__bg" id="profileHeroBg"></div>
               <div class="profile-hero__content">
@@ -135,7 +141,7 @@
 
             <div class="card usage-card">
               <div class="usage-card__header">
-                <div class="usage-card__icon">📊</div>
+                <div class="usage-card__icon"><img src="/static/icons/chart-bar.svg" class="icon icon--rose" style="width:20px;height:20px;" alt="" /></div>
                 <div class="usage-card__title" data-i18n="usage_title">Использование</div>
               </div>
               <div class="usage-stats">
@@ -157,8 +163,8 @@
                   </div>
                 </div>
               </div>
-              <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-action="open-upgrade" data-i18n="upgrade_premium">
-                ⚡️ Получить Premium
+              <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-action="open-upgrade">
+                ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
               </button>
             </div>
 
@@ -197,15 +203,16 @@
               </div>
               <div class="refs-actions">
                 <button class="btn btn--secondary" type="button" data-action="copy-ref">
-                  <span>📋</span>
+                  <img src="/static/icons/copy.svg" class="icon icon--sm" alt="" />
                   <span data-i18n="ref_copy_btn">Копировать</span>
                 </button>
                 <button class="btn btn--secondary" type="button" data-action="share-ref">
-                  <span>↗️</span>
+                  <img src="/static/icons/share-2.svg" class="icon icon--sm" alt="" />
                   <span data-i18n="ref_share_btn">Поделиться</span>
                 </button>
               </div>
             </div>
+
           </div>
         </section>
 
@@ -216,16 +223,16 @@
 
             <div class="card help-section">
               <div class="help-section__title">
-                <span class="help-section__title-icon">🛠</span>
+                <span class="help-section__title-icon"><img src="/static/icons/wrench.svg" class="icon icon--muted" style="width:17px;height:17px;" alt="" /></span>
                 <span data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
               </div>
-              <ul class="help-list">
-                <li>Открой вкладку <strong>Инструменты</strong> — вставь ссылку на видео или аудио</li>
-                <li>Поддерживаются <strong>YouTube</strong>, <strong>SoundCloud</strong> и другие публичные сайты</li>
-                <li>Нажми <strong>Скачать</strong> для видео (mp4) или <strong>MP3</strong> для аудио</li>
-                <li>После загрузки нажми <strong>Открыть</strong> или <strong>Поделиться</strong></li>
-                <li>Все файлы видны во вкладке <strong>История</strong></li>
-              </ul>
+              <div class="help-steps">
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma1">Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma2">Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma3">Нажми <b>Скачать</b> для видео (mp4) или <b>MP3</b> для аудио</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma4">После загрузки нажми <b>Открыть</b> или <b>Поделиться</b></div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma5">Все файлы видны во вкладке <b>История</b></div></div>
+              </div>
             </div>
 
             <div class="card help-section">
@@ -235,12 +242,14 @@
               </div>
               <div class="help-feature-grid">
                 <div class="help-feature">
-                  <div class="help-feature__icon">🎵</div>
+                  <div class="help-feature__icon">
+                    <img src="/static/icons/music.svg" class="icon icon--violet icon--lg" alt="" />
+                  </div>
                   <div class="help-feature__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
                   <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в mp3, wav или другой формат</div>
                 </div>
                 <div class="help-feature">
-                  <div class="help-feature__icon">🎙</div>
+                  <div class="help-feature__icon"><img src="/static/icons/microphone.svg" class="icon icon--rose icon--lg" alt="" /></div>
                   <div class="help-feature__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
                   <div class="help-feature__desc" data-i18n="help_bot_stt_desc">Отправь голосовое или аудио — бот расшифрует текст с помощью Whisper AI</div>
                 </div>
@@ -252,16 +261,14 @@
                 <span class="help-section__title-icon">⚡️</span>
                 <span data-i18n="help_premium_title">Преимущества Premium</span>
               </div>
-              <ul class="help-premium-list">
-                <li data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</li>
-                <li data-i18n="help_prem_2">Приоритетная обработка заданий</li>
-                <li data-i18n="help_prem_3">Доступ ко всем будущим функциям</li>
-                <li data-i18n="help_prem_4">Поддержка развития проекта</li>
-              </ul>
+              <div class="help-prem-list">
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_2">Приоритетная обработка заданий</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_3">Доступ ко всем будущим функциям</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_4">Поддержка развития проекта</span></div>
+              </div>
               <div style="margin-top:14px">
-                <button class="btn btn--premium" type="button" data-action="open-upgrade">
-                  ⚡️ Получить Premium
-                </button>
+                <button class="btn btn--premium" type="button" data-action="open-upgrade">⚡️ <span data-i18n="upgrade_premium">Получить Premium</span></button>
               </div>
             </div>
 
@@ -271,36 +278,25 @@
                 <span data-i18n="help_ref_title">Реферальная система</span>
               </div>
               <div class="help-ref-steps">
-                <div class="help-ref-step">
-                  <div class="help-ref-step__num">1</div>
-                  <div class="help-ref-step__text">Скопируй реферальную ссылку во вкладке Профиль</div>
-                </div>
-                <div class="help-ref-step">
-                  <div class="help-ref-step__num">2</div>
-                  <div class="help-ref-step__text">Поделись с друзьями — пусть запустят бота по ней</div>
-                </div>
-                <div class="help-ref-step">
-                  <div class="help-ref-step__num">3</div>
-                  <div class="help-ref-step__text">За каждого друга получишь <strong>+5 загрузок</strong> в день</div>
-                </div>
-                <div class="help-ref-step">
-                  <div class="help-ref-step__num">4</div>
-                  <div class="help-ref-step__text">Каждые <strong>3 приглашённых</strong> дают Premium +3 дня</div>
-                </div>
+                <div class="help-ref-step"><div class="help-ref-step__num">1</div><div class="help-ref-step__text" id="hrf1">Скопируй реферальную ссылку во вкладке Профиль</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">2</div><div class="help-ref-step__text" id="hrf2">Поделись с друзьями — пусть запустят бота по ней</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">3</div><div class="help-ref-step__text" id="hrf3">За каждого друга получишь <b>+5 загрузок</b> в день</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">4</div><div class="help-ref-step__text" id="hrf4">Каждые <b>3 приглашённых</b> дают Premium +3 дня</div></div>
               </div>
             </div>
 
             <div class="card help-section">
               <div class="help-section__title">
-                <span class="help-section__title-icon">🔒</span>
+                <img src="/static/icons/shield.svg" class="icon icon--ok help-section__title-icon" alt="" />
                 <span data-i18n="help_privacy_title">Конфиденциальность</span>
               </div>
               <div class="help-privacy-note">
                 <span class="help-privacy-note__icon">🛡</span>
-                <span>Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.</span>
+                <span id="hpriv">Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.</span>
               </div>
               <button class="btn help-btn-privacy" type="button" data-action="open-privacy">
-                🔒 Политика конфиденциальности
+                <img src="/static/icons/shield.svg" class="icon icon--sm" alt="" />
+                <span data-i18n="privacy_policy">Политика конфиденциальности</span>
               </button>
             </div>
 
@@ -318,7 +314,7 @@
         <div class="modal__head">
           <div class="modal__title" id="settingsTitle" data-i18n="settings">Настройки</div>
           <button class="iconbtn iconbtn--header" type="button" data-action="close-settings" aria-label="Close">
-            <span aria-hidden="true">✕</span>
+            <span style="font-size:15px;font-weight:600;">✕</span>
           </button>
         </div>
         <div class="modal__body">
@@ -326,7 +322,7 @@
             <div class="settings-card__title" data-i18n="settings">Настройки</div>
             <div class="setting-row">
               <div class="setting-row__label">
-                <span class="setting-row__icon">🌐</span>
+                <img src="/static/icons/globe.svg" class="icon icon--muted setting-row__icon" alt="" />
                 <span data-i18n="language">Язык</span>
               </div>
               <div class="segmini" id="langSeg">
@@ -337,7 +333,7 @@
             </div>
             <div class="setting-row">
               <div class="setting-row__label">
-                <span class="setting-row__icon">🎨</span>
+                <img src="/static/icons/palette.svg" class="icon icon--muted setting-row__icon" alt="" />
                 <span data-i18n="theme">Тема</span>
               </div>
               <div class="segmini" id="themeSeg">
@@ -349,12 +345,16 @@
           </div>
           <div class="modal__links">
             <button class="modal__link" type="button" data-action="open-support">
-              <span class="modal__linkIcon">💬</span>
+              <span class="modal__linkIcon">
+                <img src="/static/icons/message-circle.svg" class="icon icon--rose" alt="" />
+              </span>
               <span class="modal__linkText" data-i18n="support">Поддержка</span>
               <span class="modal__chev">›</span>
             </button>
             <button class="modal__link" type="button" data-action="open-privacy">
-              <span class="modal__linkIcon">🔒</span>
+              <span class="modal__linkIcon">
+                <img src="/static/icons/shield.svg" class="icon icon--ok" alt="" />
+              </span>
               <span class="modal__linkText" data-i18n="privacy_policy">Политика конфиденциальности</span>
               <span class="modal__chev">›</span>
             </button>
@@ -368,44 +368,55 @@
       <div class="player-modal__backdrop" id="playerBackdrop"></div>
       <div class="player-modal__sheet">
         <div class="player-modal__handle"></div>
-        <button class="player-modal__close" id="playerClose" type="button">✕</button>
+        <button class="player-modal__close" id="playerClose" type="button">
+          <span style="font-size:13px;font-weight:600;">✕</span>
+        </button>
         <div class="player-modal__body">
-          <!-- video -->
           <div class="player-video-wrap" id="playerVideoWrap" style="display:none;">
             <video id="playerVideo" controls playsinline></video>
           </div>
-          <!-- audio -->
           <div class="player-audio-wrap" id="playerAudioWrap" style="display:none;">
-            <div class="player-audio-cover" id="playerAudioCover">🎵</div>
+            <div class="player-audio-cover" id="playerAudioCover">
+              <img src="/static/icons/music.svg" class="icon icon--rose" style="width:52px;height:52px;" alt="" />
+            </div>
             <div class="player-audio-title" id="playerAudioTitle">—</div>
-            <div class="player-audio-sub muted">EagleTools</div>
+            <div class="player-audio-sub muted" data-i18n="player_sub">EagleTools</div>
             <audio id="playerAudio"></audio>
           </div>
-
-          <!-- controls (audio only) -->
           <div class="player-controls" id="playerControls" style="display:none;">
-            <input class="player-seek" id="playerSeek" type="range" min="0" max="100" value="0" />
+            <input class="player-seek" id="playerSeek" type="range" min="0" max="100" value="0" step="0.1" />
             <div class="player-time">
               <span id="playerCurrent">0:00</span>
               <span id="playerDuration">0:00</span>
             </div>
             <div class="player-btns">
-              <button class="player-btn-skip" id="playerBack" type="button">⏪</button>
-              <button class="player-btn-play" id="playerPlay" type="button">▶️</button>
-              <button class="player-btn-skip" id="playerFwd" type="button">⏩</button>
+              <button class="player-btn-skip" id="playerBack" type="button">
+                <img src="/static/icons/skip-back.svg" class="icon" style="width:22px;height:22px;" alt="" />
+              </button>
+              <button class="player-btn-play" id="playerPlay" type="button">
+                <img src="/static/icons/play.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" alt="" id="playerPlayIcon" />
+              </button>
+              <button class="player-btn-skip" id="playerFwd" type="button">
+                <img src="/static/icons/skip-forward.svg" class="icon" style="width:22px;height:22px;" alt="" />
+              </button>
             </div>
           </div>
-
           <div class="player-actions" id="playerActions">
-            <button class="btn btn--secondary" type="button" id="playerOpen">🌐 Открыть</button>
-            <button class="btn btn--primary" type="button" id="playerShare">📤 Поделиться</button>
+            <button class="btn btn--secondary" type="button" id="playerOpen">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" style="flex-shrink:0"><path d="M224,104a8,8,0,0,1-16,0V59.32l-82.34,82.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"></path></svg>
+              <span id="playerOpenLabel">Открыть</span>
+            </button>
+            <button class="btn btn--primary" type="button" id="playerShare">
+              <img src="/static/icons/share-2.svg" class="icon icon--sm icon--rose" alt="" />
+              <span id="playerShareLabel">Поделиться</span>
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <script src="/static/api.js?v=20260315"></script>
-    <script src="/static/profile.js?v=20260315"></script>
-    <script src="/static/app.js?v=20260315"></script>
+    <script src="/static/api.js?v=20260317"></script>
+    <script src="/static/profile.js?v=20260317"></script>
+    <script src="/static/app.js?v=20260317"></script>
   </body>
 </html>

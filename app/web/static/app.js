@@ -54,11 +54,29 @@
       return { ok: true, data: r };
     } catch (e) { return { ok: false, error: String(e?.message || e) }; }
   }
+  const ERROR_MAP = {
+    "save_failed": () => t("err_save_failed") || "Не удалось загрузить файл",
+    "soundcloud_failed": () => t("err_soundcloud") || "Ошибка SoundCloud",
+    "daily_limit_reached": () => t("limit_reached") || "Дневной лимит исчерпан",
+    "ip_blocked": () => t("err_ip_blocked") || "Платформа заблокировала сервер",
+    "yt_dlp_timeout": () => t("err_timeout") || "Превышено время ожидания",
+    "bad_url": () => t("err_bad_url") || "Неверная ссылка",
+    "unknown_tool": () => t("err_unknown_tool") || "Неизвестный инструмент",
+    "missing_init_data": () => t("err_auth") || "Ошибка авторизации",
+    "not_media_url": () => t("err_not_media") || "Ссылка не ведёт на медиафайл",
+    "too_large": () => t("err_too_large") || "Файл слишком большой",
+    "empty_download": () => t("err_empty") || "Пустой файл",
+  };
+
   function prettyErr(r) {
-    if (!r) return "Unknown error";
-    if (r.error) return String(r.error);
-    if (r.data && typeof r.data === "object") { const d = r.data; return d.detail || d.message || JSON.stringify(d); }
-    return "Request failed";
+    if (!r) return t("err_unknown") || "Неизвестная ошибка";
+    const raw = r.error ? String(r.error) : (r.data && typeof r.data === "object") ? (r.data.detail || r.data.message || "") : "";
+    // Check known error codes
+    for (const [code, fn] of Object.entries(ERROR_MAP)) {
+      if (raw.startsWith(code) || raw.includes(code)) return fn();
+    }
+    if (raw) return raw;
+    return t("err_unknown") || "Неизвестная ошибка";
   }
 
   // ---------- Open / Share ----------
@@ -72,7 +90,7 @@
     if (!url) return;
     const full = url.startsWith("http") ? url : window.location.origin + url;
     try { if (navigator.share) { await navigator.share({ title: title || "EagleTools", url: full }); return; } } catch {}
-    try { await navigator.clipboard.writeText(full); toast("Ссылка скопирована", "ok", "📋"); } catch { openFile(url); }
+    try { await navigator.clipboard.writeText(full); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch { openFile(url); }
   }
 
   // ---------- Media Player ----------
@@ -81,6 +99,11 @@
     if (!isFinite(sec)) return "0:00";
     const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
+  function updateSeekFill(el, pct) {
+    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    el.style.background = `linear-gradient(to right, #e8195a 0%, #e8195a ${p}%, rgba(255,255,255,.10) ${p}%, rgba(255,255,255,.10) 100%)`;
   }
 
   function openPlayer(url, title, isAudio) {
@@ -116,6 +139,9 @@
     }
 
     const openBtn = $("#playerOpen"), shareBtn = $("#playerShare");
+    const openLabel = $("#playerOpenLabel"), shareLabel = $("#playerShareLabel");
+    if (openLabel) openLabel.textContent = t("player_open") || "Открыть";
+    if (shareLabel) shareLabel.textContent = t("player_share") || "Поделиться";
     if (openBtn) openBtn.onclick = () => openFile(playerUrl);
     if (shareBtn) shareBtn.onclick = () => shareFile(playerUrl, playerTitle);
 
@@ -145,14 +171,26 @@
     if (fwdBtn) fwdBtn.onclick = () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); };
 
     audio.ontimeupdate = () => {
-      if (seek && isFinite(audio.duration)) seek.value = (audio.currentTime / audio.duration) * 100;
+      if (seek && isFinite(audio.duration) && audio.duration > 0) {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        seek.value = pct;
+        updateSeekFill(seek, pct);
+      }
       if (curEl) curEl.textContent = fmtTime(audio.currentTime);
     };
     audio.ondurationchange = () => { if (durEl) durEl.textContent = fmtTime(audio.duration); };
-    audio.onplay = () => { if (playBtn) playBtn.textContent = "⏸️"; };
-    audio.onpause = () => { if (playBtn) playBtn.textContent = "▶️"; };
+    audio.onplay = () => { if (playBtn) { playBtn.innerHTML = `<img src="/static/icons/pause.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" />`; } };
+    audio.onpause = () => { if (playBtn) { playBtn.innerHTML = `<img src="/static/icons/play.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" />`; } };
 
-    if (seek) seek.oninput = () => { if (isFinite(audio.duration)) audio.currentTime = (seek.value / 100) * audio.duration; };
+    if (seek) {
+      updateSeekFill(seek, 0);
+      seek.oninput = () => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          audio.currentTime = (seek.value / 100) * audio.duration;
+          updateSeekFill(seek, seek.value);
+        }
+      };
+    }
   }
 
   function initPlayer() {
@@ -177,8 +215,9 @@
     $$("[data-panel]").forEach(p => p.classList.toggle("is-active", p.dataset.panel === name));
     const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
     if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
-    if (name === "profile") { window.EagleProfile?.renderProfile?.(); syncAllSegmini(); }
+    if (name === "profile") { window.EagleProfile?.renderProfile?.(); window.EagleProfile?.init?.(); syncAllSegmini(); }
     if (name === "recent") loadRecents(false);
+    if (name === "help") window.EagleProfile?.init?.();
   }
   window.setTab = setTab;
 
@@ -382,7 +421,7 @@
     const ext = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
     const isAudio = ["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext);
     const isVideo = ["mp4", "webm", "mov", "avi", "mkv"].includes(ext);
-    const thumbIcon = isAudio ? "🎵" : isVideo ? "🎬" : "📄";
+    const thumbIcon = isAudio ? `<img src="/static/icons/music.svg" class="icon" />` : isVideo ? `<img src="/static/icons/video.svg" class="icon" />` : "📄";
     const thumbClass = isAudio ? "recentitem__thumb--audio" : isVideo ? "recentitem__thumb--video" : "";
 
     const badge = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
@@ -404,12 +443,12 @@
           <div class="recentitem__actions">
             ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
               data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-              data-audio="${isAudio}" aria-label="Воспроизвести">▶️</button>` : ""}
+              data-audio="${isAudio}" aria-label="Воспроизвести"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
             <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" aria-label="Открыть">⬇️</button>
+              data-url="${escapeHtml(downloadUrl)}" aria-label="Открыть"><img src="/static/icons/download.svg" class="icon" /></button>
             <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Поделиться">📤</button>
-            <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Удалить">🗑️</button>
+              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Поделиться"><img src="/static/icons/share-2.svg" class="icon" /></button>
+            <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Удалить"><img src="/static/icons/trash-2.svg" class="icon" /></button>
           </div>
         </div>
       </div>
@@ -452,8 +491,11 @@
       setTimeout(() => { try { window.Telegram?.WebApp?.close(); } catch {} }, 300);
       return;
     }
-    if (action === "open-support") { openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=support`); return; }
-    if (action === "open-privacy") { openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=privacy`); return; }
+    if (action === "open-support") { openTgLink("https://t.me/zorixyzz"); return; }
+    if (action === "open-privacy") {
+      try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2"); return; } } catch {}
+      window.open("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2", "_blank"); return;
+    }
 
     if (action === "open-file") { openFile(el.dataset.url || ""); return; }
     if (action === "share-file") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
@@ -465,6 +507,7 @@
         setSegActive($("#langSeg"), v);
         const a = $("[data-tab].is-active");
         if (a) syncIndicator(tabsEl, indEl, a);
+        setTimeout(() => window.EagleProfile?.init?.(), 10);
       }
       return;
     }
@@ -478,13 +521,13 @@
       const link = window.EagleProfile?.refLink || "";
       if (!link) return toast("—", "warn", "⚠️");
       try { await navigator.clipboard.writeText(link); toast(t("copied") || "Скопировано", "ok", "✅"); }
-      catch { toast("Copy failed", "err", "⛔"); }
+      catch { toast(t("copy_failed") || "Ошибка копирования", "err", "⛔"); }
       return;
     }
     if (action === "share-ref") {
       const link = window.EagleProfile?.refLink || "";
       if (!link) return toast("—", "warn", "⚠️");
-      try { if (navigator.share) await navigator.share({ text: link, url: link }); else await navigator.clipboard.writeText(link); toast("OK", "ok", "✅"); }
+      try { if (navigator.share) await navigator.share({ text: link, url: link }); else await navigator.clipboard.writeText(link); toast(t("copied") || "Скопировано!", "ok", "✅"); }
       catch {}
       return;
     }
