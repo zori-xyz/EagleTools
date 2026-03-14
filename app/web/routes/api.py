@@ -13,15 +13,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.config import settings
 from app.domain.services.jobs import create_job, get_job
-from app.infra.queue.arq import enqueue_stt
 from app.domain.services.media.saver import SaveError, SaveResult, cleanup_save_result, save_media_from_url
 from app.domain.services.media.soundcloud import SoundCloudError, cleanup_soundcloud_result, download_soundcloud_track_to_mp3
 from app.domain.services.quota import QuotaExceeded, consume_quota
 from app.infra.db.schema import JobKind, User
 from app.infra.db.session import get_session
+from app.infra.queue.arq import enqueue_stt
 from app.web.deps import get_current_user
 
 router = APIRouter(tags=["api"])
+file_router = APIRouter(tags=["files"])
 
 DATA_DIR = Path(settings.data_dir)
 RESULTS_DIR = DATA_DIR / "results"
@@ -31,6 +32,7 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 QUOTA_TOOLS: set[str] = {"save", "audio"}
+
 
 # ─────────────────────────────────────────────
 # File download token (HMAC, no DB needed)
@@ -42,7 +44,6 @@ def _file_token_secret() -> bytes:
 
 
 def make_file_token(file_id: str) -> str:
-    """Generate a short HMAC token for a file_id."""
     return hmac.new(_file_token_secret(), file_id.encode(), hashlib.sha256).hexdigest()[:32]
 
 
@@ -104,12 +105,10 @@ def _safe_resolve_under(base: Path, name: str) -> Path:
 def _ensure_under_results(out_path: Path) -> Path:
     if not out_path.exists() or not out_path.is_file():
         raise HTTPException(status_code=500, detail="save_inconsistent:no_file")
-
     if out_path.resolve().parent != RESULTS_DIR.resolve():
         fixed = RESULTS_DIR / out_path.name
         out_path.replace(fixed)
         out_path = fixed
-
     return out_path
 
 
@@ -121,18 +120,15 @@ async def _record_save_job(
     save_result: SaveResult | None = None,
 ) -> None:
     user_id = int(user.id)
-
     title = None
     source_url = None
     extractor = None
     size_bytes = None
-
     if save_result:
         title = save_result.title
         source_url = save_result.source_url
         extractor = save_result.extractor
         size_bytes = save_result.size_bytes
-
     await create_job(
         session,
         kind=JobKind.save,
@@ -180,7 +176,6 @@ async def api_save(
                 out_dir=RESULTS_DIR,
             )
             out_path = _ensure_under_results(Path(sc_res.filepath))
-
             try:
                 await consume_quota(session, user=user, cost=1)
             except QuotaExceeded:
@@ -190,16 +185,13 @@ async def api_save(
                 finally:
                     pass
                 raise HTTPException(status_code=429, detail="daily_limit_reached")
-
             await _record_save_job(session, user=user, file_id=out_path.name, save_result=None)
             await session.commit()
-
             return FileOut(
                 file_id=out_path.name,
                 filename=out_path.name,
                 download_url=file_download_url(out_path.name),
             )
-
         except SoundCloudError as e:
             await session.rollback()
             raise _http400(f"soundcloud_failed:{str(e)}")
@@ -222,7 +214,6 @@ async def api_save(
             out_dir=RESULTS_DIR,
         )
         out_path = _ensure_under_results(Path(res.filepath))
-
         try:
             await consume_quota(session, user=user, cost=1)
         except QuotaExceeded:
@@ -232,16 +223,13 @@ async def api_save(
             finally:
                 pass
             raise HTTPException(status_code=429, detail="daily_limit_reached")
-
         await _record_save_job(session, user=user, file_id=out_path.name, save_result=res)
         await session.commit()
-
         return FileOut(
             file_id=out_path.name,
             filename=out_path.name,
             download_url=file_download_url(out_path.name),
         )
-
     except SaveError as e:
         await session.rollback()
         raise _http400(f"save_failed:{str(e)}")
@@ -256,24 +244,6 @@ async def api_save(
             cleanup_save_result(res)
 
 
-@router.get("/file/{file_id}")
-async def api_file(file_id: str, token: str = Query(default="")):
-    """Public endpoint — verifies HMAC token, no auth required."""
-    if not token or not verify_file_token(file_id, token):
-        raise HTTPException(status_code=403, detail="invalid_token")
-
-    p = _safe_resolve_under(RESULTS_DIR, file_id)
-    if not p.exists() or not p.is_file():
-        raise HTTPException(status_code=404, detail="not_found")
-
-    media_type, _ = mimetypes.guess_type(str(p))
-    return FileResponse(
-        path=str(p),
-        media_type=media_type or "application/octet-stream",
-        filename=p.name,
-    )
-
-
 @router.post("/stt", response_model=SttOut)
 async def api_stt(
     payload: SttIn,
@@ -283,7 +253,6 @@ async def api_stt(
     src = _safe_resolve_under(RESULTS_DIR, payload.file_id)
     if not src.exists() or not src.is_file():
         raise HTTPException(status_code=404, detail="input_file_not_found")
-
     try:
         job = await create_job(
             session,
@@ -298,7 +267,6 @@ async def api_stt(
     except Exception:
         await session.rollback()
         raise
-
     await enqueue_stt(int(job.id))
     return SttOut(job_id=int(job.id))
 
@@ -312,13 +280,31 @@ async def api_stt_status(
     job = await get_job(session, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="job_not_found")
-
     job_user_id = getattr(job, "user_id", None)
     if job_user_id is not None and int(job_user_id) != int(user.id):
         raise HTTPException(status_code=404, detail="job_not_found")
-
     return SttStatusOut(
         status=str(job.status),
         result_path=getattr(job, "result_path", None),
         error=getattr(job, "error", None),
+    )
+
+
+# ─────────────────────────────────────────────
+# Public file endpoint (no auth, HMAC token)
+# ─────────────────────────────────────────────
+
+@file_router.get("/file/{file_id}")
+async def api_file(file_id: str, token: str = Query(default="")):
+    """Public endpoint — verifies HMAC token, no auth required."""
+    if not token or not verify_file_token(file_id, token):
+        raise HTTPException(status_code=403, detail="invalid_token")
+    p = _safe_resolve_under(RESULTS_DIR, file_id)
+    if not p.exists() or not p.is_file():
+        raise HTTPException(status_code=404, detail="not_found")
+    media_type, _ = mimetypes.guess_type(str(p))
+    return FileResponse(
+        path=str(p),
+        media_type=media_type or "application/octet-stream",
+        filename=p.name,
     )

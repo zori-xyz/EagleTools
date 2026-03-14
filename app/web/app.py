@@ -1,3 +1,4 @@
+# app/web/app.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.web.deps import get_tg_user
-from app.web.routes.api import router as api_router
+from app.web.routes.api import router as api_router, file_router
 from app.web.routes.profile import router as profile_router
 from app.web.routes.recent import router as recent_router
 from app.web.routes.internal import router as internal_router
@@ -29,6 +30,9 @@ def create_app() -> FastAPI:
     static_dir = (Path(__file__).resolve().parent / "static").resolve()
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+    # Public file download (no auth)
+    app.include_router(file_router, prefix="/api")
+
     # Protected API (WebApp auth)
     protected = [Depends(get_tg_user)]
     app.include_router(api_router, prefix="/api", dependencies=protected)
@@ -37,8 +41,7 @@ def create_app() -> FastAPI:
     # recent_router already has prefix="/api" inside router
     app.include_router(recent_router, dependencies=protected)
 
-    # INTERNAL API
-    # internal_router already has prefix="/api/internal" inside the router
+    # Internal API
     app.include_router(internal_router)
 
     # Index
