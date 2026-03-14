@@ -1,6 +1,8 @@
 # app/web/routes/api.py
 from __future__ import annotations
 
+import hashlib
+import hmac
 import mimetypes
 from pathlib import Path
 
@@ -11,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.config import settings
 from app.domain.services.jobs import create_job, get_job
+from app.infra.queue.arq import enqueue_stt
 from app.domain.services.media.saver import SaveError, SaveResult, cleanup_save_result, save_media_from_url
 from app.domain.services.media.soundcloud import SoundCloudError, cleanup_soundcloud_result, download_soundcloud_track_to_mp3
 from app.domain.services.quota import QuotaExceeded, consume_quota
 from app.infra.db.schema import JobKind, User
 from app.infra.db.session import get_session
-from app.infra.queue.arq import enqueue_stt
 from app.web.deps import get_current_user
 
 router = APIRouter(tags=["api"])
@@ -28,9 +30,35 @@ TMP_DIR = DATA_DIR / "tmp"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-# quota only for these tools (downloaders)
 QUOTA_TOOLS: set[str] = {"save", "audio"}
 
+# ─────────────────────────────────────────────
+# File download token (HMAC, no DB needed)
+# ─────────────────────────────────────────────
+
+def _file_token_secret() -> bytes:
+    key = (settings.effective_webapp_secret or "").encode()
+    return hashlib.sha256(b"file_dl:" + key).digest()
+
+
+def make_file_token(file_id: str) -> str:
+    """Generate a short HMAC token for a file_id."""
+    return hmac.new(_file_token_secret(), file_id.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def verify_file_token(file_id: str, token: str) -> bool:
+    expected = make_file_token(file_id)
+    return hmac.compare_digest(expected, token)
+
+
+def file_download_url(file_id: str) -> str:
+    token = make_file_token(file_id)
+    return f"/api/file/{file_id}?token={token}"
+
+
+# ─────────────────────────────────────────────
+# Pydantic models
+# ─────────────────────────────────────────────
 
 class UrlIn(BaseModel):
     url: HttpUrl
@@ -44,6 +72,7 @@ class UrlOnly(BaseModel):
 class FileOut(BaseModel):
     file_id: str
     filename: str
+    download_url: str
 
 
 class SttIn(BaseModel):
@@ -91,7 +120,6 @@ async def _record_save_job(
     file_id: str,
     save_result: SaveResult | None = None,
 ) -> None:
-    """Сохраняем job в БД с metadata из SaveResult (если есть)."""
     user_id = int(user.id)
 
     title = None
@@ -139,7 +167,6 @@ async def api_save(
 ) -> FileOut:
     tool = (payload.tool or "save").lower().strip()
 
-    # жестко: этот endpoint только для скачивалок
     if tool not in QUOTA_TOOLS:
         raise _http400("unknown_tool")
 
@@ -154,7 +181,6 @@ async def api_save(
             )
             out_path = _ensure_under_results(Path(sc_res.filepath))
 
-            # quota списываем ТОЛЬКО после успешного сохранения файла
             try:
                 await consume_quota(session, user=user, cost=1)
             except QuotaExceeded:
@@ -166,10 +192,13 @@ async def api_save(
                 raise HTTPException(status_code=429, detail="daily_limit_reached")
 
             await _record_save_job(session, user=user, file_id=out_path.name, save_result=None)
-
-            # коммитим quota + job одной транзакцией
             await session.commit()
-            return FileOut(file_id=out_path.name, filename=out_path.name)
+
+            return FileOut(
+                file_id=out_path.name,
+                filename=out_path.name,
+                download_url=file_download_url(out_path.name),
+            )
 
         except SoundCloudError as e:
             await session.rollback()
@@ -205,9 +234,13 @@ async def api_save(
             raise HTTPException(status_code=429, detail="daily_limit_reached")
 
         await _record_save_job(session, user=user, file_id=out_path.name, save_result=res)
-
         await session.commit()
-        return FileOut(file_id=out_path.name, filename=out_path.name)
+
+        return FileOut(
+            file_id=out_path.name,
+            filename=out_path.name,
+            download_url=file_download_url(out_path.name),
+        )
 
     except SaveError as e:
         await session.rollback()
@@ -224,7 +257,11 @@ async def api_save(
 
 
 @router.get("/file/{file_id}")
-async def api_file(file_id: str):
+async def api_file(file_id: str, token: str = Query(default="")):
+    """Public endpoint — verifies HMAC token, no auth required."""
+    if not token or not verify_file_token(file_id, token):
+        raise HTTPException(status_code=403, detail="invalid_token")
+
     p = _safe_resolve_under(RESULTS_DIR, file_id)
     if not p.exists() or not p.is_file():
         raise HTTPException(status_code=404, detail="not_found")
@@ -237,7 +274,6 @@ async def api_file(file_id: str):
     )
 
 
-# ✅ STT НЕ должен тратить quota (по твоей политике)
 @router.post("/stt", response_model=SttOut)
 async def api_stt(
     payload: SttIn,
@@ -277,7 +313,6 @@ async def api_stt_status(
     if not job:
         raise HTTPException(status_code=404, detail="job_not_found")
 
-    # ownership check
     job_user_id = getattr(job, "user_id", None)
     if job_user_id is not None and int(job_user_id) != int(user.id):
         raise HTTPException(status_code=404, detail="job_not_found")

@@ -12,6 +12,7 @@ from app.infra.db.models import Job
 from app.infra.db.schema import User
 from app.infra.db.session import get_db
 from app.web.deps import get_current_user
+from app.web.routes.api import make_file_token
 
 router = APIRouter(prefix="/api", tags=["recent"])
 
@@ -22,25 +23,37 @@ def _jsonify(v: Any) -> Any:
     return v
 
 
+def _file_download_url(file_id: str) -> str:
+    if not file_id:
+        return ""
+    token = make_file_token(file_id)
+    return f"/api/file/{file_id}?token={token}"
+
+
 def _to_item(row: dict[str, Any]) -> dict[str, Any]:
     file_id = row.get("file_id") or ""
-    filename = file_id
     ext = ""
-    if isinstance(filename, str) and "." in filename:
-        ext = filename.rsplit(".", 1)[-1]
+    if isinstance(file_id, str) and "." in file_id:
+        ext = file_id.rsplit(".", 1)[-1]
+
+    # prefer title from DB, fallback to file_id
+    title = row.get("title") or file_id or "file"
+    download_url = _file_download_url(file_id) if file_id else None
 
     return {
         "id": row.get("id"),
         "kind": row.get("kind"),
         "status": row.get("status"),
         "file_id": file_id,
-        "filename": filename,
-        "title": filename or file_id or "file",
+        "filename": file_id,
+        "title": title,
         "ext": ext,
         "size_bytes": row.get("size_bytes") if "size_bytes" in row else None,
+        "source_url": row.get("source_url"),
+        "extractor": row.get("extractor"),
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
-        "download_url": f"/api/file/{file_id}" if file_id else None,
+        "download_url": download_url,
     }
 
 
@@ -56,7 +69,6 @@ async def recent_list(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # UI-контракт: { items: [...] }
     t = Job.__table__
     cols = list(t.c)
 
@@ -83,7 +95,6 @@ async def recent_clear(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # payload может содержать delete_files, пока игнорируем
     t = Job.__table__
     res = await db.execute(delete(t).where(t.c.user_id == int(user.id)))
     await db.commit()

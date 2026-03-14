@@ -14,7 +14,6 @@
     const initData = getInitData();
     if (initData) headers.set("X-TG-INITDATA", initData);
 
-    // When sending JSON
     if (opts.json === true) {
       headers.set("Accept", "application/json");
       headers.set("Content-Type", "application/json");
@@ -37,7 +36,6 @@
       return data;
     }
 
-    // Non-JSON response
     const text = await resp.text().catch(() => "");
     if (!resp.ok) {
       const err = new Error(text || `HTTP_${resp.status}`);
@@ -48,19 +46,12 @@
     return text;
   }
 
-  // --------
-  // RAW calls (return raw JSON / text)
-  // --------
   API.safeFetch = safeFetch;
   API.getJsonRaw = (path) => safeFetch(path, { method: "GET" });
   API.postJsonRaw = (path, body) =>
     safeFetch(path, { method: "POST", body: JSON.stringify(body || {}), json: true });
   API.delJsonRaw = (path) => safeFetch(path, { method: "DELETE" });
 
-  // --------
-  // WRAPPED calls (return {ok, data} for JSON payloads)
-  // This matches the format most UI code expects.
-  // --------
   API.getJson = async (path) => {
     try {
       const data = await API.getJsonRaw(path);
@@ -88,7 +79,15 @@
     }
   };
 
-  // App-specific helpers (wrapped)
+  // Build download URL from file_id + download_url returned by server
+  // If server already returned download_url (with token) — use it directly
+  // Otherwise fallback to /api/file/{file_id} (old behavior)
+  API.fileUrl = (fileIdOrUrl) => {
+    if (!fileIdOrUrl) return "";
+    if (fileIdOrUrl.startsWith("/") || fileIdOrUrl.startsWith("http")) return fileIdOrUrl;
+    return `/api/file/${encodeURIComponent(fileIdOrUrl)}`;
+  };
+
   API.saveJob = (tool, url) => API.postJson(`/api/save_job?tool=${encodeURIComponent(tool)}`, { url });
   API.getRecent = () => API.getJson("/api/recent");
   API.getProfile = () => API.getJson("/api/profile");
