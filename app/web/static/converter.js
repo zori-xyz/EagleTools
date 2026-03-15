@@ -263,7 +263,7 @@
       /* Получаем initData для авторизации */
       const initData = window.Telegram?.WebApp?.initData || "";
       const headers  = {};
-      if (initData) headers["X-Telegram-Init-Data"] = initData;
+      if (initData) headers["X-TG-INITDATA"] = initData;
 
       const resp = await fetch("/api/convert", { method: "POST", headers, body: formData });
 
