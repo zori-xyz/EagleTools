@@ -492,6 +492,11 @@
       return;
     }
     if (action === "open-support") { openTgLink("https://t.me/zorixyzz"); return; }
+    if (action === "open-tour") {
+      closeSettings();
+      setTimeout(() => { if (typeof window.eagleTourStart === "function") window.eagleTourStart(); }, 320);
+      return;
+    }
     if (action === "open-privacy") {
       try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2"); return; } } catch {}
       window.open("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2", "_blank"); return;
