@@ -11,16 +11,20 @@
   const PROFILE_KEY = "eagle_profile_settings";
 
   function getLang() {
+    /* profile.js пишет lang в document.documentElement.lang — самый надёжный источник */
+    try {
+      const docLang = document.documentElement.lang || "";
+      if (docLang === "en") return "en";
+      if (docLang === "ru") return "ru";
+    } catch {}
+    /* Fallback: читаем из localStorage напрямую */
     try {
       const raw = localStorage.getItem(PROFILE_KEY);
       if (raw) {
         const obj = JSON.parse(raw);
         if (obj && obj.lang === "en") return "en";
+        if (obj && obj.lang === "ru") return "ru";
       }
-    } catch {}
-    try {
-      const tgLang = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || "";
-      if (tgLang.startsWith("en")) return "en";
     } catch {}
     return "ru";
   }
