@@ -82,12 +82,22 @@
 
   var current=0, steps=[], overlay, ring, tip, cutout, styleEl, resizeHandler, rafId;
 
+  function lockScroll() {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+  }
+  function unlockScroll() {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+  }
+
   function cleanup() {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (resizeHandler) { window.removeEventListener("resize", resizeHandler); resizeHandler = null; }
     if (overlay) { overlay.remove(); overlay = null; }
     if (styleEl) { styleEl.remove(); styleEl = null; }
     ring = tip = cutout = null;
+    unlockScroll();
   }
 
   function switchTab(tabName) {
@@ -288,6 +298,7 @@
     };
     window.addEventListener("resize", resizeHandler);
 
+    lockScroll();
     requestAnimationFrame(function() { overlay.classList.add("et-active"); });
   }
 
