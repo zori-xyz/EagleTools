@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.web.deps import get_tg_user
 from app.web.routes.api import router as api_router, file_router
+from app.web.routes.convert import router as convert_router
 from app.web.routes.profile import router as profile_router
 from app.web.routes.recent import router as recent_router
 from app.web.routes.internal import router as internal_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
 
     # recent_router already has prefix="/api" inside router
     app.include_router(recent_router, dependencies=protected)
+    app.include_router(convert_router, prefix="/api", dependencies=protected)
 
     # Internal API
     app.include_router(internal_router)
