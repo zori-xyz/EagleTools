@@ -181,7 +181,14 @@
 
   /* ── Рендер кнопок действий ── */
   function renderActions(type) {
-    const actions = ACTION_MAP[type] || [];
+    const inputExt  = selectedFile ? selectedFile.name.split(".").pop().toLowerCase() : "";
+    const allActions = ACTION_MAP[type] || [];
+    /* Скрываем если выходной формат совпадает со входным */
+    const actions = allActions.filter(a => {
+      const parts = a.id.split("_to_");
+      if (parts.length < 2) return true;
+      return parts[parts.length - 1] !== inputExt;
+    });
     const lang    = getLang();
     const grid    = $("convActionGrid");
 
