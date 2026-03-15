@@ -291,30 +291,50 @@
 
   /* ── Показать результат ── */
   function showResult(data) {
-    const lang    = getLang();
-    const result  = $("convResult");
-    const dlLabel = lang === "en" ? "Download" : "Скачать";
-    const shareLabel = lang === "en" ? "Share" : "Поделиться";
+    const lang       = getLang();
+    const result     = $("convResult");
+    const dlLabel    = lang === "en" ? "Download" : "Скачать";
+    const shareLabel = lang === "en" ? "Share"    : "Поделиться";
+    const url        = data.download_url || "";
+    const fname      = data.filename || "file";
 
     result.style.display = "block";
     result.innerHTML = `
       <div class="result-file" style="animation: resultIn .28s cubic-bezier(.34,1.56,.64,1) both">
         <div class="result-file__top">
           <div class="result-file__icon">✅</div>
-          <div class="result-file__name">${escHtml(data.filename || "result")}</div>
+          <div class="result-file__name">${escHtml(fname)}</div>
         </div>
         <div class="result-file__actions">
-          <a class="btn btn--primary" href="${escHtml(data.download_url)}" download style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <button class="btn btn--primary" id="convDlBtn" style="flex:1">
             <img src="/static/icons/download.svg" class="icon" style="width:16px;height:16px" />
             ${dlLabel}
-          </a>
-          <button class="btn btn--secondary" onclick="window.__eagleShare('${escHtml(data.download_url)}','${escHtml(data.filename || "")}')">
+          </button>
+          <button class="btn btn--secondary" id="convShareBtn">
             <img src="/static/icons/share-2.svg" class="icon" style="width:16px;height:16px" />
             ${shareLabel}
           </button>
         </div>
       </div>
     `;
+
+    /* Скачивание — открываем полный URL через Telegram или напрямую */
+    /* Добавляем имя файла как query param для красивого скачивания */
+    const baseUrl  = url.startsWith("http") ? url : (window.location.origin + url);
+    const fullUrl  = baseUrl + (baseUrl.includes("?") ? "&" : "?") + "name=" + encodeURIComponent(fname);
+    document.getElementById("convDlBtn").onclick = function() {
+      /* Используем ту же функцию что и recent — openFile из app.js */
+      if (typeof window.__eagleOpenFile === "function") {
+        window.__eagleOpenFile(fullUrl);
+      } else {
+        var full = fullUrl.startsWith("http") ? fullUrl : window.location.origin + fullUrl;
+        try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(full); return; } } catch {}
+        try { window.open(full, "_blank", "noopener"); } catch {}
+      }
+    };
+    document.getElementById("convShareBtn").onclick = function() {
+      window.__eagleShare(fullUrl, fname);
+    };
 
     /* Кнопка сбросить */
     const resetBtn = document.createElement("button");

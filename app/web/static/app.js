@@ -589,6 +589,7 @@
     syncAllSegmini();
     loadRecents(true).catch(() => {});
     window.__EAGLE_APP_READY__ = true;
+    window.__eagleOpenFile = openFile;
     requestAnimationFrame(() => {
       const a = $("[data-tab].is-active");
       if (a) syncIndicator(tabsEl, indEl, a);
