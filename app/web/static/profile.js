@@ -87,7 +87,7 @@
       help_ref_title: "Реферальная система",
       // Help - Privacy
       help_privacy_title: "Конфиденциальность",
-      privacy_policy: "🔒 Политика конфиденциальности",
+      privacy_policy: "Политика конфиденциальности",
       // Player
       player_open: "🌐 Открыть",
       player_share: "📤 Поделиться",
