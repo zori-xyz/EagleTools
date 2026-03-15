@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260319" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260320" />
   </head>
   <body>
     <div class="app">
@@ -47,6 +47,54 @@
         <!-- ======== TOOLS ======== -->
         <section class="panel is-active" data-panel="tools">
           <h1 class="h1" data-i18n="tab_tools">Инструменты</h1>
+
+          <!-- CONVERTER CARD -->
+          <div class="converter-card" id="converterCard">
+            <div class="converter-card__header">
+              <div class="converter-card__icon">
+                <img src="/static/icons/palette.svg" class="icon icon--rose" alt="" />
+              </div>
+              <div class="converter-card__meta">
+                <div class="converter-card__title" data-i18n="conv_title">Конвертер файлов</div>
+                <div class="converter-card__desc" data-i18n="conv_desc">Видео, аудио, фото, PDF, документы</div>
+              </div>
+              <div class="converter-card__badge" data-i18n="conv_badge">SMART</div>
+            </div>
+            <div class="converter-drop" id="convDrop">
+              <input type="file" id="convFileInput" accept="*/*" />
+              <div class="converter-drop__icon">
+                <img src="/static/icons/download.svg" alt="" />
+              </div>
+              <div class="converter-drop__label" data-i18n="conv_drop_label">Выбери файл</div>
+              <div class="converter-drop__sub" data-i18n="conv_drop_sub">или перетащи сюда · до 100 МБ</div>
+            </div>
+            <div class="converter-file" id="convFile">
+              <div class="converter-file__thumb" id="convFileThumb">📄</div>
+              <div class="converter-file__info">
+                <div class="converter-file__name" id="convFileName">—</div>
+                <div class="converter-file__size" id="convFileSize"></div>
+              </div>
+              <button class="converter-file__clear" id="convFileClear" type="button">✕</button>
+            </div>
+            <div class="converter-actions" id="convActions">
+              <div class="converter-actions__label" data-i18n="conv_choose_action">Что сделать с файлом</div>
+              <div class="converter-action-grid" id="convActionGrid"></div>
+            </div>
+            <div class="converter-run-wrap" id="convRunWrap">
+              <button class="btn btn--primary" id="convRunBtn" type="button" style="width:100%;height:48px;font-size:15px;">
+                <img src="/static/icons/palette.svg" class="icon icon--rose" alt="" style="width:18px;height:18px;" />
+                <span data-i18n="conv_btn_run" id="convRunLabel">Конвертировать</span>
+              </button>
+            </div>
+            <div class="converter-progress" id="convProgress">
+              <div class="converter-progress__track">
+                <div class="converter-progress__fill" id="convProgressFill"></div>
+              </div>
+              <div class="converter-progress__text" id="convProgressText"></div>
+            </div>
+            <div class="converter-result" id="convResult"></div>
+          </div>
+
           <div class="toolgrid">
 
             <!-- Video -->
@@ -422,9 +470,10 @@
       </div>
     </div>
 
-    <script src="/static/api.js?v=20260319"></script>
-    <script src="/static/profile.js?v=20260319"></script>
-    <script src="/static/app.js?v=20260319"></script>
-    <script src="/static/onboarding.js?v=20260319"></script>
+    <script src="/static/api.js?v=20260320"></script>
+    <script src="/static/profile.js?v=20260320"></script>
+    <script src="/static/app.js?v=20260320"></script>
+    <script src="/static/converter.js?v=20260320"></script>
+    <script src="/static/onboarding.js?v=20260320"></script>
   </body>
 </html>

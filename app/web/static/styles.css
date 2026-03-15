@@ -967,3 +967,170 @@ html[data-theme="dark"] .recentitem__actions .iconbtn--danger img { filter: inve
 
 /* pill compat */
 .dot { opacity: .35; }
+/* ================================================================
+   CONVERTER TOOL CARD
+   ================================================================ */
+
+/* Hero card — конвертер вверху страницы */
+.converter-card {
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--sh-md);
+  overflow: hidden;
+  margin-bottom: 12px;
+  position: relative;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.converter-card:hover { border-color: var(--border2); box-shadow: var(--sh-lg); }
+html[data-theme="light"] .converter-card { background: rgba(255,255,255,.86); }
+
+/* Верхняя полоска — акцент */
+.converter-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--rose), #7c3aed, #06b6d4);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+
+.converter-card__header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 16px 14px;
+}
+.converter-card__icon {
+  width: 44px; height: 44px; border-radius: var(--r-md);
+  display: grid; place-items: center; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(232,25,90,.15), rgba(124,58,237,.15));
+  border: 1px solid rgba(232,25,90,.2);
+}
+.converter-card__icon img { width: 22px; height: 22px; }
+.converter-card__meta { flex: 1; min-width: 0; }
+.converter-card__title { font-size: 16px; font-weight: 700; letter-spacing: -.2px; margin-bottom: 2px; }
+.converter-card__desc  { font-size: 12px; color: var(--text2); }
+.converter-card__badge {
+  padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  letter-spacing: .5px; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(232,25,90,.12), rgba(124,58,237,.12));
+  border: 1px solid rgba(232,25,90,.2);
+  color: var(--rose2);
+}
+
+/* Зона загрузки файла */
+.converter-drop {
+  margin: 0 16px 14px;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r-md);
+  padding: 24px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; position: relative;
+  transition: border-color .2s ease, background .2s ease;
+  background: rgba(255,255,255,.015);
+  -webkit-tap-highlight-color: transparent;
+}
+.converter-drop:hover, .converter-drop.drag-over {
+  border-color: var(--rose);
+  background: var(--rose-soft);
+}
+html[data-theme="light"] .converter-drop { background: rgba(0,0,0,.02); }
+html[data-theme="light"] .converter-drop:hover { background: var(--rose-soft); }
+
+.converter-drop input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.converter-drop__icon {
+  width: 40px; height: 40px; border-radius: var(--r-md);
+  display: grid; place-items: center;
+  background: var(--surface2); border: 1px solid var(--border2);
+  transition: transform .2s ease;
+}
+.converter-drop:hover .converter-drop__icon { transform: scale(1.08); }
+.converter-drop__icon img { width: 20px; height: 20px; }
+html[data-theme="dark"] .converter-drop__icon img { filter: invert(1); opacity: .7; }
+.converter-drop__label { font-size: 14px; font-weight: 600; color: var(--text); }
+.converter-drop__sub   { font-size: 11px; color: var(--text3); }
+
+/* Превью выбранного файла */
+.converter-file {
+  margin: 0 16px 14px;
+  background: var(--surface2); border-radius: var(--r-md);
+  border: 1px solid var(--border2);
+  padding: 12px 14px;
+  display: none; align-items: center; gap: 12px;
+}
+.converter-file.visible { display: flex; }
+.converter-file__thumb {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center; flex-shrink: 0;
+  font-size: 20px;
+}
+.converter-file__info { flex: 1; min-width: 0; }
+.converter-file__name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.converter-file__size { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.converter-file__clear {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: none; border: none; color: var(--text3);
+  font-size: 16px; transition: color .15s ease, background .15s ease;
+}
+.converter-file__clear:hover { color: var(--err); background: rgba(248,113,113,.1); }
+
+/* Список действий */
+.converter-actions {
+  margin: 0 16px 16px;
+  display: none; flex-direction: column; gap: 6px;
+}
+.converter-actions.visible { display: flex; }
+
+.converter-actions__label {
+  font-size: 11px; font-weight: 600; color: var(--text3);
+  letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px;
+}
+
+.converter-action-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+
+.conv-action {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+  cursor: pointer; transition: all .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.conv-action:hover { border-color: var(--rose-edge); background: var(--rose-soft); }
+.conv-action.selected { border-color: var(--rose); background: var(--rose-soft); box-shadow: 0 0 0 3px var(--rose-soft); }
+html[data-theme="light"] .conv-action { background: rgba(255,255,255,.7); }
+
+.conv-action__icon {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 13px;
+}
+.conv-action__text { flex: 1; min-width: 0; }
+.conv-action__name { font-size: 12px; font-weight: 600; }
+.conv-action__desc { font-size: 10px; color: var(--text3); }
+
+/* Кнопка запуска конвертации */
+.converter-run-wrap { padding: 0 16px 16px; display: none; }
+.converter-run-wrap.visible { display: block; }
+
+/* Прогресс */
+.converter-progress { display: none; padding: 0 16px 14px; }
+.converter-progress.visible { display: block; }
+.converter-progress__track {
+  height: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.07); overflow: hidden; margin-bottom: 8px;
+}
+html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,.07); }
+.converter-progress__fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rose), #7c3aed);
+  box-shadow: 0 0 10px var(--rose-glow);
+  transition: width .3s ease;
+}
+@keyframes convPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+.converter-progress.is-running .converter-progress__fill { animation: convPulse 1.4s ease-in-out infinite; }
+.converter-progress__text { font-size: 12px; color: var(--text2); text-align: center; }
+
+/* Результат */
+.converter-result { padding: 0 16px 16px; display: none; }
+.converter-result:not(:empty) { display: block; }
