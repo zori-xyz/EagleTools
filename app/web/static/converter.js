@@ -222,7 +222,19 @@
     });
 
     $("convActions").classList.add("visible");
+    /* Скрываем кнопку пока не выбрано действие */
     $("convRunWrap").classList.remove("visible");
+    /* Если только одно действие — выбираем его автоматически */
+    if (actions.length === 1) {
+      const onlyAction = grid.querySelector(".conv-action");
+      if (onlyAction) {
+        onlyAction.classList.add("selected");
+        selectedAction = onlyAction.dataset.actionId;
+        const a = actions[0];
+        $("convRunLabel").textContent = (getLang() === "en" ? "Convert " : "Конвертировать ") + a.name;
+        $("convRunWrap").classList.add("visible");
+      }
+    }
   }
 
   /* ── Неподдерживаемый формат ── */

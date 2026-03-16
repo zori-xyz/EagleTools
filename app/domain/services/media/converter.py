@@ -244,6 +244,16 @@ async def _do_image(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResu
     except ImportError:
         raise ConvertError("pillow_missing")
 
+    # HEIC/HEIF — конвертируем через ffmpeg в PNG сначала
+    in_ext = in_path.suffix.lower().lstrip(".")
+    if in_ext in ("heic", "heif"):
+        png_tmp = tmp_dir / f"{in_path.stem}_conv.png"
+        await _run_ffmpeg(["ffmpeg", "-y", "-i", str(in_path), str(png_tmp)])
+        if png_tmp.exists() and png_tmp.stat().st_size > 0:
+            in_path = png_tmp
+        else:
+            raise ConvertError("heic_convert_failed")
+
     stem = _safe_stem(in_path.name)
 
     ext_map = {
