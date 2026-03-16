@@ -230,7 +230,64 @@ async def _do_convert(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertRe
         _check_out(out)
         return ConvertResult(out_path=out, tmp_dir=tmp_dir)
 
+    # ── Изображения ─────────────────────────────────────────
+    if action in {"img_to_jpg", "img_to_png", "img_to_webp", "img_compress"}:
+        return await _do_image(in_path, action=action, tmp_dir=tmp_dir)
+
     raise ConvertError(f"unknown_action:{action}")
+
+
+async def _do_image(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResult:
+    """Конвертация изображений через Pillow."""
+    try:
+        from PIL import Image
+    except ImportError:
+        raise ConvertError("pillow_missing")
+
+    stem = _safe_stem(in_path.name)
+
+    ext_map = {
+        "img_to_jpg":     ("jpg",  "JPEG"),
+        "img_to_png":     ("png",  "PNG"),
+        "img_to_webp":    ("webp", "WEBP"),
+        "img_compress":   ("jpg",  "JPEG"),
+    }
+
+    ext, fmt = ext_map[action]
+    out = tmp_dir / f"{stem}.{ext}"
+
+    try:
+        img = Image.open(str(in_path))
+
+        # Конвертируем RGBA/P в RGB для JPEG
+        if fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            bg.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+            img = bg
+        elif img.mode not in ("RGB", "RGBA", "L") and fmt != "JPEG":
+            img = img.convert("RGB")
+
+        save_kwargs = {}
+        if fmt == "JPEG":
+            # compress = сильнее сжимаем, иначе стандартное качество
+            quality = 60 if action == "img_compress" else 85
+            save_kwargs = {"quality": quality, "optimize": True}
+        elif fmt == "WEBP":
+            save_kwargs = {"quality": 82, "method": 4}
+        elif fmt == "PNG":
+            save_kwargs = {"optimize": True}
+
+        img.save(str(out), fmt, **save_kwargs)
+
+    except ConvertError:
+        raise
+    except Exception as e:
+        raise ConvertError(f"image_failed:{e}")
+
+    _check_out(out)
+    return ConvertResult(out_path=out, tmp_dir=tmp_dir)
 
 
 def _check_out(path: Path) -> None:

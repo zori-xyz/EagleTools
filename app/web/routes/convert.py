@@ -39,6 +39,8 @@ ALLOWED_ACTIONS: set[str] = {
     # audio
     "audio_to_mp3", "audio_to_wav", "audio_to_ogg",
     "audio_to_m4a", "audio_compress", "audio_stt",
+    # image
+    "img_to_jpg", "img_to_png", "img_to_webp", "img_compress",
 }
 
 # Читаемые ошибки для фронта
