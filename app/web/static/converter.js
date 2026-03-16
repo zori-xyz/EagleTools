@@ -181,13 +181,17 @@
 
   /* ── Рендер кнопок действий ── */
   function renderActions(type) {
-    const inputExt  = selectedFile ? selectedFile.name.split(".").pop().toLowerCase() : "";
+    var rawExt = selectedFile ? selectedFile.name.split(".").pop().toLowerCase() : "";
+    /* jpg и jpeg — одно и то же */
+    const inputExt  = rawExt === "jpeg" ? "jpg" : rawExt;
     const allActions = ACTION_MAP[type] || [];
     /* Скрываем если выходной формат совпадает со входным */
     const actions = allActions.filter(a => {
       const parts = a.id.split("_to_");
       if (parts.length < 2) return true;
-      return parts[parts.length - 1] !== inputExt;
+      var outExt = parts[parts.length - 1];
+      if (outExt === "jpeg") outExt = "jpg";
+      return outExt !== inputExt;
     });
     const lang    = getLang();
     const grid    = $("convActionGrid");

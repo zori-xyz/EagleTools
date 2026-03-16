@@ -253,6 +253,15 @@ async def _do_image(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResu
         "img_compress":   ("jpg",  "JPEG"),
     }
 
+    # jpg и jpeg — одно и то же
+    in_ext = in_path.suffix.lower().lstrip(".")
+    if in_ext == "jpeg":
+        in_ext = "jpg"
+    # Если конвертируем в тот же формат — просто сжимаем
+    out_ext = ext_map[action][0]
+    if in_ext == out_ext and action != "img_compress":
+        action = "img_compress"
+
     ext, fmt = ext_map[action]
     out = tmp_dir / f"{stem}.{ext}"
 
