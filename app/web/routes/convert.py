@@ -120,6 +120,13 @@ async def api_convert(
         if written == 0:
             raise HTTPException(status_code=400, detail="empty_file")
 
+        # DEBUG: логируем что пришло
+        import logging
+        logging.getLogger("uvicorn").info(
+            f"[convert] action={action} filename={file.filename!r} "
+            f"content_type={file.content_type!r} size={written}"
+        )
+
         # ── Конвертация ───────────────────────────────────────
         timeout = 600 if is_premium else 300
         result = await convert_file(
