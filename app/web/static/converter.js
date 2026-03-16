@@ -289,7 +289,8 @@
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.detail || tx("conv_error"));
+        const detail = err.detail || tx("conv_error");
+        throw new Error(detail);
       }
 
       const data = await resp.json();
@@ -365,18 +366,23 @@
   function showError(msg) {
     const result = $("convResult");
     result.style.display = "block";
+
+    const lang = getLang();
+    const retryLabel = lang === "en" ? "Try again" : "Попробовать снова";
+
     result.innerHTML = `
-      <div style="padding:14px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r-md);font-size:13px;color:var(--err)">
-        ⚠️ ${escHtml(msg)}
+      <div style="padding:14px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r-md);">
+        <div style="font-size:13px;color:var(--err);margin-bottom:10px;">⚠️ ${escHtml(msg)}</div>
+        <button class="btn btn--secondary" id="convRetryBtn" style="width:100%;font-size:13px;">${retryLabel}</button>
       </div>
     `;
-    /* Показываем дроп снова */
-    setTimeout(() => {
-      $("convFile").classList.remove("visible");
-      $("convDrop").style.display = "";
+    document.getElementById("convRetryBtn").onclick = () => {
       result.style.display = "none";
       result.innerHTML = "";
-    }, 3000);
+      /* Показываем действия снова */
+      $("convActions").classList.add("visible");
+      $("convRunWrap").classList.add("visible");
+    };
   }
 
   /* ── Сброс состояния ── */
