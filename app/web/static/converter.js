@@ -281,19 +281,30 @@
     }, 400);
 
     try {
-      const formData = new FormData();
-      formData.append("file",   selectedFile);
-      formData.append("action", selectedAction);
+      /* Читаем файл как base64 */
+      $("convProgressText").textContent = (getLang() === "en" ? "Reading " : "Читаю ") + fmtSize(selectedFile.size) + "…";
 
-      /* Получаем initData для авторизации */
-      const initData = window.Telegram?.WebApp?.initData || "";
-      const headers  = {};
-      if (initData) headers["X-TG-INITDATA"] = initData;
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = () => reject(new Error("file_read_failed"));
+        reader.readAsDataURL(selectedFile);
+      });
 
-      /* Показываем что именно отправляем */
       $("convProgressText").textContent = (getLang() === "en" ? "Uploading " : "Загружаю ") + fmtSize(selectedFile.size) + "…";
 
-      const resp = await fetch("/api/convert", { method: "POST", headers, body: formData });
+      const initData = window.Telegram?.WebApp?.initData || "";
+      const headers  = { "Content-Type": "application/json" };
+      if (initData) headers["X-TG-INITDATA"] = initData;
+
+      const body = JSON.stringify({
+        action:   selectedAction,
+        filename: selectedFile.name,
+        mimetype: selectedFile.type || "application/octet-stream",
+        data:     base64,
+      });
+
+      const resp = await fetch("/api/convert", { method: "POST", headers, body });
 
       clearInterval(progInterval);
       $("convProgressFill").style.width = "100%";

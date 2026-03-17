@@ -5,8 +5,10 @@ import shutil
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import base64
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.config import settings
@@ -19,6 +21,13 @@ from app.web.deps import get_current_user
 from app.web.routes.api import file_download_url, make_file_token
 
 router = APIRouter(tags=["convert"])
+
+
+class ConvertIn(BaseModel):
+    action:   str
+    filename: str
+    mimetype: str = "application/octet-stream"
+    data:     str  # base64
 
 DATA_DIR    = Path(settings.data_dir)
 RESULTS_DIR = DATA_DIR / "results"
@@ -66,18 +75,17 @@ def _readable_error(code: str) -> str:
 
 @router.post("/convert")
 async def api_convert(
-    file:    UploadFile = File(...),
-    action:  str        = Form(...),
+    payload: ConvertIn,
     session: AsyncSession = Depends(get_session),
     user:    User         = Depends(get_current_user),
 ) -> JSONResponse:
     """
-    Принимает файл + action, конвертирует через ffmpeg,
+    Принимает base64 файл + action, конвертирует через ffmpeg,
     сохраняет результат в RESULTS_DIR, возвращает download_url.
     """
 
     # ── Валидация action ───────────────────────────────────────
-    action = (action or "").strip().lower()
+    action = (payload.action or "").strip().lower()
     if action not in ALLOWED_ACTIONS:
         raise HTTPException(status_code=400, detail="unknown_action")
 
@@ -90,41 +98,32 @@ async def api_convert(
     if not is_premium and quota.used_today >= quota.daily_limit:
         raise HTTPException(status_code=429, detail="quota_exceeded")
 
-    # ── Читаем файл ───────────────────────────────────────────
-    # Сначала проверяем размер по Content-Length если есть
-    content_length = file.size  # может быть None
-    if content_length and content_length > max_bytes:
+    # ── Декодируем base64 ─────────────────────────────────────
+    try:
+        file_bytes = base64.b64decode(payload.data)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid_base64")
+
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="empty_file")
+
+    if len(file_bytes) > max_bytes:
         raise HTTPException(status_code=413, detail="file_too_large")
 
     # Сохраняем во временный файл
-    suffix = Path(file.filename or "input").suffix or ".bin"
+    suffix = Path(payload.filename or "input").suffix or ".bin"
     tmp_in  = TMP_DIR / f"{uuid.uuid4().hex}{suffix}"
     result: ConvertResult | None = None
 
     try:
-        # Стримим файл на диск чтобы не держать в памяти
         TMP_DIR.mkdir(parents=True, exist_ok=True)
-        written = 0
-        with open(tmp_in, "wb") as fout:
-            while True:
-                chunk = await file.read(1024 * 256)  # 256 KB chunks
-                if not chunk:
-                    break
-                written += len(chunk)
-                if written > max_bytes:
-                    fout.close()
-                    tmp_in.unlink(missing_ok=True)
-                    raise HTTPException(status_code=413, detail="file_too_large")
-                fout.write(chunk)
+        tmp_in.write_bytes(file_bytes)
+        written = len(file_bytes)
 
-        if written == 0:
-            raise HTTPException(status_code=400, detail="empty_file")
-
-        # DEBUG: логируем что пришло
         import logging
         logging.getLogger("uvicorn").info(
-            f"[convert] action={action} filename={file.filename!r} "
-            f"content_type={file.content_type!r} size={written}"
+            f"[convert] action={action} filename={payload.filename!r} "
+            f"content_type={payload.mimetype!r} size={written}"
         )
 
         # ── Конвертация ───────────────────────────────────────
