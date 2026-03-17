@@ -1025,11 +1025,15 @@ html[data-theme="light"] .ri--doc   .ri-icon { background: rgba(99,102,241,.08);
 }
 .ri-btn:hover { background: rgba(255,255,255,.20); }
 .ri-btn:disabled { opacity: .3; cursor: default; }
-.ri-btn--play { background: rgba(232,25,90,.30); color: #e8195a; }
+.ri-btn--play { background: rgba(232,25,90,.30); color: #fff; }
 .ri-btn--play:hover { background: rgba(232,25,90,.45); }
-.ri-btn--dl   { color: rgba(255,255,255,.80); }
-.ri-btn--del  { background: rgba(248,113,113,.15); color: rgba(248,113,113,.80); }
+.ri-btn--dl   { color: rgba(255,255,255,.90); }
+.ri-btn--del  { background: rgba(248,113,113,.15); color: rgba(248,113,113,.90); }
 .ri-btn--del:hover { background: rgba(248,113,113,.25); color: var(--err); }
+
+html[data-theme="light"] .ri-btn--dl   { color: rgba(22,18,42,.65); }
+html[data-theme="light"] .ri-btn--del  { background: rgba(185,28,28,.08); color: rgba(185,28,28,.70); }
+html[data-theme="light"] .ri-btn--del:hover { background: rgba(185,28,28,.15); color: #b91c1c; }
 
 html[data-theme="light"] .ri-btn { background: rgba(0,0,0,.04); }
 html[data-theme="light"] .ri-btn:hover { background: rgba(0,0,0,.08); }

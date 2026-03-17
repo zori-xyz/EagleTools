@@ -446,11 +446,11 @@
 
     const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
       data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
-      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+      <svg class="ri-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
     </button>`;
 
     const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
-      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(248,113,113,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+      <svg class="ri-btn-icon ri-btn-icon--del" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
     </button>`;
 
     const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
