@@ -448,6 +448,14 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 
 .btn--sm { height: 38px; border-radius: var(--r-sm); padding: 0 14px; font-size: 13px; }
 
+html[data-theme="light"] .btn--premium {
+  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
+  background-size: 200% 100%;
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 22px rgba(232,25,90,.35);
+}
+
 .tag {
   padding: 4px 10px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface2);
@@ -463,17 +471,6 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 .muted { color: var(--text2); }
 .small { font-size: 13px; }
 
-/* ── RECENT ── */
-.recentlist { display: flex; flex-direction: column; gap: 8px; }
-  border-radius: var(--r-md); border: 1px solid var(--border);
-  background: var(--surface2); overflow: hidden;
-  transition: border-color .18s ease, background .18s ease, transform .15s ease, box-shadow .18s ease;
-}
-
-  width: 42px; height: 42px; border-radius: var(--r-sm);
-  border: 1px solid var(--border); display: grid; place-items: center;
-  font-size: 18px; flex-shrink: 0; background: var(--surface);
-}
 .dot { opacity: .35; }
 
 /* Pills */
@@ -1049,6 +1046,12 @@ html[data-theme="light"] .ri-btn--play {
   box-shadow: 0 2px 8px rgba(232,25,90,.3);
 }
 html[data-theme="light"] .ri-btn--play:hover { background: #c9134e; }
+html[data-theme="light"] .btn--premium {
+  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
+  background-size: 200% 100%;
+  color: #fff;
+  box-shadow: 0 6px 22px rgba(232,25,90,.35);
+}
 html[data-theme="light"] .ri-btn--dl { color: rgba(22,18,42,.45); }
 html[data-theme="light"] .ri-btn--dl:hover { background: rgba(0,0,0,.08); color: #16122a; }
 html[data-theme="light"] .ri-btn--del { background: rgba(185,28,28,.05); color: rgba(185,28,28,.5); }
@@ -1073,7 +1076,7 @@ html[data-theme="dark"] .ri-btn--del img {
   filter: invert(1) opacity(.6);
 }
 html[data-theme="dark"] .ri-btn--play img {
-  filter: brightness(10);
+  filter: invert(1) brightness(10);
 }
 html[data-theme="light"] .ri-icon img,
 html[data-theme="light"] .conv-action__icon img {
