@@ -1253,6 +1253,28 @@ html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,
 .converter-result { padding: 0 16px 16px; display: none; }
 .converter-result:not(:empty) { display: block; }
 
+/* ── Анимированная галочка результата ── */
+.conv-check-anim { display: flex; align-items: center; justify-content: center; }
+
+.cca-circle {
+  stroke-dasharray: 126;
+  stroke-dashoffset: 126;
+  animation: ccaCircle .55s cubic-bezier(.4,0,.2,1) forwards;
+  transform-origin: center;
+  transform: rotate(-90deg);
+}
+.cca-tick {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: ccaTick .35s cubic-bezier(.4,0,.2,1) .5s forwards;
+}
+@keyframes ccaCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ccaTick {
+  to { stroke-dashoffset: 0; }
+}
+
 /* ── Анимированная галочка ── */
 .conv-check__circle {
   stroke-dasharray: 120;

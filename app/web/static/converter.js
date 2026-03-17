@@ -362,8 +362,13 @@
     result.innerHTML = `
       <div class="result-file" style="animation: resultIn .28s cubic-bezier(.34,1.56,.64,1) both">
         <div class="result-file__top">
-          <div class="result-file__icon" style="display:flex;align-items:center;">
-            <dotlottie-player src="https://lottie.host/0a2c3314-1c05-4b41-b6b8-dbce526df12d/ZHMB3O5I8V.lottie" background="transparent" speed="1.2" style="width:44px;height:44px;" autoplay></dotlottie-player>
+          <div class="result-file__icon">
+            <div class="conv-check-anim">
+              <svg viewBox="0 0 48 48" width="44" height="44" fill="none">
+                <circle class="cca-circle" cx="24" cy="24" r="20" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
+                <polyline class="cca-tick" points="14,24 21,31 34,16" stroke="#34d399" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
           </div>
           <div class="result-file__name">${escHtml(fname)}</div>
         </div>
