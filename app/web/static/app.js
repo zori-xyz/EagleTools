@@ -409,6 +409,15 @@
     return pickFirstString(item?.title, item?.filename, meta?.title, meta?.filename);
   }
 
+  /* ── SVG иконки для типов файлов ── */
+  const FILE_ICONS = {
+    audio:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+    video:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><rect x="2" y="4" width="15" height="16" rx="2"/><path d="m17 8 5-3v14l-5-3V8z"/></svg>`,
+    image:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
+    document: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
+    default:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  };
+
   function recentRow(item) {
     const id          = item?.id ?? "";
     const title       = itemTitle(item) || item?.file_id || `#${id}`;
@@ -418,54 +427,53 @@
     const canDl       = !!downloadUrl;
     const ext         = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
     const isAudio     = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
-    const isVideo     = ["mp4","webm","mov","avi","mkv","gif"].includes(ext);
-    const isImage     = ["jpg","jpeg","png","webp","bmp","tiff","heic"].includes(ext);
-    const isTxt       = ["txt"].includes(ext);
+    const isVideo     = ["mp4","webm","mov","avi","mkv"].includes(ext);
+    const isImage     = ["jpg","jpeg","png","webp","bmp","tiff","heic","gif"].includes(ext);
+    const isTxt       = ["txt","pdf","doc","docx"].includes(ext);
 
-    /* Иконка */
-    let thumbIcon, thumbClass;
-    if (isAudio)      { thumbIcon = `<img src="/static/icons/music.svg" class="icon" />`; thumbClass = "recentitem__thumb--audio"; }
-    else if (isVideo) { thumbIcon = `<img src="/static/icons/video.svg" class="icon" />`; thumbClass = "recentitem__thumb--video"; }
-    else if (isImage) { thumbIcon = "🖼"; thumbClass = "recentitem__thumb--image"; }
-    else if (isTxt)   { thumbIcon = "📄"; thumbClass = ""; }
-    else              { thumbIcon = "📁"; thumbClass = ""; }
+    const fileType  = isAudio ? "audio" : isVideo ? "video" : isImage ? "image" : isTxt ? "document" : "default";
+    const icon      = FILE_ICONS[fileType];
+    const typeClass = `ri--${fileType === "default" ? "doc" : fileType}`;
 
-    /* Статус — если есть ссылка на скачивание, файл готов */
-    const rawStatus = String(item?.status || "queued").toLowerCase();
-    const status    = canDl ? "done" : rawStatus;
-    const badge     = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
-    const statusLabel = status === "done"
-      ? (t("done") || "Готово")
-      : status === "failed" || status === "error"
-        ? (t("err_unknown") || "Ошибка")
-        : status === "running"
-          ? (t("starting") || "Обрабатываю…")
-          : (t("queued") || "В очереди");
+    /* Статус */
+    const rawStatus   = String(item?.status || "queued").toLowerCase();
+    const status      = canDl ? "done" : rawStatus;
+    const badgeCls    = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
+    const statusLabel = status === "done" ? (t("done") || "ГОТОВО")
+      : status === "failed" || status === "error" ? (t("err_unknown") || "ОШИБКА")
+      : status === "running" ? "ОБРАБАТЫВАЮ"
+      : "В ОЧЕРЕДИ";
+
+    const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
+      data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+    </button>`;
+
+    const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    </button>`;
+
+    const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
+      data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
+      data-audio="${isAudio}" data-image="${isImage}" aria-label="Play">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7z"/></svg>
+    </button>` : "";
 
     return `
-      <div class="recentitem" data-id="${escapeHtml(id)}">
-        <div class="recentitem__body">
-          <div class="recentitem__left">
-            <div class="recentitem__thumb ${thumbClass}">${thumbIcon}</div>
-            <div class="recentitem__main">
-              <div class="recentitem__title">${escapeHtml(title)}</div>
-              <div class="recentitem__sub">
-                <span class="recentitem__badge recentitem__badge--${badge}">${escapeHtml(statusLabel)}</span>
-                ${size ? `<span class="recentitem__size">${escapeHtml(size)}</span>` : ""}
-                ${when ? `<span class="recentitem__when">${escapeHtml(when)}</span>` : ""}
-              </div>
+      <div class="recentitem ri ${typeClass}" data-id="${escapeHtml(id)}">
+        <div class="ri-inner">
+          <div class="ri-icon">${icon}</div>
+          <div class="ri-info">
+            <div class="ri-name">${escapeHtml(title)}</div>
+            <div class="ri-meta">
+              <span class="ri-badge ri-badge--${badgeCls}">${escapeHtml(statusLabel)}</span>
+              ${size ? `<span class="ri-size">${escapeHtml(size)}</span>` : ""}
+              ${size && when ? `<span class="ri-dot"></span>` : ""}
+              ${when ? `<span class="ri-date">${escapeHtml(when)}</span>` : ""}
             </div>
           </div>
-          <div class="recentitem__actions">
-            ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
-              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-              data-audio="${isAudio}" data-image="${isImage}"
-              aria-label="Play"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
-            <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" aria-label="Download"><img src="/static/icons/download.svg" class="icon" /></button>
-            <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
-              data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" aria-label="Share"><img src="/static/icons/share-2.svg" class="icon" /></button>
-            <button class="iconbtn iconbtn--danger" type="button" data-action="recent-del" aria-label="Delete"><img src="/static/icons/trash-2.svg" class="icon" /></button>
+          <div class="ri-actions">
+            ${playBtn}${dlBtn}${delBtn}
           </div>
         </div>
       </div>
@@ -505,13 +513,31 @@
     catch { return String(items?.length || 0); }
   }
 
+  let _recentItems = [];
+
+  function sortItems(items, sortVal) {
+    const arr = [...items];
+    switch (sortVal) {
+      case "date_asc":   return arr.sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+      case "name_asc":   return arr.sort((a,b) => (a.title||"").localeCompare(b.title||""));
+      case "name_desc":  return arr.sort((a,b) => (b.title||"").localeCompare(a.title||""));
+      case "size_desc":  return arr.sort((a,b) => (b.size_bytes||0) - (a.size_bytes||0));
+      case "size_asc":   return arr.sort((a,b) => (a.size_bytes||0) - (b.size_bytes||0));
+      default:           return arr.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+    }
+  }
+
   function renderRecents(items) {
     const list = $("#recentList"); if (!list) return;
-    if (!items || !items.length) {
-      list.innerHTML = `<div class="muted small" style="text-align:center;padding:20px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
+    _recentItems = items || [];
+    if (!_recentItems.length) {
+      list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
       return;
     }
-    list.innerHTML = items.map(recentRow).join("");
+    const sortSel = document.getElementById("recentSort");
+    const sortVal = sortSel ? sortSel.value : "date_desc";
+    const sorted  = sortItems(_recentItems, sortVal);
+    list.innerHTML = sorted.map(recentRow).join("");
   }
 
   async function loadRecents(silent = true) {
@@ -653,6 +679,10 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
     syncAllSegmini();
     loadRecents(true).catch(() => {});
+    /* Сортировка recent */
+    const sortSel = document.getElementById("recentSort");
+    if (sortSel) sortSel.addEventListener("change", () => renderRecents(_recentItems));
+
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
     window.__eagleToast = toast;

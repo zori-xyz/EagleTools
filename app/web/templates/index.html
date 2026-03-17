@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260339" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260340" />
   </head>
   <body>
     <div class="app">
@@ -164,12 +164,20 @@
 
         <!-- ======== RECENT ======== -->
         <section class="panel" data-panel="recent">
-          <h1 class="h1" data-i18n="recent_title">История загрузок</h1>
-          <div class="card">
-            <div class="card__body">
-              <div id="recentList" class="recentlist"></div>
+          <div class="recent-header">
+            <h1 class="h1" data-i18n="recent_title">История загрузок</h1>
+            <div class="recent-sort">
+              <select id="recentSort" class="recent-sort__select">
+                <option value="date_desc" data-i18n="sort_date_new">Сначала новые</option>
+                <option value="date_asc" data-i18n="sort_date_old">Сначала старые</option>
+                <option value="name_asc" data-i18n="sort_name_az">По имени А–Я</option>
+                <option value="name_desc" data-i18n="sort_name_za">По имени Я–А</option>
+                <option value="size_desc" data-i18n="sort_size_big">По размеру ↓</option>
+                <option value="size_asc" data-i18n="sort_size_small">По размеру ↑</option>
+              </select>
             </div>
           </div>
+          <div id="recentList" class="recentlist"></div>
         </section>
 
         <!-- ======== PROFILE ======== -->
@@ -470,10 +478,10 @@
       </div>
     </div>
 
-    <script src="/static/api.js?v=20260339"></script>
-    <script src="/static/profile.js?v=20260339"></script>
-    <script src="/static/app.js?v=20260339"></script>
-    <script src="/static/converter.js?v=20260339"></script>
-    <script src="/static/onboarding.js?v=20260339"></script>
+    <script src="/static/api.js?v=20260340"></script>
+    <script src="/static/profile.js?v=20260340"></script>
+    <script src="/static/app.js?v=20260340"></script>
+    <script src="/static/converter.js?v=20260340"></script>
+    <script src="/static/onboarding.js?v=20260340"></script>
   </body>
 </html>
