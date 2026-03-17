@@ -484,12 +484,26 @@
   }
 
   /* Share helper */
-  window.__eagleShare = function(url, title) {
+  window.__eagleShare = async function(url, title) {
+    const full = url.startsWith("http") ? url : window.location.origin + url;
+    /* Сначала пробуем нативный share sheet */
+    if (navigator.share) {
+      try { await navigator.share({ url: full, title: title || "EagleTools" }); return; } catch(e) {
+        /* Если отменили — не делаем ничего, если ошибка — копируем */
+        if (e.name === "AbortError") return;
+      }
+    }
+    /* Fallback — копируем ссылку */
     try {
-      if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(url); return; }
-    } catch {}
-    if (navigator.share) { navigator.share({ url, title }).catch(() => {}); return; }
-    window.open(url, "_blank");
+      await navigator.clipboard.writeText(full);
+      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
+    } catch {
+      /* последний fallback */
+      const inp = document.createElement("input");
+      inp.value = full; document.body.appendChild(inp);
+      inp.select(); document.execCommand("copy"); inp.remove();
+      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
+    }
   };
 
   /* ── Запуск после DOMContentLoaded ── */

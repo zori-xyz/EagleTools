@@ -1252,3 +1252,21 @@ html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,
 /* Результат */
 .converter-result { padding: 0 16px 16px; display: none; }
 .converter-result:not(:empty) { display: block; }
+
+/* ── Анимированная галочка ── */
+.conv-check__circle {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: convCircle .5s cubic-bezier(.4,0,.2,1) .1s forwards;
+}
+.conv-check__tick {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: convTick .4s cubic-bezier(.4,0,.2,1) .5s forwards;
+}
+@keyframes convCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes convTick {
+  to { stroke-dashoffset: 0; }
+}
