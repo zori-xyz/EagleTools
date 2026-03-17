@@ -184,7 +184,7 @@
     try {
       renderActions(fileType);
     } catch(err) {
-      alert("renderActions error: " + err.message + "\n" + (err.stack||"").slice(0,300));
+      showError("Ошибка отображения: " + err.message);
     }
   }
 
@@ -311,7 +311,13 @@
     } catch (e) {
       clearInterval(progInterval);
       prog.classList.remove("visible", "is-running");
-      showError(e.message || tx("conv_error"));
+      const msg = (e && e.message) ? e.message : tx("conv_error");
+      showError(msg);
+      /* Восстанавливаем кнопки */
+      if (selectedAction) {
+        $("convActions").classList.add("visible");
+        $("convRunWrap").classList.add("visible");
+      }
     }
   }
 
@@ -419,8 +425,8 @@
 
   function showToast(msg, type) {
     if (typeof window.__eagleToast === "function") { window.__eagleToast(msg, type); return; }
-    /* fallback */
-    alert(msg);
+    /* fallback — не используем alert, просто показываем в UI */
+    if (type === "err" || type === "warn") showError(msg);
   }
 
   /* Share helper */

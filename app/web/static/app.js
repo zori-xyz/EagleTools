@@ -590,6 +590,7 @@
     loadRecents(true).catch(() => {});
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
+    window.__eagleToast = toast;
     requestAnimationFrame(() => {
       const a = $("[data-tab].is-active");
       if (a) syncIndicator(tabsEl, indEl, a);
