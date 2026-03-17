@@ -297,14 +297,22 @@
       const headers  = { "Content-Type": "application/json" };
       if (initData) headers["X-TG-INITDATA"] = initData;
 
-      const body = JSON.stringify({
+      const bodyObj = {
         action:   selectedAction,
         filename: selectedFile.name,
         mimetype: selectedFile.type || "application/octet-stream",
         data:     base64,
-      });
+      };
+      const body = JSON.stringify(bodyObj);
 
-      const resp = await fetch("/api/convert", { method: "POST", headers, body });
+      $("convProgressText").textContent = "JSON size: " + (body.length / 1024).toFixed(0) + " KB, sending…";
+
+      let resp;
+      try {
+        resp = await fetch("/api/convert", { method: "POST", headers, body });
+      } catch(fetchErr) {
+        throw new Error("fetch failed: " + fetchErr.message + " (body size: " + body.length + ")");
+      }
 
       clearInterval(progInterval);
       $("convProgressFill").style.width = "100%";
