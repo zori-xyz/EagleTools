@@ -412,45 +412,59 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 .btn--premium {
   position: relative; overflow: hidden;
   border: none; color: #fff; font-weight: 700; width: 100%;
-  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
-  background-size: 200% 100%;
-  animation: premiumShift 3s ease infinite, premiumBreath 2.4s ease-in-out infinite;
+  background: #c9134e;
   box-shadow: 0 6px 22px rgba(232,25,90,.35);
   z-index: 0;
+  animation: premiumBreath 3s ease-in-out infinite;
 }
+/* Псевдоэлемент с вращающимся конусным градиентом */
 .btn--premium::before {
   content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
-  background-size: 200% 100%;
-  animation: premiumShine 2.4s ease-in-out infinite;
-  pointer-events: none; z-index: 1;
+  position: absolute; inset: -100%;
+  background: conic-gradient(
+    from 0deg,
+    #e8195a 0deg,
+    #b5147a 60deg,
+    #7c3aed 120deg,
+    #4f46e5 180deg,
+    #7c3aed 240deg,
+    #b5147a 300deg,
+    #e8195a 360deg
+  );
+  animation: premiumRotate 4s linear infinite;
+  pointer-events: none; z-index: 0;
+}
+/* Внутренний слой чтобы скрыть края конуса */
+.btn--premium::after {
+  content: '';
+  position: absolute; inset: 2px;
+  border-radius: calc(var(--r-md) - 2px);
+  background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%);
+  z-index: 1;
+  animation: premiumColorShift 4s linear infinite;
 }
 .btn--premium > * { position: relative; z-index: 2; }
-.btn--premium:hover {
-  box-shadow: 0 10px 32px rgba(232,25,90,.5);
-  animation: premiumShift 1.5s ease infinite, premiumBreath 2.4s ease-in-out infinite;
-}
+.btn--premium:hover { box-shadow: 0 10px 32px rgba(232,25,90,.5); }
 
-@keyframes premiumShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes premiumRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes premiumColorShift {
+  0%   { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
+  25%  { background: linear-gradient(135deg, #8b35e8 0%, #4f46e5 100%); }
+  50%  { background: linear-gradient(135deg, #4f46e5 0%, #d01453 100%); }
+  75%  { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
+  100% { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
 }
 @keyframes premiumBreath {
   0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 6px 22px rgba(232,25,90,.35); }
-  50%       { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 30px rgba(232,25,90,.48); }
-}
-@keyframes premiumShine {
-  0%        { background-position: -100% 0; }
-  60%, 100% { background-position: 200% 0; }
+  50%       { transform: translateY(-2px) scale(1.005); box-shadow: 0 10px 30px rgba(232,25,90,.48); }
 }
 
 .btn--sm { height: 38px; border-radius: var(--r-sm); padding: 0 14px; font-size: 13px; }
 
 html[data-theme="light"] .btn--premium {
-  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
-  background-size: 200% 100%;
   color: #fff;
   border: none;
   box-shadow: 0 6px 22px rgba(232,25,90,.35);
@@ -1082,6 +1096,10 @@ html[data-theme="light"] .ri-icon img,
 html[data-theme="light"] .conv-action__icon img {
   filter: opacity(.75);
 }
+
+/* converter file thumb icon */
+html[data-theme="dark"] .converter-file__thumb img { filter: invert(1) opacity(.8); }
+html[data-theme="light"] .converter-file__thumb img { filter: opacity(.75); }
 
 /* pill compat */
 .dot { opacity: .35; }

@@ -172,8 +172,18 @@
     $("convFile").classList.add("visible");
     $("convFileName").textContent   = file.name;
     $("convFileSize").textContent   = fmtSize(file.size);
-    $("convFileThumb").textContent  = TYPE_EMOJI[fileType] || "📄";
-    $("convFileThumb").style.background = TYPE_COLOR[fileType] || "var(--surface2)";
+    /* SVG иконка вместо эмодзи */
+    const thumbIcons = {
+      video:    "/static/icons/fmt-video.svg",
+      audio:    "/static/icons/fmt-mp3.svg",
+      image:    "/static/icons/fmt-png.svg",
+      pdf:      "/static/icons/fmt-pdf.svg",
+      document: "/static/icons/file-doc.svg",
+    };
+    const thumbSrc = thumbIcons[fileType] || "/static/icons/file-doc.svg";
+    const thumbEl  = $("convFileThumb");
+    thumbEl.innerHTML = `<img src="${thumbSrc}" style="width:22px;height:22px;display:block;" />`;
+    thumbEl.style.background = TYPE_COLOR[fileType] || "var(--surface2)";
 
     /* Список действий */
     if (!fileType) {
