@@ -290,6 +290,9 @@
       const headers  = {};
       if (initData) headers["X-TG-INITDATA"] = initData;
 
+      /* Показываем что именно отправляем */
+      $("convProgressText").textContent = (getLang() === "en" ? "Uploading " : "Загружаю ") + fmtSize(selectedFile.size) + "…";
+
       const resp = await fetch("/api/convert", { method: "POST", headers, body: formData });
 
       clearInterval(progInterval);
@@ -313,11 +316,6 @@
       prog.classList.remove("visible", "is-running");
       const msg = (e && e.message) ? e.message : tx("conv_error");
       showError(msg);
-      /* Восстанавливаем кнопки */
-      if (selectedAction) {
-        $("convActions").classList.add("visible");
-        $("convRunWrap").classList.add("visible");
-      }
     }
   }
 
@@ -377,27 +375,53 @@
     result.appendChild(resetBtn);
   }
 
-  /* ── Показать ошибку ── */
+  /* ── Показать ошибку — красивый автотост ── */
   function showError(msg) {
-    const result = $("convResult");
-    result.style.display = "block";
+    /* Убираем старый тост если есть */
+    var old = document.getElementById("convErrToast");
+    if (old) old.remove();
 
-    const lang = getLang();
-    const retryLabel = lang === "en" ? "Try again" : "Попробовать снова";
+    var toast = document.createElement("div");
+    toast.id = "convErrToast";
+    toast.style.cssText = [
+      "position:fixed",
+      "bottom:24px",
+      "left:50%",
+      "transform:translateX(-50%) translateY(0)",
+      "background:var(--bg3,#16131f)",
+      "border:1px solid rgba(248,113,113,.3)",
+      "border-radius:14px",
+      "padding:12px 18px",
+      "font-size:13px",
+      "color:var(--err,#f87171)",
+      "z-index:9999",
+      "max-width:calc(100vw - 32px)",
+      "text-align:center",
+      "box-shadow:0 8px 28px rgba(0,0,0,.44)",
+      "transition:opacity .4s ease, transform .4s ease",
+      "pointer-events:none",
+    ].join(";");
+    toast.textContent = "⚠️ " + msg;
 
-    result.innerHTML = `
-      <div style="padding:14px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r-md);">
-        <div style="font-size:13px;color:var(--err);margin-bottom:10px;">⚠️ ${escHtml(msg)}</div>
-        <button class="btn btn--secondary" id="convRetryBtn" style="width:100%;font-size:13px;">${retryLabel}</button>
-      </div>
-    `;
-    document.getElementById("convRetryBtn").onclick = () => {
-      result.style.display = "none";
-      result.innerHTML = "";
-      /* Показываем действия снова */
-      $("convActions").classList.add("visible");
-      $("convRunWrap").classList.add("visible");
-    };
+    document.body.appendChild(toast);
+
+    /* Анимация появления */
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.style.opacity = "1";
+      });
+    });
+
+    /* Автоисчезновение через 3.5 сек */
+    setTimeout(function() {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateX(-50%) translateY(12px)";
+      setTimeout(function() { toast.remove(); }, 420);
+    }, 3500);
+
+    /* Восстанавливаем кнопки */
+    $("convActions").classList.add("visible");
+    $("convRunWrap").classList.add("visible");
   }
 
   /* ── Сброс состояния ── */
