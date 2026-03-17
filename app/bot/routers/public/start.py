@@ -89,10 +89,12 @@ async def _sync_user_profile(tg_user: TgUser) -> None:
                 setattr(user, attr, val)
                 changed = True
 
+        # Устанавливаем язык только при первом входе — потом не трогаем
         if not user.language_code:
             tg_lang = (tg_user.language_code or "").strip()
             user.language_code = "en" if tg_lang.startswith("en") else "ru"
             changed = True
+        # Если язык уже установлен — не перезаписываем (пользователь мог сменить вручную)
 
         if changed:
             await session.commit()

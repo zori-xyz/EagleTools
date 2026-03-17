@@ -129,53 +129,80 @@ async def _handle_stt_from_message(message: Message, lang: str) -> None:
         return
 
     base = _tmp_dir() / "stt"
-    tmp_in = base / "in"
+    tmp_in  = base / "in"
+    work_dir = base / "work"
     model_dir = Path(settings.data_dir) / "models" / "whisper"
 
     in_path = None
     status: Message | None = None
 
     try:
-        status = await _edit_or_send_status(message, status, s.stt_preparing)
+        status = await message.reply(s.stt_preparing)
         in_path = await tg_download_to_path(message.bot, message, dst_dir=tmp_in)
 
         async with STT_SEM:
-            status = await _edit_or_send_status(message, status, s.stt_recognizing)
+            try:
+                await status.edit_text(s.stt_recognizing)
+            except Exception:
+                pass
+
             res = await transcribe_to_text(
                 in_path,
-                workdir=base / "work",
+                workdir=work_dir,
                 model_dir=model_dir,
-                timeout_sec=90,
+                timeout_sec=180,
             )
 
         text = (res.text or "").strip()
 
+        if not text:
+            try:
+                await status.edit_text(s.stt_empty)
+            except Exception:
+                await message.reply(s.stt_empty)
+            return
+
         if len(text) <= TG_TEXT_LIMIT:
-            await _edit_or_send_status(message, status, f"{s.stt_done}\n\n{text}")
+            # Отправляем результат новым сообщением — чтобы его можно было скопировать
+            try:
+                await status.delete()
+            except Exception:
+                pass
+            stt_result = s.stt_done + "\n\n" + text
+            await message.reply(stt_result)
         else:
-            out_txt = (base / "work") / "result.txt"
-            out_txt.parent.mkdir(parents=True, exist_ok=True)
+            work_dir.mkdir(parents=True, exist_ok=True)
+            out_txt = work_dir / "result.txt"
             out_txt.write_text(text, encoding="utf-8")
-            await _edit_or_send_status(message, status, s.stt_done_file)
-            await message.answer_document(
+            try:
+                await status.delete()
+            except Exception:
+                pass
+            await message.reply_document(
                 document=FSInputFile(str(out_txt)),
                 caption=s.stt_done,
             )
 
     except SttError as e:
         code = str(e)
-        if code == "timeout":
-            msg = s.stt_timeout
-        else:
-            msg = s.stt_empty
-
-        if status is None:
-            await message.reply(msg)
-        else:
-            try:
+        msg = s.stt_timeout if "timeout" in code else s.stt_empty
+        try:
+            if status:
                 await status.edit_text(msg)
-            except Exception:
+            else:
                 await message.reply(msg)
+        except Exception:
+            await message.reply(msg)
+
+    except Exception as e:
+        msg = f"❌ STT error: {e}"
+        try:
+            if status:
+                await status.edit_text(msg)
+            else:
+                await message.reply(msg)
+        except Exception:
+            pass
 
     finally:
         if in_path is not None:

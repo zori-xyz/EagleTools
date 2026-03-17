@@ -27,7 +27,7 @@ async def safe_edit_or_send(
     reply_markup: InlineKeyboardMarkup | None = None,
     current: PanelRef | None = None,
     parse_mode: str | None = "HTML",
-    delete_after: Message | None = None,  # команда юзера которую нужно удалить
+    delete_after: Message | None = None,
 ) -> PanelRef:
     # Удаляем команду пользователя если передана
     if delete_after is not None:
@@ -36,25 +36,9 @@ async def safe_edit_or_send(
     if current is not None and current.chat_id != chat_id:
         current = None
 
+    # Всегда удаляем старую панель и отправляем новую внизу
     if current is not None:
-        try:
-            await bot.edit_message_text(
-                chat_id=current.chat_id,
-                message_id=current.message_id,
-                text=text,
-                reply_markup=reply_markup,
-                disable_web_page_preview=True,
-                parse_mode=parse_mode,
-            )
-            return current
-        except TelegramBadRequest as e:
-            msg = str(e).lower()
-            if "message is not modified" in msg:
-                return current
-        except TelegramAPIError:
-            pass
-        except Exception:
-            pass
+        await delete_message_safe(bot, current.chat_id, current.message_id)
 
     m = await bot.send_message(
         chat_id=chat_id,
