@@ -948,6 +948,17 @@ html[data-theme="light"] .recentitem__thumb--audio img { filter: invert(30%) sep
 .recentitem__badge--err  { color: var(--err);   background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.22); }
 .recentitem__badge--run  { color: var(--rose2); background: var(--rose-soft);      border-color: var(--rose-edge); }
 .recentitem__badge--q    { color: var(--warn);  background: rgba(251,191,36,.10);  border-color: rgba(251,191,36,.22); }
+.recentitem__size {
+  font-size: 10px; color: var(--text3);
+  white-space: nowrap; flex-shrink: 0;
+  background: var(--surface2);
+  padding: 1px 5px; border-radius: 4px;
+}
+.recentitem__thumb--image {
+  background: rgba(5,150,105,.08);
+  border-color: rgba(5,150,105,.16);
+  font-size: 18px;
+}
 .recentitem__when {
   font-size: 10px; color: var(--text3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

@@ -305,8 +305,6 @@
       };
       const body = JSON.stringify(bodyObj);
 
-      $("convProgressText").textContent = "JSON size: " + (body.length / 1024).toFixed(0) + " KB, sending…";
-
       let resp;
       try {
         resp = await fetch("/api/convert", { method: "POST", headers, body });

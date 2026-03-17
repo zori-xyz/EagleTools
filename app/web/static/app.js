@@ -410,22 +410,37 @@
   }
 
   function recentRow(item) {
-    const id = item?.id ?? "";
-    const kind = String(item?.kind || "SAVE").toUpperCase();
-    const status = String(item?.status || "queued").toLowerCase();
-    const title = itemTitle(item) || item?.file_id || `#${id}`;
-    const when = fmtWhen(item?.created_at);
-    const size = fmtBytes(item?.size_bytes);
+    const id          = item?.id ?? "";
+    const title       = itemTitle(item) || item?.file_id || `#${id}`;
+    const when        = fmtWhen(item?.created_at);
+    const size        = fmtBytes(item?.size_bytes);
     const downloadUrl = item?.download_url || "";
-    const canDl = !!downloadUrl;
-    const ext = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
-    const isAudio = ["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext);
-    const isVideo = ["mp4", "webm", "mov", "avi", "mkv"].includes(ext);
-    const thumbIcon = isAudio ? `<img src="/static/icons/music.svg" class="icon" />` : isVideo ? `<img src="/static/icons/video.svg" class="icon" />` : "📄";
-    const thumbClass = isAudio ? "recentitem__thumb--audio" : isVideo ? "recentitem__thumb--video" : "";
+    const canDl       = !!downloadUrl;
+    const ext         = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio     = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
+    const isVideo     = ["mp4","webm","mov","avi","mkv","gif"].includes(ext);
+    const isImage     = ["jpg","jpeg","png","webp","bmp","tiff","heic"].includes(ext);
+    const isTxt       = ["txt"].includes(ext);
 
-    const badge = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
-    const statusLabel = status === "done" ? (t("done") || "Готово") : status === "failed" || status === "error" ? (t("err_unknown") || "Ошибка") : status === "running" ? (t("starting") || "Идёт загрузка") : (t("queued") || "В очереди");
+    /* Иконка */
+    let thumbIcon, thumbClass;
+    if (isAudio)      { thumbIcon = `<img src="/static/icons/music.svg" class="icon" />`; thumbClass = "recentitem__thumb--audio"; }
+    else if (isVideo) { thumbIcon = `<img src="/static/icons/video.svg" class="icon" />`; thumbClass = "recentitem__thumb--video"; }
+    else if (isImage) { thumbIcon = "🖼"; thumbClass = "recentitem__thumb--image"; }
+    else if (isTxt)   { thumbIcon = "📄"; thumbClass = ""; }
+    else              { thumbIcon = "📁"; thumbClass = ""; }
+
+    /* Статус — если есть ссылка на скачивание, файл готов */
+    const rawStatus = String(item?.status || "queued").toLowerCase();
+    const status    = canDl ? "done" : rawStatus;
+    const badge     = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
+    const statusLabel = status === "done"
+      ? (t("done") || "Готово")
+      : status === "failed" || status === "error"
+        ? (t("err_unknown") || "Ошибка")
+        : status === "running"
+          ? (t("starting") || "Обрабатываю…")
+          : (t("queued") || "В очереди");
 
     return `
       <div class="recentitem" data-id="${escapeHtml(id)}">
@@ -436,6 +451,7 @@
               <div class="recentitem__title">${escapeHtml(title)}</div>
               <div class="recentitem__sub">
                 <span class="recentitem__badge recentitem__badge--${badge}">${escapeHtml(statusLabel)}</span>
+                ${size ? `<span class="recentitem__size">${escapeHtml(size)}</span>` : ""}
                 ${when ? `<span class="recentitem__when">${escapeHtml(when)}</span>` : ""}
               </div>
             </div>
@@ -443,7 +459,8 @@
           <div class="recentitem__actions">
             ${canDl ? `<button class="iconbtn iconbtn--play" type="button" data-action="recent-play"
               data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-              data-audio="${isAudio}" aria-label="Play"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
+              data-audio="${isAudio}" data-image="${isImage}"
+              aria-label="Play"><img src="/static/icons/play.svg" class="icon" /></button>` : ""}
             <button class="iconbtn" type="button" data-action="recent-dl" ${canDl ? "" : "disabled"}
               data-url="${escapeHtml(downloadUrl)}" aria-label="Download"><img src="/static/icons/download.svg" class="icon" /></button>
             <button class="iconbtn" type="button" data-action="recent-share" ${canDl ? "" : "disabled"}
@@ -453,6 +470,34 @@
         </div>
       </div>
     `;
+  }
+
+  /* ── Лайтбокс для просмотра фото ── */
+  function showImageViewer(url, title) {
+    var old = document.getElementById("et-imgviewer");
+    if (old) old.remove();
+
+    const full = url.startsWith("http") ? url : window.location.origin + url;
+    const el = document.createElement("div");
+    el.id = "et-imgviewer";
+    el.style.cssText = "position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;";
+    el.innerHTML = `
+      <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px;">
+        <button id="et-img-dl" style="background:var(--rose);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;">
+          Скачать
+        </button>
+        <button id="et-img-close" style="background:rgba(255,255,255,.1);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;cursor:pointer;">
+          ✕
+        </button>
+      </div>
+      <img src="${full}" style="max-width:calc(100vw - 32px);max-height:calc(100vh - 100px);border-radius:12px;object-fit:contain;" />
+      ${title ? `<div style="font-size:12px;color:rgba(255,255,255,.5);max-width:80%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${escapeHtml(title)}</div>` : ""}
+    `;
+    document.body.appendChild(el);
+
+    document.getElementById("et-img-close").onclick = () => el.remove();
+    document.getElementById("et-img-dl").onclick = () => openFile(url);
+    el.addEventListener("click", (e) => { if (e.target === el) el.remove(); });
   }
 
   function hash(items) {
@@ -538,6 +583,14 @@
     }
 
     if (action === "recent-play") {
+      const isImage = el.dataset.image === "true";
+      if (isImage) {
+        /* Показываем фото в лайтбоксе */
+        const url = el.dataset.url || "";
+        const title = el.dataset.title || "";
+        showImageViewer(url, title);
+        return;
+      }
       const url = el.dataset.url || "";
       const title = el.dataset.title || "";
       const isAudio = el.dataset.audio === "true";
@@ -547,7 +600,19 @@
     }
 
     if (action === "recent-dl") { openFile(el.dataset.url || ""); return; }
-    if (action === "recent-share") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
+    if (action === "recent-share") {
+      const shareUrl = el.dataset.url || "";
+      const shareTitle = el.dataset.title || "";
+      if (shareUrl) {
+        const fullUrl = shareUrl.startsWith("http") ? shareUrl : window.location.origin + shareUrl;
+        try {
+          if (navigator.share) { await navigator.share({ title: shareTitle || "EagleTools", url: fullUrl }); return; }
+        } catch {}
+        try { await navigator.clipboard.writeText(fullUrl); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch {}
+      }
+      return;
+    }
+    if (action === "recent-share-old") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "recent-del") {
       const row = el.closest(".recentitem");

@@ -120,11 +120,7 @@ async def api_convert(
         tmp_in.write_bytes(file_bytes)
         written = len(file_bytes)
 
-        import logging
-        logging.getLogger("uvicorn").info(
-            f"[convert] action={action} filename={payload.filename!r} "
-            f"content_type={payload.mimetype!r} size={written}"
-        )
+
 
         # ── Конвертация ───────────────────────────────────────
         timeout = 600 if is_premium else 300
