@@ -183,6 +183,7 @@
     try {
       renderActions(fileType);
     } catch(err) {
+      alert("DEBUG: " + err.message + " | stack: " + (err.stack || "").slice(0, 200));
       showError("JS error: " + err.message);
     }
   }
