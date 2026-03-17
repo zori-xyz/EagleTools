@@ -216,7 +216,7 @@
     const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
     if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
     if (name === "profile") { window.EagleProfile?.renderProfile?.(); window.EagleProfile?.init?.(); syncAllSegmini(); }
-    if (name === "recent") loadRecents(false);
+    if (name === "recent") { lastHash = ""; loadRecents(false); }
     if (name === "help") window.EagleProfile?.init?.();
   }
   window.setTab = setTab;
