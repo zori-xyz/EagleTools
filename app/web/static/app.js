@@ -411,11 +411,11 @@
 
   /* ── SVG иконки для типов файлов ── */
   const FILE_ICONS = {
-    audio:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
-    video:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><rect x="2" y="4" width="15" height="16" rx="2"/><path d="m17 8 5-3v14l-5-3V8z"/></svg>`,
-    image:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
-    document: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>`,
-    default:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+    audio:    `<img src="/static/icons/fmt-mp3.svg"   style="width:18px;height:18px;display:block;" />`,
+    video:    `<img src="/static/icons/fmt-mp4.svg"   style="width:18px;height:18px;display:block;" />`,
+    image:    `<img src="/static/icons/fmt-png.svg"   style="width:18px;height:18px;display:block;" />`,
+    document: `<img src="/static/icons/file-doc.svg"  style="width:18px;height:18px;display:block;" />`,
+    default:  `<img src="/static/icons/file-doc.svg"  style="width:18px;height:18px;display:block;" />`,
   };
 
   function recentRow(item) {
@@ -446,17 +446,17 @@
 
     const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
       data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+      <img src="/static/icons/dl.svg" style="width:15px;height:15px;display:block;" />
     </button>`;
 
     const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+      <img src="/static/icons/delete.svg" style="width:15px;height:15px;display:block;" />
     </button>`;
 
     const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
       data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
       data-audio="${isAudio}" data-image="${isImage}" aria-label="Play">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M8 5v14l11-7z"/></svg>
+      <img src="/static/icons/play-btn.svg" style="width:14px;height:14px;display:block;filter:brightness(10);" />
     </button>` : "";
 
     return `

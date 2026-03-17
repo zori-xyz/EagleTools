@@ -410,11 +410,41 @@ html[data-theme="light"] .btn--secondary { background: rgba(255,255,255,.60); co
 html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.90); color: var(--text); }
 
 .btn--premium {
-  background: linear-gradient(135deg, var(--rose) 0%, #9b0d38 100%);
-  border: none; color: #fff; font-weight: 700;
-  box-shadow: 0 6px 22px rgba(232,25,90,.32); width: 100%;
+  position: relative; overflow: hidden;
+  border: none; color: #fff; font-weight: 700; width: 100%;
+  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
+  background-size: 200% 100%;
+  animation: premiumShift 3s ease infinite, premiumBreath 2.4s ease-in-out infinite;
+  box-shadow: 0 6px 22px rgba(232,25,90,.35);
+  z-index: 0;
 }
-.btn--premium:hover { box-shadow: 0 10px 30px rgba(232,25,90,.42); transform: translateY(-2px); }
+.btn--premium::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: premiumShine 2.4s ease-in-out infinite;
+  pointer-events: none; z-index: 1;
+}
+.btn--premium > * { position: relative; z-index: 2; }
+.btn--premium:hover {
+  box-shadow: 0 10px 32px rgba(232,25,90,.5);
+  animation: premiumShift 1.5s ease infinite, premiumBreath 2.4s ease-in-out infinite;
+}
+
+@keyframes premiumShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes premiumBreath {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 6px 22px rgba(232,25,90,.35); }
+  50%       { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 30px rgba(232,25,90,.48); }
+}
+@keyframes premiumShine {
+  0%        { background-position: -100% 0; }
+  60%, 100% { background-position: 200% 0; }
+}
 
 .btn--sm { height: 38px; border-radius: var(--r-sm); padding: 0 14px; font-size: 13px; }
 
@@ -1031,6 +1061,23 @@ html[data-theme="light"] .recent-sort__select {
   border-color: var(--border2);
   color: var(--text2);
   box-shadow: 0 1px 4px rgba(60,30,140,.08);
+}
+
+/* ── SVG icon color inversion ── */
+html[data-theme="dark"] .ri-icon img,
+html[data-theme="dark"] .conv-action__icon img {
+  filter: invert(1) opacity(.85);
+}
+html[data-theme="dark"] .ri-btn--dl img,
+html[data-theme="dark"] .ri-btn--del img {
+  filter: invert(1) opacity(.6);
+}
+html[data-theme="dark"] .ri-btn--play img {
+  filter: brightness(10);
+}
+html[data-theme="light"] .ri-icon img,
+html[data-theme="light"] .conv-action__icon img {
+  filter: opacity(.75);
 }
 
 /* pill compat */

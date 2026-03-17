@@ -8,35 +8,35 @@
   /* ── Матрица: тип файла → доступные действия ── */
   const ACTION_MAP = {
     video: [
-      { id: "video_to_mp3",  icon: "🎵", name: "→ MP3",  desc_ru: "Извлечь аудио",       desc_en: "Extract audio",        color: "#7c3aed" },
-      { id: "video_to_mp4",  icon: "🎬", name: "→ MP4",  desc_ru: "Конвертировать",       desc_en: "Convert video",        color: "#e8195a" },
-      { id: "video_to_gif",  icon: "🎞", name: "→ GIF",  desc_ru: "Сделать гифку",        desc_en: "Make GIF",             color: "#059669" },
-      { id: "video_compress",icon: "📦", name: "Сжать",  desc_ru: "Уменьшить размер",     desc_en: "Compress size",        color: "#d97706" },
-      { id: "video_to_m4a",  icon: "🎧", name: "→ M4A",  desc_ru: "Аудио M4A",            desc_en: "Audio M4A",            color: "#7c3aed" },
-      { id: "video_stt",     icon: "📝", name: "→ Текст",desc_ru: "Распознать речь",      desc_en: "Speech to text",       color: "#0891b2" },
+      { id: "video_to_mp3",  icon: '<img src="/static/icons/fmt-mp3.svg" style="width:20px;height:20px;display:block;" />',      name: "→ MP3",  desc_ru: "Извлечь аудио",       desc_en: "Extract audio",        color: "#7c3aed" },
+      { id: "video_to_mp4",  icon: '<img src="/static/icons/fmt-mp4.svg" style="width:20px;height:20px;display:block;" />',      name: "→ MP4",  desc_ru: "Конвертировать",       desc_en: "Convert video",        color: "#e8195a" },
+      { id: "video_to_gif",  icon: '<img src="/static/icons/fmt-gif.svg" style="width:20px;height:20px;display:block;" />',      name: "→ GIF",  desc_ru: "Сделать гифку",        desc_en: "Make GIF",             color: "#059669" },
+      { id: "video_compress",icon: '<img src="/static/icons/fmt-compress.svg" style="width:20px;height:20px;display:block;" />', name: "Сжать",  desc_ru: "Уменьшить размер",     desc_en: "Compress size",        color: "#d97706" },
+      { id: "video_to_m4a",  icon: '<img src="/static/icons/fmt-mp3.svg" style="width:20px;height:20px;display:block;" />',      name: "→ M4A",  desc_ru: "Аудио M4A",            desc_en: "Audio M4A",            color: "#7c3aed" },
+      { id: "video_stt",     icon: '<img src="/static/icons/fmt-text.svg" style="width:20px;height:20px;display:block;" />',     name: "→ Текст",desc_ru: "Распознать речь",      desc_en: "Speech to text",       color: "#0891b2" },
     ],
     audio: [
-      { id: "audio_to_mp3",  icon: "🎵", name: "→ MP3",  desc_ru: "Конвертировать",       desc_en: "Convert",              color: "#e8195a" },
-      { id: "audio_to_wav",  icon: "🔊", name: "→ WAV",  desc_ru: "Несжатый формат",      desc_en: "Lossless format",      color: "#7c3aed" },
-      { id: "audio_to_ogg",  icon: "🎶", name: "→ OGG",  desc_ru: "Открытый формат",      desc_en: "Open format",          color: "#059669" },
-      { id: "audio_to_m4a",  icon: "🎧", name: "→ M4A",  desc_ru: "Для Apple устройств",  desc_en: "For Apple devices",    color: "#6366f1" },
-      { id: "audio_compress",icon: "📦", name: "Сжать",  desc_ru: "Уменьшить размер",     desc_en: "Compress size",        color: "#d97706" },
-      { id: "audio_stt",     icon: "📝", name: "→ Текст",desc_ru: "Распознать речь",      desc_en: "Speech to text",       color: "#0891b2" },
+      { id: "audio_to_mp3",  icon: '<img src="/static/icons/fmt-mp3.svg" style="width:20px;height:20px;display:block;" />',      name: "→ MP3",  desc_ru: "Конвертировать",       desc_en: "Convert",              color: "#e8195a" },
+      { id: "audio_to_wav",  icon: '<img src="/static/icons/fmt-wav.svg" style="width:20px;height:20px;display:block;" />',      name: "→ WAV",  desc_ru: "Несжатый формат",      desc_en: "Lossless format",      color: "#7c3aed" },
+      { id: "audio_to_ogg",  icon: '<img src="/static/icons/fmt-wav.svg" style="width:20px;height:20px;display:block;" />',      name: "→ OGG",  desc_ru: "Открытый формат",      desc_en: "Open format",          color: "#059669" },
+      { id: "audio_to_m4a",  icon: '<img src="/static/icons/fmt-mp3.svg" style="width:20px;height:20px;display:block;" />',      name: "→ M4A",  desc_ru: "Для Apple устройств",  desc_en: "For Apple devices",    color: "#6366f1" },
+      { id: "audio_compress",icon: '<img src="/static/icons/fmt-compress.svg" style="width:20px;height:20px;display:block;" />', name: "Сжать",  desc_ru: "Уменьшить размер",     desc_en: "Compress size",        color: "#d97706" },
+      { id: "audio_stt",     icon: '<img src="/static/icons/fmt-text.svg" style="width:20px;height:20px;display:block;" />',     name: "→ Текст",desc_ru: "Распознать речь",      desc_en: "Speech to text",       color: "#0891b2" },
     ],
     image: [
-      { id: "img_to_jpg",    icon: "🖼",  name: "→ JPG",  desc_ru: "Универсальный формат", desc_en: "Universal format",     color: "#e8195a" },
-      { id: "img_to_png",    icon: "🖼",  name: "→ PNG",  desc_ru: "С прозрачностью",      desc_en: "With transparency",    color: "#7c3aed" },
-      { id: "img_to_webp",   icon: "🌐", name: "→ WebP", desc_ru: "Для веба",             desc_en: "For web",              color: "#059669" },
-      { id: "img_compress",  icon: "📦", name: "Сжать",  desc_ru: "Уменьшить файл",       desc_en: "Reduce size",          color: "#d97706" },
+      { id: "img_to_jpg",    icon: '<img src="/static/icons/fmt-jpg.svg" style="width:20px;height:20px;display:block;" />',      name: "→ JPG",  desc_ru: "Универсальный формат", desc_en: "Universal format",     color: "#e8195a" },
+      { id: "img_to_png",    icon: '<img src="/static/icons/fmt-png.svg" style="width:20px;height:20px;display:block;" />',      name: "→ PNG",  desc_ru: "С прозрачностью",      desc_en: "With transparency",    color: "#7c3aed" },
+      { id: "img_to_webp",   icon: '<img src="/static/icons/fmt-webp.svg" style="width:20px;height:20px;display:block;" />',     name: "→ WebP", desc_ru: "Для веба",             desc_en: "For web",              color: "#059669" },
+      { id: "img_compress",  icon: '<img src="/static/icons/fmt-compress.svg" style="width:20px;height:20px;display:block;" />', name: "Сжать",  desc_ru: "Уменьшить файл",       desc_en: "Reduce size",          color: "#d97706" },
     ],
     pdf: [
-      { id: "pdf_to_txt",    icon: "📄", name: "→ Текст",desc_ru: "Извлечь текст",        desc_en: "Extract text",         color: "#e8195a" },
-      { id: "pdf_to_img",    icon: "🖼",  name: "→ Фото", desc_ru: "Страницы как картинки",desc_en: "Pages as images",      color: "#7c3aed" },
-      { id: "pdf_compress",  icon: "📦", name: "Сжать",  desc_ru: "Уменьшить файл",       desc_en: "Reduce size",          color: "#d97706" },
+      { id: "pdf_to_txt",    icon: '<img src="/static/icons/fmt-text.svg" style="width:20px;height:20px;display:block;" />',     name: "→ Текст",desc_ru: "Извлечь текст",        desc_en: "Extract text",         color: "#e8195a" },
+      { id: "pdf_to_img",    icon: '<img src="/static/icons/fmt-png.svg" style="width:20px;height:20px;display:block;" />',      name: "→ Фото", desc_ru: "Страницы как картинки",desc_en: "Pages as images",      color: "#7c3aed" },
+      { id: "pdf_compress",  icon: '<img src="/static/icons/fmt-compress.svg" style="width:20px;height:20px;display:block;" />', name: "Сжать",  desc_ru: "Уменьшить файл",       desc_en: "Reduce size",          color: "#d97706" },
     ],
     document: [
-      { id: "doc_to_pdf",    icon: "📑", name: "→ PDF",  desc_ru: "Конвертировать в PDF", desc_en: "Convert to PDF",       color: "#e8195a" },
-      { id: "doc_to_txt",    icon: "📄", name: "→ Текст",desc_ru: "Извлечь текст",        desc_en: "Extract text",         color: "#059669" },
+      { id: "doc_to_pdf",    icon: '<img src="/static/icons/fmt-pdf.svg" style="width:20px;height:20px;display:block;" />',      name: "→ PDF",  desc_ru: "Конвертировать в PDF", desc_en: "Convert to PDF",       color: "#e8195a" },
+      { id: "doc_to_txt",    icon: '<img src="/static/icons/fmt-text.svg" style="width:20px;height:20px;display:block;" />',     name: "→ Текст",desc_ru: "Извлечь текст",        desc_en: "Extract text",         color: "#059669" },
     ],
   };
 
@@ -207,7 +207,7 @@
 
     grid.innerHTML = actions.map(a => `
       <div class="conv-action" data-action-id="${a.id}" style="--ac:${a.color}">
-        <div class="conv-action__icon" style="background:${a.color}22;">${a.icon}</div>
+        <div class="conv-action__icon" style="background:${a.color}22;display:flex;align-items:center;justify-content:center;">${a.icon}</div>
         <div class="conv-action__text">
           <div class="conv-action__name">${a.name}</div>
           <div class="conv-action__desc">${lang === "en" ? a.desc_en : a.desc_ru}</div>
@@ -357,7 +357,7 @@
         </div>
         <div class="result-file__actions">
           <button class="btn btn--primary" id="convDlBtn" style="flex:1">
-            <img src="/static/icons/download.svg" class="icon" style="width:16px;height:16px" />
+            <img src="/static/icons/dl.svg" class="icon" style="width:16px;height:16px;filter:brightness(10);" />
             ${dlLabel}
           </button>
           <button class="btn btn--secondary" id="convShareBtn">
