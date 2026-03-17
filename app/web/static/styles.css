@@ -463,6 +463,17 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 .muted { color: var(--text2); }
 .small { font-size: 13px; }
 
+/* ── RECENT ── */
+.recentlist { display: flex; flex-direction: column; gap: 8px; }
+  border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface2); overflow: hidden;
+  transition: border-color .18s ease, background .18s ease, transform .15s ease, box-shadow .18s ease;
+}
+
+  width: 42px; height: 42px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); display: grid; place-items: center;
+  font-size: 18px; flex-shrink: 0; background: var(--surface);
+}
 .dot { opacity: .35; }
 
 /* Pills */
