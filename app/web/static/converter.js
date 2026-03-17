@@ -362,7 +362,9 @@
     result.innerHTML = `
       <div class="result-file" style="animation: resultIn .28s cubic-bezier(.34,1.56,.64,1) both">
         <div class="result-file__top">
-          <div class="result-file__icon">✅</div>
+          <div class="result-file__icon" style="display:flex;align-items:center;">
+            <dotlottie-player src="https://lottie.host/0a2c3314-1c05-4b41-b6b8-dbce526df12d/ZHMB3O5I8V.lottie" background="transparent" speed="1.2" style="width:44px;height:44px;" autoplay></dotlottie-player>
+          </div>
           <div class="result-file__name">${escHtml(fname)}</div>
         </div>
         <div class="result-file__actions">
