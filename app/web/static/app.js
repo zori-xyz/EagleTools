@@ -1,701 +1,487 @@
-// app/web/static/app.js
-(() => {
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+<!doctype html>
+<html lang="ru" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>EagleTools</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260344" />
+  </head>
+  <body>
+    <div class="app">
 
-  function escapeHtml(s) {
-    return String(s ?? "")
-      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
-  }
-
-  const t = (k) => window.EagleProfile?.t?.(k) || "";
-
-  // ---------- Toast ----------
-  let toastEl = null, toastTimer = null;
-  function ensureToast() {
-    if (toastEl) return toastEl;
-    toastEl = document.createElement("div");
-    toastEl.className = "toast";
-    toastEl.innerHTML = `<div class="toast__inner"><div class="toast__icon" id="toastIcon">ℹ️</div><div class="toast__msg" id="toastMsg"></div></div>`;
-    document.body.appendChild(toastEl);
-    return toastEl;
-  }
-  function toast(msg, kind = "ok", icon = "ℹ️") {
-    const el = ensureToast();
-    const m = $("#toastMsg", el), ic = $("#toastIcon", el);
-    if (m) m.textContent = String(msg ?? "");
-    if (ic) ic.textContent = icon;
-    el.dataset.kind = kind || "ok";
-    el.classList.add("is-on");
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("is-on"), 2400);
-  }
-
-  // ---------- API ----------
-  async function apiGet(path) {
-    try {
-      const r = await window.EagleAPI?.getJson?.(path);
-      if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
-      return { ok: true, data: r };
-    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
-  }
-  async function apiPost(path, body) {
-    try {
-      const r = await window.EagleAPI?.postJson?.(path, body);
-      if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
-      return { ok: true, data: r };
-    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
-  }
-  async function apiDelete(path) {
-    try {
-      const r = await window.EagleAPI?.delJson?.(path);
-      if (r && typeof r === "object" && "ok" in r && "data" in r) return r;
-      return { ok: true, data: r };
-    } catch (e) { return { ok: false, error: String(e?.message || e) }; }
-  }
-  const ERROR_MAP = {
-    "save_failed": () => t("err_save_failed") || "Не удалось загрузить файл",
-    "soundcloud_failed": () => t("err_soundcloud") || "Ошибка SoundCloud",
-    "daily_limit_reached": () => t("limit_reached") || "Дневной лимит исчерпан",
-    "ip_blocked": () => t("err_ip_blocked") || "Платформа заблокировала сервер",
-    "yt_dlp_timeout": () => t("err_timeout") || "Превышено время ожидания",
-    "bad_url": () => t("err_bad_url") || "Неверная ссылка",
-    "unknown_tool": () => t("err_unknown_tool") || "Неизвестный инструмент",
-    "missing_init_data": () => t("err_auth") || "Ошибка авторизации",
-    "not_media_url": () => t("err_not_media") || "Ссылка не ведёт на медиафайл",
-    "too_large": () => t("err_too_large") || "Файл слишком большой",
-    "empty_download": () => t("err_empty") || "Пустой файл",
-  };
-
-  function prettyErr(r) {
-    if (!r) return t("err_unknown") || "Неизвестная ошибка";
-    const raw = r.error ? String(r.error) : (r.data && typeof r.data === "object") ? (r.data.detail || r.data.message || "") : "";
-    // Check known error codes
-    for (const [code, fn] of Object.entries(ERROR_MAP)) {
-      if (raw.startsWith(code) || raw.includes(code)) return fn();
-    }
-    if (raw) return raw;
-    return t("err_unknown") || "Неизвестная ошибка";
-  }
-
-  // ---------- Open / Share ----------
-  function openFile(url) {
-    if (!url) return;
-    const full = url.startsWith("http") ? url : window.location.origin + url;
-    try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(full); return; } } catch {}
-    try { window.open(full, "_blank", "noopener"); } catch {}
-  }
-  async function shareFile(url, title = "") {
-    if (!url) return;
-    const full = url.startsWith("http") ? url : window.location.origin + url;
-    try { if (navigator.share) { await navigator.share({ title: title || "EagleTools", url: full }); return; } } catch {}
-    try { await navigator.clipboard.writeText(full); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch { openFile(url); }
-  }
-
-  // ---------- Media Player ----------
-  let playerUrl = "", playerTitle = "", playerIsAudio = false;
-  function fmtTime(sec) {
-    if (!isFinite(sec)) return "0:00";
-    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
-
-  function updateSeekFill(el, pct) {
-    const p = Math.max(0, Math.min(100, Number(pct) || 0));
-    el.style.background = `linear-gradient(to right, #e8195a 0%, #e8195a ${p}%, rgba(255,255,255,.10) ${p}%, rgba(255,255,255,.10) 100%)`;
-  }
-
-  function openPlayer(url, title, isAudio) {
-    playerUrl = url; playerTitle = title || ""; playerIsAudio = isAudio;
-    const modal = $("#playerModal");
-    const video = $("#playerVideo"), audio = $("#playerAudio");
-    const videoWrap = $("#playerVideoWrap"), audioWrap = $("#playerAudioWrap");
-    const controls = $("#playerControls");
-    const titleEl = $("#playerAudioTitle");
-
-    // stop previous
-    if (video) { video.pause(); video.src = ""; }
-    if (audio) { audio.pause(); audio.src = ""; }
-
-    if (isAudio) {
-      videoWrap && (videoWrap.style.display = "none");
-      audioWrap && (audioWrap.style.display = "");
-      controls && (controls.style.display = "");
-      if (titleEl) titleEl.textContent = title || "Аудио";
-      if (audio) {
-        audio.src = url.startsWith("http") ? url : window.location.origin + url;
-        audio.load();
-        bindAudioControls(audio);
-      }
-    } else {
-      audioWrap && (audioWrap.style.display = "none");
-      videoWrap && (videoWrap.style.display = "");
-      controls && (controls.style.display = "none");
-      if (video) {
-        video.src = url.startsWith("http") ? url : window.location.origin + url;
-        video.load();
-      }
-    }
-
-    const openBtn = $("#playerOpen"), shareBtn = $("#playerShare");
-    const openLabel = $("#playerOpenLabel"), shareLabel = $("#playerShareLabel");
-    if (openLabel) openLabel.textContent = t("player_open") || "Открыть";
-    if (shareLabel) shareLabel.textContent = t("player_share") || "Поделиться";
-    if (openBtn) openBtn.onclick = () => openFile(playerUrl);
-    if (shareBtn) shareBtn.onclick = () => shareFile(playerUrl, playerTitle);
-
-    modal && modal.classList.add("is-open");
-  }
-
-  function closePlayer() {
-    const modal = $("#playerModal");
-    const video = $("#playerVideo"), audio = $("#playerAudio");
-    if (video) { video.pause(); video.src = ""; }
-    if (audio) { audio.pause(); audio.src = ""; }
-    modal && modal.classList.remove("is-open");
-  }
-
-  function bindAudioControls(audio) {
-    const seek = $("#playerSeek");
-    const playBtn = $("#playerPlay");
-    const backBtn = $("#playerBack");
-    const fwdBtn = $("#playerFwd");
-    const curEl = $("#playerCurrent");
-    const durEl = $("#playerDuration");
-
-    if (playBtn) {
-      playBtn.onclick = () => { if (audio.paused) audio.play(); else audio.pause(); };
-    }
-    if (backBtn) backBtn.onclick = () => { audio.currentTime = Math.max(0, audio.currentTime - 10); };
-    if (fwdBtn) fwdBtn.onclick = () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); };
-
-    audio.ontimeupdate = () => {
-      if (seek && isFinite(audio.duration) && audio.duration > 0) {
-        const pct = (audio.currentTime / audio.duration) * 100;
-        seek.value = pct;
-        updateSeekFill(seek, pct);
-      }
-      if (curEl) curEl.textContent = fmtTime(audio.currentTime);
-    };
-    audio.ondurationchange = () => { if (durEl) durEl.textContent = fmtTime(audio.duration); };
-    audio.onplay = () => { if (playBtn) { playBtn.innerHTML = `<img src="/static/icons/pause.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" />`; } };
-    audio.onpause = () => { if (playBtn) { playBtn.innerHTML = `<img src="/static/icons/play.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" />`; } };
-
-    if (seek) {
-      updateSeekFill(seek, 0);
-      seek.oninput = () => {
-        if (isFinite(audio.duration) && audio.duration > 0) {
-          audio.currentTime = (seek.value / 100) * audio.duration;
-          updateSeekFill(seek, seek.value);
-        }
-      };
-    }
-  }
-
-  function initPlayer() {
-    $("#playerClose")?.addEventListener("click", closePlayer);
-    $("#playerBackdrop")?.addEventListener("click", closePlayer);
-  }
-
-  // ---------- Indicator ----------
-  function syncIndicator(container, indicator, activeBtn) {
-    if (!container || !indicator || !activeBtn) return;
-    const cRect = container.getBoundingClientRect(), bRect = activeBtn.getBoundingClientRect();
-    indicator.style.left = "0px"; indicator.style.top = "0px";
-    indicator.style.width = `${Math.round(bRect.width)}px`;
-    indicator.style.height = `${Math.round(bRect.height)}px`;
-    indicator.style.transform = `translate(${Math.round(bRect.left - cRect.left)}px, ${Math.round(bRect.top - cRect.top)}px)`;
-  }
-
-  // ---------- Tabs ----------
-  const tabsEl = $("#tabs"), indEl = $("#tabsIndicator");
-  function setTab(name) {
-    $$("[data-tab]").forEach(b => b.classList.toggle("is-active", b.dataset.tab === name));
-    $$("[data-panel]").forEach(p => p.classList.toggle("is-active", p.dataset.panel === name));
-    const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
-    if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
-    if (name === "profile") { window.EagleProfile?.renderProfile?.(); window.EagleProfile?.init?.(); syncAllSegmini(); }
-    if (name === "recent") { lastHash = ""; loadRecents(false); }
-    if (name === "help") window.EagleProfile?.init?.();
-  }
-  window.setTab = setTab;
-
-  function bindTabs() {
-    document.addEventListener("click", e => {
-      const btn = e.target.closest("[data-tab]");
-      if (!btn || !btn.dataset.tab) return;
-      setTab(btn.dataset.tab);
-    }, true);
-    const active = $("[data-tab].is-active");
-    if (active) syncIndicator(tabsEl, indEl, active);
-    window.addEventListener("resize", () => {
-      const a = $("[data-tab].is-active");
-      if (a) syncIndicator(tabsEl, indEl, a);
-      syncAllSegmini();
-    });
-  }
-
-  // ---------- Segmini ----------
-  function syncSegmini(seg) {
-    if (!seg) return;
-    const indicator = $(".segmini__indicator", seg);
-    const active = $(".segmini__btn.is-active", seg) || $(".segmini__btn", seg);
-    if (!indicator || !active) return;
-    syncIndicator(seg, indicator, active);
-  }
-  function syncAllSegmini() { $$(".segmini").forEach(syncSegmini); }
-  function setSegActive(seg, value) {
-    if (!seg) return;
-    $$(".segmini__btn", seg).forEach(b => b.classList.toggle("is-active", b.dataset.value === value));
-    syncSegmini(seg);
-  }
-
-  // ---------- Settings modal ----------
-  const modalEl = () => $("#settingsModal");
-  function isModalOpen() { return modalEl()?.classList.contains("is-open"); }
-  function openSettings() {
-    const m = modalEl(); if (!m) return;
-    const s = window.EagleProfile?.settings || { lang: "ru", theme: "dark" };
-    setSegActive($("#langSeg"), s.lang);
-    setSegActive($("#themeSeg"), s.theme);
-    m.classList.add("is-open"); m.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => syncAllSegmini());
-  }
-  function closeSettings() {
-    const m = modalEl(); if (!m) return;
-    m.classList.remove("is-open"); m.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-  }
-
-  function getBotUsername() { return window.BOT_USERNAME || "EagleToolsBot"; }
-  function openTgLink(url) {
-    try {
-      if (window.Telegram?.WebApp?.openTelegramLink && url.startsWith("https://t.me/")) { window.Telegram.WebApp.openTelegramLink(url); return; }
-      if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink(url); return; }
-    } catch {}
-    try { window.open(url, "_blank", "noopener"); } catch {}
-  }
-
-  // ---------- Tool card helpers ----------
-  function getRole(card, role) { return card?.querySelector?.(`[data-role="${role}"]`) || null; }
-
-  function setProgress(card, v) {
-    const bar = getRole(card, "bar");
-    const val = Math.max(0, Math.min(100, Number(v || 0)));
-    if (bar) bar.style.width = `${val}%`;
-    if (card) card.classList.toggle("is-progress", val > 0);
-  }
-  function setProgressText(card, html) { const el = getRole(card, "progress"); if (el) el.innerHTML = html || ""; }
-  function setResult(card, html) {
-    const el = getRole(card, "result");
-    if (el) { el.innerHTML = html || ""; el.style.display = html ? "" : "none"; }
-  }
-  function resetCardUi(card) { setProgress(card, 0); setProgressText(card, ""); setResult(card, ""); }
-
-  // ---------- Helpers ----------
-  function pickFirstString(...vals) { for (const v of vals) { if (typeof v === "string" && v.trim()) return v.trim(); } return ""; }
-  function extFromTool(tool) { return tool === "audio" ? ".mp3" : ".mp4"; }
-  function normalizeDisplayName(name, tool) {
-    const base = String(name || "").trim();
-    if (!base) return "";
-    if (/\.[a-z0-9]{2,5}$/i.test(base)) return base;
-    return base + extFromTool(tool);
-  }
-  function extractOut(data, tool) {
-    if (!data || typeof data !== "object") return null;
-    const meta = data.metadata || data.meta || {};
-    const out = data.out || data.result || data.file || {};
-    const fileId = pickFirstString(data.file_id, out.file_id) || "";
-    const downloadUrl = pickFirstString(data.download_url, out.download_url, data.url, out.url) || (fileId ? `/api/file/${encodeURIComponent(fileId)}` : "");
-    const title = pickFirstString(data.title, out.title, data.filename, out.filename, meta.title, meta.filename);
-    const displayName = normalizeDisplayName(title || fileId, tool);
-    if (!downloadUrl) return null;
-    return { fileId, downloadUrl, displayName };
-  }
-
-  // ---------- Tools run ----------
-  let lastHash = "";
-
-  async function runTool(card) {
-    const tool = card?.dataset?.tool || "";
-    const urlEl = getRole(card, "url");
-    const url = (urlEl?.value || "").trim();
-    if (!url) { toast(t("err_empty_url") || "Вставь ссылку", "warn", "⚠️"); return; }
-
-    resetCardUi(card);
-    setProgress(card, 20);
-    setProgressText(card, `<span>${t("starting") || "Загружаем…"}</span>`);
-
-    const t0 = performance.now();
-    const r = await apiPost(`/api/save_job?tool=${encodeURIComponent(tool)}`, { url });
-
-    if (!r.ok) {
-      resetCardUi(card);
-      setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⛔</span><span class="result-file__name muted">${escapeHtml(prettyErr(r))}</span></div></div>`);
-      toast(prettyErr(r), "err", "⛔");
-      return;
-    }
-
-    lastHash = "";
-    loadRecents(true);
-
-    const data = r.data;
-    const secs = ((performance.now() - t0) / 1000).toFixed(1);
-    const out = extractOut(data, tool);
-
-    if (out) {
-      setProgress(card, 0);
-      setProgressText(card, `✓ Готово за ${escapeHtml(secs)}s`);
-
-      const isAudio = tool === "audio" || out.displayName.endsWith(".mp3");
-      const icon = isAudio ? "🎵" : "🎬";
-
-      setResult(card, `
-        <div class="result-file">
-          <div class="result-file__top">
-            <span class="result-file__icon">${icon}</span>
-            <span class="result-file__name">${escapeHtml(out.displayName)}</span>
+      <!-- HEADER -->
+      <header class="header">
+        <div class="brand">
+          <div class="brand__icon" aria-hidden="true">
+            <img src="/static/logo.png" alt="EagleTools" class="brand__logo" />
           </div>
-          <div class="result-file__actions">
-            <button class="btn btn--secondary btn--sm" type="button"
-              data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}">
-              🌐 Открыть
-            </button>
-            <button class="btn btn--primary btn--sm" type="button"
-              data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
-              data-title="${escapeHtml(out.displayName)}">
-              📤 Поделиться
-            </button>
+          <div class="brand__text">
+            <div class="brand__title">EagleTools</div>
+            <div class="brand__subtitle" data-i18n="subtitle">Links → files</div>
           </div>
         </div>
-      `);
+        <div class="header__actions">
+          <button class="iconbtn iconbtn--header" type="button" data-action="open-profile" aria-label="Profile">
+            <span class="header__avatar" id="headerAvatar" aria-hidden="true">
+              <img src="/static/icons/user.svg" class="icon icon--muted" alt="" />
+            </span>
+          </button>
+          <button class="iconbtn iconbtn--header" type="button" data-action="open-settings" aria-label="Settings">
+            <img src="/static/icons/settings.svg" class="icon icon--muted" alt="" />
+          </button>
+        </div>
+      </header>
 
-      toast(t("done") || "Готово!", "ok", "✅");
-      return;
-    }
+      <!-- TABS -->
+      <nav class="tabs" id="tabs">
+        <div class="tabs__indicator" id="tabsIndicator" aria-hidden="true"></div>
+        <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Инструменты</button>
+        <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">История</button>
+        <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Профиль</button>
+        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Помощь</button>
+      </nav>
 
-    setProgress(card, 0);
-    setProgressText(card, "");
-    setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⏳</span><span class="result-file__name muted">${escapeHtml(t("queued") || "В очереди")}</span></div></div>`);
-    toast(t("job_created") || "Задание создано", "ok", "✅");
-  }
+      <main class="main">
 
-  function bindToolRuns() {
-    document.addEventListener("click", e => {
-      const btn = e.target.closest("[data-role='run']");
-      if (!btn) return;
-      const card = btn.closest("[data-tool]");
-      if (!card) return;
-      runTool(card).catch(err => toast(String(err?.message || err), "err", "⛔"));
-    }, true);
-  }
+        <!-- ======== TOOLS ======== -->
+        <section class="panel is-active" data-panel="tools">
+          <h1 class="h1" data-i18n="tab_tools">Инструменты</h1>
 
-  // ---------- Recents ----------
-  function fmtBytes(n) {
-    const v = Number(n);
-    if (!Number.isFinite(v) || v <= 0) return "";
-    const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0, x = v;
-    while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; }
-    return `${x.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
-  }
-  function fmtWhen(iso) {
-    if (!iso) return "";
-    try { const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return d.toLocaleString(); } catch { return ""; }
-  }
-  function itemTitle(item) {
-    const meta = item?.metadata || item?.meta || {};
-    return pickFirstString(item?.title, item?.filename, meta?.title, meta?.filename);
-  }
+          <!-- CONVERTER CARD -->
+          <div class="converter-card" id="converterCard">
+            <div class="converter-card__header">
+              <div class="converter-card__icon">
+                <img src="/static/icons/fmt-video.svg" class="icon icon--rose" alt="" style="width:22px;height:22px;" />
+              </div>
+              <div class="converter-card__meta">
+                <div class="converter-card__title" data-i18n="conv_title">Конвертер файлов</div>
+                <div class="converter-card__desc" data-i18n="conv_desc">Видео, аудио, фото, PDF, документы</div>
+              </div>
+              <div class="converter-card__badge" data-i18n="conv_badge">SMART</div>
+            </div>
+            <div class="converter-drop" id="convDrop">
+              <input type="file" id="convFileInput" accept="*/*" />
+              <div class="converter-drop__icon">
+                <img src="/static/icons/download.svg" alt="" />
+              </div>
+              <div class="converter-drop__label" data-i18n="conv_drop_label">Выбери файл</div>
+              <div class="converter-drop__sub" data-i18n="conv_drop_sub">или перетащи сюда · до 100 МБ</div>
+            </div>
+            <div class="converter-file" id="convFile">
+              <div class="converter-file__thumb" id="convFileThumb">📄</div>
+              <div class="converter-file__info">
+                <div class="converter-file__name" id="convFileName">—</div>
+                <div class="converter-file__size" id="convFileSize"></div>
+              </div>
+              <button class="converter-file__clear" id="convFileClear" type="button">✕</button>
+            </div>
+            <div class="converter-actions" id="convActions">
+              <div class="converter-actions__label" data-i18n="conv_choose_action">Что сделать с файлом</div>
+              <div class="converter-action-grid" id="convActionGrid"></div>
+            </div>
+            <div class="converter-run-wrap" id="convRunWrap">
+              <button class="btn btn--primary" id="convRunBtn" type="button" style="width:100%;height:48px;font-size:15px;">
+                <img src="/static/icons/fmt-video.svg" class="icon icon--rose" alt="" style="width:18px;height:18px;" />
+                <span data-i18n="conv_btn_run" id="convRunLabel">Конвертировать</span>
+              </button>
+            </div>
+            <div class="converter-progress" id="convProgress">
+              <div class="converter-progress__track">
+                <div class="converter-progress__fill" id="convProgressFill"></div>
+              </div>
+              <div class="converter-progress__text" id="convProgressText"></div>
+            </div>
+            <div class="converter-result" id="convResult"></div>
+          </div>
 
-  /* ── SVG иконки для типов файлов ── */
-  const FILE_ICONS = {
-    audio:    `<img src="/static/icons/fmt-mp3.svg"   style="width:18px;height:18px;display:block;" />`,
-    video:    `<img src="/static/icons/fmt-mp4.svg"   style="width:18px;height:18px;display:block;" />`,
-    image:    `<img src="/static/icons/fmt-png.svg"   style="width:18px;height:18px;display:block;" />`,
-    document: `<img src="/static/icons/file-doc.svg"  style="width:18px;height:18px;display:block;" />`,
-    default:  `<img src="/static/icons/file-doc.svg"  style="width:18px;height:18px;display:block;" />`,
-  };
+          <div class="toolgrid">
 
-  function recentRow(item) {
-    const id          = item?.id ?? "";
-    const title       = itemTitle(item) || item?.file_id || `#${id}`;
-    const when        = fmtWhen(item?.created_at);
-    const size        = fmtBytes(item?.size_bytes);
-    const downloadUrl = item?.download_url || "";
-    const canDl       = !!downloadUrl;
-    const ext         = (item?.file_id || "").split(".").pop()?.toLowerCase() || "";
-    const isAudio     = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
-    const isVideo     = ["mp4","webm","mov","avi","mkv"].includes(ext);
-    const isImage     = ["jpg","jpeg","png","webp","bmp","tiff","heic","gif"].includes(ext);
-    const isTxt       = ["txt","pdf","doc","docx"].includes(ext);
+            <!-- Video -->
+            <div class="toolcard" data-tool="save">
+              <div class="toolcard__header">
+                <div class="toolcard__icon toolcard__icon--video">
+                  <img src="/static/icons/video.svg" class="icon icon--rose" alt="" />
+                </div>
+                <div class="toolcard__meta">
+                  <div class="toolcard__title" data-i18n="links">Видео</div>
+                  <div class="toolcard__desc" data-i18n="tool_video_desc">YouTube и другие платформы</div>
+                </div>
+                <div class="toolcard__badge toolcard__badge--video">MP4</div>
+              </div>
+              <div class="toolcard__input-row">
+                <div class="toolcard__input-wrap">
+                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
+                  <input class="input" data-role="url" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
+                </div>
+                <button class="btn btn--video" data-role="run" type="button">
+                  <img src="/static/icons/download.svg" class="icon" alt="" />
+                  <span data-i18n="btn_download">Скачать</span>
+                </button>
+              </div>
+              <div class="toolcard__progress">
+                <div class="toolcard__progress-track">
+                  <div class="toolcard__progress-fill toolcard__progress-fill--video" data-role="bar"></div>
+                </div>
+                <div class="toolcard__progress-text muted" data-role="progress"></div>
+              </div>
+              <div class="toolcard__result" data-role="result"></div>
+            </div>
 
-    const fileType  = isAudio ? "audio" : isVideo ? "video" : isImage ? "image" : isTxt ? "document" : "default";
-    const icon      = FILE_ICONS[fileType];
-    const typeClass = `ri--${fileType === "default" ? "doc" : fileType}`;
+            <!-- Audio -->
+            <div class="toolcard" data-tool="audio">
+              <div class="toolcard__header">
+                <div class="toolcard__icon toolcard__icon--audio">
+                  <img src="/static/icons/music.svg" class="icon icon--violet" alt="" />
+                </div>
+                <div class="toolcard__meta">
+                  <div class="toolcard__title">SoundCloud</div>
+                  <div class="toolcard__desc" data-i18n="tool_audio_desc">Треки и плейлисты</div>
+                </div>
+                <div class="toolcard__badge toolcard__badge--audio">MP3</div>
+              </div>
+              <div class="toolcard__input-row">
+                <div class="toolcard__input-wrap">
+                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
+                  <input class="input" data-role="url" type="url" placeholder="https://soundcloud.com/..." autocomplete="off" />
+                </div>
+                <button class="btn btn--audio-orange" data-role="run" type="button">
+                  <img src="/static/icons/music.svg" class="icon" alt="" />
+                  <span data-i18n="btn_make_mp3">MP3</span>
+                </button>
+              </div>
+              <div class="toolcard__progress">
+                <div class="toolcard__progress-track">
+                  <div class="toolcard__progress-fill toolcard__progress-fill--audio" data-role="bar"></div>
+                </div>
+                <div class="toolcard__progress-text muted" data-role="progress"></div>
+              </div>
+              <div class="toolcard__result" data-role="result"></div>
+            </div>
 
-    /* Статус */
-    const rawStatus   = String(item?.status || "queued").toLowerCase();
-    const status      = canDl ? "done" : rawStatus;
-    const badgeCls    = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
-    const statusLabel = status === "done" ? (t("done") || "ГОТОВО")
-      : status === "failed" || status === "error" ? (t("err_unknown") || "ОШИБКА")
-      : status === "running" ? "ОБРАБАТЫВАЮ"
-      : "В ОЧЕРЕДИ";
+          </div>
+        </section>
 
-    const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
-      data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
-      <img src="/static/icons/dl.svg" style="width:15px;height:15px;display:block;" />
-    </button>`;
-
-    const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
-      <img src="/static/icons/delete.svg" style="width:15px;height:15px;display:block;" />
-    </button>`;
-
-    const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
-      data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-      data-audio="${isAudio}" data-image="${isImage}" aria-label="Play">
-      <img src="/static/icons/play-btn.svg" style="width:14px;height:14px;display:block;filter:brightness(10);" />
-    </button>` : "";
-
-    return `
-      <div class="recentitem ri ${typeClass}" data-id="${escapeHtml(id)}">
-        <div class="ri-inner">
-          <div class="ri-icon">${icon}</div>
-          <div class="ri-info">
-            <div class="ri-name">${escapeHtml(title)}</div>
-            <div class="ri-meta">
-              <span class="ri-badge ri-badge--${badgeCls}">${escapeHtml(statusLabel)}</span>
-              ${size ? `<span class="ri-size">${escapeHtml(size)}</span>` : ""}
-              ${size && when ? `<span class="ri-dot"></span>` : ""}
-              ${when ? `<span class="ri-date">${escapeHtml(when)}</span>` : ""}
+        <!-- ======== RECENT ======== -->
+        <section class="panel" data-panel="recent">
+          <div class="recent-header">
+            <h1 class="h1" data-i18n="recent_title">История загрузок</h1>
+            <div class="recent-sort">
+              <select id="recentSort" class="recent-sort__select">
+                <option value="date_desc" data-i18n="sort_date_new">Сначала новые</option>
+                <option value="date_asc" data-i18n="sort_date_old">Сначала старые</option>
+                <option value="name_asc" data-i18n="sort_name_az">По имени А–Я</option>
+                <option value="name_desc" data-i18n="sort_name_za">По имени Я–А</option>
+                <option value="size_desc" data-i18n="sort_size_big">По размеру ↓</option>
+                <option value="size_asc" data-i18n="sort_size_small">По размеру ↑</option>
+              </select>
             </div>
           </div>
-          <div class="ri-actions">
-            ${playBtn}${dlBtn}${delBtn}
+          <div id="recentList" class="recentlist"></div>
+        </section>
+
+        <!-- ======== PROFILE ======== -->
+        <section class="panel" data-panel="profile">
+          <h1 class="h1" data-i18n="profile_title">Профиль</h1>
+          <div class="profile">
+
+            <div class="card profile-hero">
+              <div class="profile-hero__bg" id="profileHeroBg"></div>
+              <div class="profile-hero__content">
+                <div class="profile-hero__avatar" id="profileAvatar">👤</div>
+                <div class="profile-hero__name" id="profileName">User</div>
+                <div class="profile-hero__username muted" id="profileUsername">@username</div>
+                <div class="profile-hero__badge" id="profilePlanBadge">FREE</div>
+              </div>
+            </div>
+
+            <div class="card usage-card">
+              <div class="usage-card__header">
+                <div class="usage-card__icon"><img src="/static/icons/chart-bar.svg" class="icon icon--rose" style="width:20px;height:20px;" alt="" /></div>
+                <div class="usage-card__title" data-i18n="usage_title">Использование</div>
+              </div>
+              <div class="usage-stats">
+                <div class="usage-stats__main">
+                  <div class="usage-stats__value">
+                    <span id="profileUsed">0</span>
+                    <span class="usage-stats__divider">/</span>
+                    <span id="profileLimit" class="muted">10</span>
+                  </div>
+                  <div class="usage-stats__label muted" data-i18n="requests_today">запросов сегодня</div>
+                </div>
+                <div class="usage-progress">
+                  <div class="usage-progress__track">
+                    <div class="usage-progress__fill" id="profileBarFill"></div>
+                  </div>
+                  <div class="usage-progress__label">
+                    <span data-i18n="remaining">Осталось</span>
+                    <span id="profileLeft" class="usage-progress__count">10</span>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-action="open-upgrade">
+                ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
+              </button>
+            </div>
+
+            <div class="card premium-card" id="premiumCard" style="display:none;">
+              <div class="premium-card__glow"></div>
+              <div class="premium-card__content">
+                <div class="premium-card__icon">✨</div>
+                <div class="premium-card__title">Premium Active</div>
+                <div class="premium-card__until">
+                  <span class="muted" data-i18n="valid_until">Активен до:</span>
+                  <span id="profilePremiumUntil">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card refs-card">
+              <div class="refs-card__header">
+                <div class="refs-card__icon">🎁</div>
+                <div>
+                  <div class="refs-card__title" data-i18n="referrals_title">Реферальная программа</div>
+                  <div class="refs-card__subtitle muted" data-i18n="refs_subtitle">Приглашай друзей и получай бонусы</div>
+                </div>
+              </div>
+              <div class="refs-stats">
+                <div class="refs-stat">
+                  <div class="refs-stat__value" id="profileRefs">0</div>
+                  <div class="refs-stat__label muted" data-i18n="friends_invited">друзей приглашено</div>
+                </div>
+                <div class="refs-stat" id="rewardStat" style="display:none;">
+                  <div class="refs-stat__value" id="profileRewardNeed">3</div>
+                  <div class="refs-stat__label muted" data-i18n="until_reward">до награды</div>
+                </div>
+              </div>
+              <div class="refs-link">
+                <div class="refs-link__text" id="profileRefLink">—</div>
+              </div>
+              <div class="refs-actions">
+                <button class="btn btn--secondary" type="button" data-action="copy-ref">
+                  <img src="/static/icons/copy.svg" class="icon icon--sm" alt="" />
+                  <span data-i18n="ref_copy_btn">Копировать</span>
+                </button>
+                <button class="btn btn--secondary" type="button" data-action="share-ref">
+                  <img src="/static/icons/share-2.svg" class="icon icon--sm" alt="" />
+                  <span data-i18n="ref_share_btn">Поделиться</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ======== HELP ======== -->
+        <section class="panel" data-panel="help">
+          <h1 class="h1" data-i18n="help_title">Помощь</h1>
+          <div class="help-page">
+
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon"><img src="/static/icons/wrench.svg" class="icon icon--muted" style="width:17px;height:17px;" alt="" /></span>
+                <span data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
+              </div>
+              <div class="help-steps">
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma1">Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma2">Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma3">Нажми <b>Скачать</b> для видео (mp4) или <b>MP3</b> для аудио</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma4">После загрузки нажми <b>Открыть</b> или <b>Поделиться</b></div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma5">Все файлы видны во вкладке <b>История</b></div></div>
+              </div>
+            </div>
+
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🤖</span>
+                <span data-i18n="help_bot_title">Функции бота в Telegram</span>
+              </div>
+              <div class="help-feature-grid">
+                <div class="help-feature">
+                  <div class="help-feature__icon">
+                    <img src="/static/icons/music.svg" class="icon icon--violet icon--lg" alt="" />
+                  </div>
+                  <div class="help-feature__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
+                  <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в mp3, wav или другой формат</div>
+                </div>
+                <div class="help-feature">
+                  <div class="help-feature__icon"><img src="/static/icons/microphone.svg" class="icon icon--rose icon--lg" alt="" /></div>
+                  <div class="help-feature__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
+                  <div class="help-feature__desc" data-i18n="help_bot_stt_desc">Отправь голосовое или аудио — бот расшифрует текст с помощью Whisper AI</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">⚡️</span>
+                <span data-i18n="help_premium_title">Преимущества Premium</span>
+              </div>
+              <div class="help-prem-list">
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_2">Приоритетная обработка заданий</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_3">Доступ ко всем будущим функциям</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_4">Поддержка развития проекта</span></div>
+              </div>
+              <div style="margin-top:14px">
+                <button class="btn btn--premium" type="button" data-action="open-upgrade">⚡️ <span data-i18n="upgrade_premium">Получить Premium</span></button>
+              </div>
+            </div>
+
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">🎁</span>
+                <span data-i18n="help_ref_title">Реферальная система</span>
+              </div>
+              <div class="help-ref-steps">
+                <div class="help-ref-step"><div class="help-ref-step__num">1</div><div class="help-ref-step__text" id="hrf1">Скопируй реферальную ссылку во вкладке Профиль</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">2</div><div class="help-ref-step__text" id="hrf2">Поделись с друзьями — пусть запустят бота по ней</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">3</div><div class="help-ref-step__text" id="hrf3">За каждого друга получишь <b>+5 загрузок</b> в день</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">4</div><div class="help-ref-step__text" id="hrf4">Каждые <b>3 приглашённых</b> дают Premium +3 дня</div></div>
+              </div>
+            </div>
+
+            <div class="card help-section">
+              <div class="help-section__title">
+                <img src="/static/icons/shield.svg" class="icon icon--ok help-section__title-icon" alt="" />
+                <span data-i18n="help_privacy_title">Конфиденциальность</span>
+              </div>
+              <div class="help-privacy-note">
+                <span class="help-privacy-note__icon">🛡</span>
+                <span id="hpriv">Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.</span>
+              </div>
+              <button class="btn help-btn-privacy" type="button" data-action="open-privacy">
+                <img src="/static/icons/shield.svg" class="icon icon--sm" alt="" />
+                <span data-i18n="privacy_policy">Политика конфиденциальности</span>
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal" id="settingsModal" aria-hidden="true">
+      <div class="modal__backdrop" data-action="close-settings" aria-hidden="true"></div>
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal__handle" aria-hidden="true"></div>
+        <div class="modal__head">
+          <div class="modal__title" id="settingsTitle" data-i18n="settings">Настройки</div>
+          <button class="iconbtn iconbtn--header" type="button" data-action="close-settings" aria-label="Close">
+            <span style="font-size:15px;font-weight:600;">✕</span>
+          </button>
+        </div>
+        <div class="modal__body">
+          <div class="card card--inner modal__card">
+            <div class="settings-card__title" data-i18n="settings">Настройки</div>
+            <div class="setting-row">
+              <div class="setting-row__label">
+                <img src="/static/icons/globe.svg" class="icon icon--muted setting-row__icon" alt="" />
+                <span data-i18n="language">Язык</span>
+              </div>
+              <div class="segmini" id="langSeg">
+                <div class="segmini__indicator" aria-hidden="true"></div>
+                <button class="segmini__btn" type="button" data-action="lang" data-value="ru">RU</button>
+                <button class="segmini__btn" type="button" data-action="lang" data-value="en">EN</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row__label">
+                <img src="/static/icons/palette.svg" class="icon icon--muted setting-row__icon" alt="" />
+                <span data-i18n="theme">Тема</span>
+              </div>
+              <div class="segmini" id="themeSeg">
+                <div class="segmini__indicator" aria-hidden="true"></div>
+                <button class="segmini__btn" type="button" data-action="theme" data-value="dark">Dark</button>
+                <button class="segmini__btn" type="button" data-action="theme" data-value="light">Light</button>
+              </div>
+            </div>
+          </div>
+          <div class="modal__links">
+            <button class="modal__link" type="button" data-action="open-tour">
+              <span class="modal__linkIcon">
+                <img src="/static/icons/wrench.svg" class="icon icon--muted" alt="" />
+              </span>
+              <span class="modal__linkText" data-i18n="tour_btn">Повторить тур по приложению</span>
+              <span class="modal__chev">›</span>
+            </button>
+            <button class="modal__link" type="button" data-action="open-support">
+              <span class="modal__linkIcon">
+                <img src="/static/icons/message-circle.svg" class="icon icon--rose" alt="" />
+              </span>
+              <span class="modal__linkText" data-i18n="support">Поддержка</span>
+              <span class="modal__chev">›</span>
+            </button>
+            <button class="modal__link" type="button" data-action="open-privacy">
+              <span class="modal__linkIcon">
+                <img src="/static/icons/shield.svg" class="icon icon--ok" alt="" />
+              </span>
+              <span class="modal__linkText" data-i18n="privacy_policy">Политика конфиденциальности</span>
+              <span class="modal__chev">›</span>
+            </button>
           </div>
         </div>
       </div>
-    `;
-  }
+    </div>
 
-  /* ── Лайтбокс для просмотра фото ── */
-  function showImageViewer(url, title) {
-    var old = document.getElementById("et-imgviewer");
-    if (old) old.remove();
-
-    const full = url.startsWith("http") ? url : window.location.origin + url;
-    const el = document.createElement("div");
-    el.id = "et-imgviewer";
-    el.style.cssText = "position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;";
-    el.innerHTML = `
-      <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px;">
-        <button id="et-img-dl" style="background:var(--rose);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;">
-          Скачать
+    <!-- MEDIA PLAYER MODAL -->
+    <div class="player-modal" id="playerModal">
+      <div class="player-modal__backdrop" id="playerBackdrop"></div>
+      <div class="player-modal__sheet">
+        <div class="player-modal__handle"></div>
+        <button class="player-modal__close" id="playerClose" type="button">
+          <span style="font-size:13px;font-weight:600;">✕</span>
         </button>
-        <button id="et-img-close" style="background:rgba(255,255,255,.1);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:13px;cursor:pointer;">
-          ✕
-        </button>
+        <div class="player-modal__body">
+          <div class="player-video-wrap" id="playerVideoWrap" style="display:none;">
+            <video id="playerVideo" controls playsinline></video>
+          </div>
+          <div class="player-audio-wrap" id="playerAudioWrap" style="display:none;">
+            <div class="player-audio-cover" id="playerAudioCover">
+              <img src="/static/icons/music.svg" class="icon icon--rose" style="width:52px;height:52px;" alt="" />
+            </div>
+            <div class="player-audio-title" id="playerAudioTitle">—</div>
+            <div class="player-audio-sub muted" data-i18n="player_sub">EagleTools</div>
+            <audio id="playerAudio"></audio>
+          </div>
+          <div class="player-controls" id="playerControls" style="display:none;">
+            <input class="player-seek" id="playerSeek" type="range" min="0" max="100" value="0" step="0.1" />
+            <div class="player-time">
+              <span id="playerCurrent">0:00</span>
+              <span id="playerDuration">0:00</span>
+            </div>
+            <div class="player-btns">
+              <button class="player-btn-skip" id="playerBack" type="button">
+                <img src="/static/icons/skip-back.svg" class="icon" style="width:22px;height:22px;" alt="" />
+              </button>
+              <button class="player-btn-play" id="playerPlay" type="button">
+                <img src="/static/icons/play.svg" class="icon" style="width:26px;height:26px;filter:brightness(0) invert(1);" alt="" id="playerPlayIcon" />
+              </button>
+              <button class="player-btn-skip" id="playerFwd" type="button">
+                <img src="/static/icons/skip-forward.svg" class="icon" style="width:22px;height:22px;" alt="" />
+              </button>
+            </div>
+          </div>
+          <div class="player-actions" id="playerActions">
+            <button class="btn btn--secondary" type="button" id="playerOpen">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" style="flex-shrink:0"><path d="M224,104a8,8,0,0,1-16,0V59.32l-82.34,82.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"></path></svg>
+              <span id="playerOpenLabel">Открыть</span>
+            </button>
+            <button class="btn btn--primary" type="button" id="playerShare">
+              <img src="/static/icons/share-2.svg" class="icon icon--sm icon--rose" alt="" />
+              <span id="playerShareLabel">Поделиться</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <img src="${full}" style="max-width:calc(100vw - 32px);max-height:calc(100vh - 100px);border-radius:12px;object-fit:contain;" />
-      ${title ? `<div style="font-size:12px;color:rgba(255,255,255,.5);max-width:80%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${escapeHtml(title)}</div>` : ""}
-    `;
-    document.body.appendChild(el);
+    </div>
 
-    document.getElementById("et-img-close").onclick = () => el.remove();
-    document.getElementById("et-img-dl").onclick = () => openFile(url);
-    el.addEventListener("click", (e) => { if (e.target === el) el.remove(); });
-  }
-
-  function hash(items) {
-    try { return JSON.stringify(items.map(x => [x?.id, x?.status, x?.file_id, x?.download_url, x?.title])); }
-    catch { return String(items?.length || 0); }
-  }
-
-  let _recentItems = [];
-
-  function sortItems(items, sortVal) {
-    const arr = [...items];
-    switch (sortVal) {
-      case "date_asc":   return arr.sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
-      case "name_asc":   return arr.sort((a,b) => (a.title||"").localeCompare(b.title||""));
-      case "name_desc":  return arr.sort((a,b) => (b.title||"").localeCompare(a.title||""));
-      case "size_desc":  return arr.sort((a,b) => (b.size_bytes||0) - (a.size_bytes||0));
-      case "size_asc":   return arr.sort((a,b) => (a.size_bytes||0) - (b.size_bytes||0));
-      default:           return arr.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
-    }
-  }
-
-  function renderRecents(items) {
-    const list = $("#recentList"); if (!list) return;
-    _recentItems = items || [];
-    if (!_recentItems.length) {
-      list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
-      return;
-    }
-    const sortSel = document.getElementById("recentSort");
-    const sortVal = sortSel ? sortSel.value : "date_desc";
-    const sorted  = sortItems(_recentItems, sortVal);
-    list.innerHTML = sorted.map(recentRow).join("");
-  }
-
-  async function loadRecents(silent = true) {
-    const r = await apiGet("/api/recent");
-    if (!r || !r.ok) { if (!silent) toast(prettyErr(r), "err", "⛔"); return; }
-    const d = r.data || {};
-    const items = Array.isArray(d) ? d : Array.isArray(d.items) ? d.items : [];
-    const h = hash(items);
-    if (silent && h === lastHash) return;
-    lastHash = h;
-    renderRecents(items);
-  }
-
-  // ---------- Actions ----------
-  async function onAction(action, el) {
-    if (action === "open-profile") return setTab("profile");
-    if (action === "open-settings") { openSettings(); return; }
-    if (action === "close-settings") { closeSettings(); return; }
-
-    if (action === "open-upgrade") {
-      openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=premium`);
-      setTimeout(() => { try { window.Telegram?.WebApp?.close(); } catch {} }, 300);
-      return;
-    }
-    if (action === "open-support") { openTgLink("https://t.me/zorixyzz"); return; }
-    if (action === "open-tour") {
-      closeSettings();
-      setTimeout(() => { if (typeof window.eagleTourStart === "function") window.eagleTourStart(); }, 320);
-      return;
-    }
-    if (action === "open-privacy") {
-      try { if (window.Telegram?.WebApp?.openLink) { window.Telegram.WebApp.openLink("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2"); return; } } catch {}
-      window.open("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2", "_blank"); return;
-    }
-
-    if (action === "open-file") { openFile(el.dataset.url || ""); return; }
-    if (action === "share-file") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
-
-    if (action === "lang") {
-      const v = el.dataset.value;
-      if (v === "ru" || v === "en") {
-        window.EagleProfile?.setLang?.(v);
-        setSegActive($("#langSeg"), v);
-        const a = $("[data-tab].is-active");
-        if (a) syncIndicator(tabsEl, indEl, a);
-        setTimeout(() => window.EagleProfile?.init?.(), 10);
-      }
-      return;
-    }
-    if (action === "theme") {
-      const v = el.dataset.value;
-      if (v === "dark" || v === "light") { window.EagleProfile?.setTheme?.(v); setSegActive($("#themeSeg"), v); }
-      return;
-    }
-
-    if (action === "copy-ref") {
-      const link = window.EagleProfile?.refLink || "";
-      if (!link) return toast("—", "warn", "⚠️");
-      try { await navigator.clipboard.writeText(link); toast(t("copied") || "Скопировано", "ok", "✅"); }
-      catch { toast(t("copy_failed") || "Ошибка копирования", "err", "⛔"); }
-      return;
-    }
-    if (action === "share-ref") {
-      const link = window.EagleProfile?.refLink || "";
-      if (!link) return toast("—", "warn", "⚠️");
-      try { if (navigator.share) await navigator.share({ text: link, url: link }); else await navigator.clipboard.writeText(link); toast(t("copied") || "Скопировано!", "ok", "✅"); }
-      catch {}
-      return;
-    }
-
-    if (action === "recent-play") {
-      const isImage = el.dataset.image === "true";
-      if (isImage) {
-        /* Показываем фото в лайтбоксе */
-        const url = el.dataset.url || "";
-        const title = el.dataset.title || "";
-        showImageViewer(url, title);
-        return;
-      }
-      const url = el.dataset.url || "";
-      const title = el.dataset.title || "";
-      const isAudio = el.dataset.audio === "true";
-      if (!url) return;
-      openPlayer(url, title, isAudio);
-      return;
-    }
-
-    if (action === "recent-dl") { openFile(el.dataset.url || ""); return; }
-    if (action === "recent-share") {
-      const shareUrl = el.dataset.url || "";
-      const shareTitle = el.dataset.title || "";
-      if (shareUrl) {
-        const fullUrl = shareUrl.startsWith("http") ? shareUrl : window.location.origin + shareUrl;
-        try {
-          if (navigator.share) { await navigator.share({ title: shareTitle || "EagleTools", url: fullUrl }); return; }
-        } catch {}
-        try { await navigator.clipboard.writeText(fullUrl); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch {}
-      }
-      return;
-    }
-    if (action === "recent-share-old") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
-
-    if (action === "recent-del") {
-      const row = el.closest(".recentitem");
-      const id = row?.dataset?.id;
-      if (!id) return;
-      const ok = confirm(t("confirm_delete") || "Удалить?");
-      if (!ok) return;
-      row.style.transition = "opacity .3s, transform .3s";
-      row.style.opacity = "0";
-      row.style.transform = "translateX(20px)";
-      setTimeout(() => row.remove(), 300);
-      const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
-      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
-      toast(t("deleted") || "Удалено", "ok", "✅");
-      lastHash = "";
-      loadRecents(true);
-    }
-  }
-
-  function bindGlobalClick() {
-    document.addEventListener("click", async e => {
-      const btn = e.target.closest("[data-action]");
-      if (!btn) return;
-      const action = btn.dataset.action;
-      if (!action) return;
-      try { await onAction(action, btn); }
-      catch (err) { toast(String(err?.message || err), "err", "⛔"); }
-    }, true);
-  }
-
-  // ---------- Init ----------
-  function init() {
-    $$("[data-tool]").forEach(resetCardUi);
-    bindTabs();
-    bindToolRuns();
-    bindGlobalClick();
-    initPlayer();
-    document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
-    syncAllSegmini();
-    loadRecents(true).catch(() => {});
-    /* Сортировка recent */
-    const sortSel = document.getElementById("recentSort");
-    if (sortSel) sortSel.addEventListener("change", () => renderRecents(_recentItems));
-
-    window.__EAGLE_APP_READY__ = true;
-    window.__eagleOpenFile = openFile;
-    window.__eagleToast = toast;
-    requestAnimationFrame(() => {
-      const a = $("[data-tab].is-active");
-      if (a) syncIndicator(tabsEl, indEl, a);
-      syncAllSegmini();
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-})();
+    <script src="/static/api.js?v=20260344"></script>
+    <script src="/static/profile.js?v=20260344"></script>
+    <script src="/static/app.js?v=20260344"></script>
+    <script src="/static/converter.js?v=20260344"></script>
+    <script src="/static/onboarding.js?v=20260344"></script>
+  </body>
+</html>

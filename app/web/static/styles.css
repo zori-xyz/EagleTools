@@ -1049,6 +1049,12 @@ html[data-theme="light"] .ri-btn--play {
   box-shadow: 0 2px 8px rgba(232,25,90,.3);
 }
 html[data-theme="light"] .ri-btn--play:hover { background: #c9134e; }
+html[data-theme="light"] .btn--premium {
+  background: linear-gradient(135deg, #e8195a 0%, #7c3aed 50%, #e8195a 100%);
+  background-size: 200% 100%;
+  color: #fff;
+  box-shadow: 0 6px 22px rgba(232,25,90,.35);
+}
 html[data-theme="light"] .ri-btn--dl { color: rgba(22,18,42,.45); }
 html[data-theme="light"] .ri-btn--dl:hover { background: rgba(0,0,0,.08); color: #16122a; }
 html[data-theme="light"] .ri-btn--del { background: rgba(185,28,28,.05); color: rgba(185,28,28,.5); }
@@ -1073,7 +1079,7 @@ html[data-theme="dark"] .ri-btn--del img {
   filter: invert(1) opacity(.6);
 }
 html[data-theme="dark"] .ri-btn--play img {
-  filter: brightness(10);
+  filter: invert(1) brightness(10);
 }
 html[data-theme="light"] .ri-icon img,
 html[data-theme="light"] .conv-action__icon img {
