@@ -325,7 +325,10 @@
     } catch (e) {
       clearInterval(progInterval);
       prog.classList.remove("visible", "is-running");
-      const msg = (e && e.message) ? e.message : tx("conv_error");
+      /* Показываем детальную ошибку для диагностики */
+      var errType = e ? e.constructor.name : "unknown";
+      var errMsg  = (e && e.message) ? e.message : "no message";
+      var msg = errType + ": " + errMsg;
       showError(msg);
     }
   }
