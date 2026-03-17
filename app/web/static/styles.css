@@ -1019,17 +1019,17 @@ html[data-theme="light"] .ri--doc   .ri-icon { background: rgba(99,102,241,.08);
   width: 30px; height: 30px; border-radius: 8px;
   display: grid; place-items: center;
   border: none; cursor: pointer;
-  background: rgba(255,255,255,.05);
+  background: rgba(255,255,255,.12);
   transition: background .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.ri-btn:hover { background: rgba(255,255,255,.10); }
+.ri-btn:hover { background: rgba(255,255,255,.20); }
 .ri-btn:disabled { opacity: .3; cursor: default; }
-.ri-btn--play { background: rgba(232,25,90,.15); color: #e8195a; }
-.ri-btn--play:hover { background: rgba(232,25,90,.25); }
-.ri-btn--dl   { color: rgba(255,255,255,.5); }
-.ri-btn--del  { color: rgba(248,113,113,.5); }
-.ri-btn--del:hover { background: rgba(248,113,113,.12); color: var(--err); }
+.ri-btn--play { background: rgba(232,25,90,.30); color: #e8195a; }
+.ri-btn--play:hover { background: rgba(232,25,90,.45); }
+.ri-btn--dl   { color: rgba(255,255,255,.80); }
+.ri-btn--del  { background: rgba(248,113,113,.15); color: rgba(248,113,113,.80); }
+.ri-btn--del:hover { background: rgba(248,113,113,.25); color: var(--err); }
 
 html[data-theme="light"] .ri-btn { background: rgba(0,0,0,.04); }
 html[data-theme="light"] .ri-btn:hover { background: rgba(0,0,0,.08); }
