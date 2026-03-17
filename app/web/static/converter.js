@@ -56,6 +56,10 @@
     if (mime.startsWith("image/")  || IMAGE_EXT.includes(ext))  return "image";
     if (mime === "application/pdf" || PDF_EXT.includes(ext))    return "pdf";
     if (DOC_EXT.includes(ext))                                   return "document";
+    /* Fallback: если mime содержит image — считаем картинкой */
+    if (mime.includes("image"))  return "image";
+    if (mime.includes("video"))  return "video";
+    if (mime.includes("audio"))  return "audio";
     return null;
   }
 
@@ -176,7 +180,11 @@
       return;
     }
 
-    renderActions(fileType);
+    try {
+      renderActions(fileType);
+    } catch(err) {
+      showError("JS error: " + err.message);
+    }
   }
 
   /* ── Рендер кнопок действий ── */
