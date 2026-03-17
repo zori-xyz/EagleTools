@@ -150,8 +150,8 @@ async def api_convert(
             raise HTTPException(status_code=429, detail="quota_exceeded")
 
         # ── Пишем job в историю ───────────────────────────────
-        original_name = Path(file.filename or "file").name
-        out_stem = Path(file.filename or "file").stem[:50]
+        original_name = Path(payload.filename or "file").name
+        out_stem = Path(payload.filename or "file").stem[:50]
         display_name = f"{out_stem}{result.out_path.suffix}"
 
         await create_job(
