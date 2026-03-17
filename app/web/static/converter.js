@@ -154,8 +154,9 @@
 
   /* ── Обработка выбранного файла ── */
   function handleFile(file) {
-    const isPremium = window.EagleProfile?.isPremium?.() || false;
-    const maxSize   = isPremium ? MAX_SIZE_PREMIUM : MAX_SIZE_FREE;
+    var isPremium = false;
+    try { isPremium = !!(window.EagleProfile && window.EagleProfile.isPremium && window.EagleProfile.isPremium()); } catch(e) {}
+    const maxSize = isPremium ? MAX_SIZE_PREMIUM : MAX_SIZE_FREE;
 
     if (file.size > maxSize) {
       showToast(tx("conv_too_big"), "err");
@@ -183,8 +184,7 @@
     try {
       renderActions(fileType);
     } catch(err) {
-      alert("DEBUG: " + err.message + " | stack: " + (err.stack || "").slice(0, 200));
-      showError("JS error: " + err.message);
+      alert("renderActions error: " + err.message + "\n" + (err.stack||"").slice(0,300));
     }
   }
 
