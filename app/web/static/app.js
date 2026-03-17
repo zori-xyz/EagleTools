@@ -480,51 +480,27 @@
     `;
   }
 
-  /* ── Анимация рассыпания при удалении ── */
-  function explodeRow(row) {
-    const colors = ["#e8195a","#7c3aed","#34d399","#fbbf24","#f87171","#a78bfa"];
-    const count  = 10;
-
-    /* Частицы внутри самой карточки — position:absolute */
-    row.style.position = "relative";
-    row.style.overflow = "visible";
-
-    for (let i = 0; i < count; i++) {
-      const p   = document.createElement("div");
-      const sz  = 5 + Math.random() * 6;
-      const tx  = (Math.random() - .5) * 120;
-      const ty  = -20 - Math.random() * 80;
-      const rot = Math.random() * 540;
-      const dur = 350 + Math.random() * 200;
-      const del = Math.random() * 60;
-
-      p.style.cssText = [
-        "position:absolute",
-        `left:${10 + Math.random() * 80}%`,
-        `top:${20 + Math.random() * 60}%`,
-        `width:${sz}px`, `height:${sz}px`,
-        `border-radius:${Math.random() > .5 ? "50%" : "3px"}`,
-        `background:${colors[i % colors.length]}`,
-        "z-index:10", "pointer-events:none",
-        `transition:transform ${dur}ms cubic-bezier(.2,0,1,1) ${del}ms,opacity ${dur*.7}ms ease ${del + dur*.3}ms`,
-      ].join(";");
-
-      row.appendChild(p);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        p.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg) scale(0)`;
-        p.style.opacity   = "0";
-      }));
-    }
-
-    /* Карточка сжимается вниз */
+  /* ── Анимация удаления — встряска + сворачивание ── */
+  function deleteRow(row) {
+    /* 1. Встряска */
+    row.style.transition = "none";
+    row.style.animation  = "riShake .35s cubic-bezier(.36,.07,.19,.97) both";
+    /* 2. После встряски — краснеем и сворачиваемся */
     setTimeout(() => {
-      row.style.transition = "transform .25s ease, opacity .25s ease";
-      row.style.transform  = "scaleY(0) scaleX(.9)";
+      row.style.animation  = "";
+      row.style.transition = "background .2s ease";
+      row.style.background = "rgba(248,113,113,.18)";
+      row.style.borderColor = "rgba(248,113,113,.35)";
+    }, 350);
+    setTimeout(() => {
+      row.style.transition = "transform .3s ease, opacity .3s ease, max-height .35s ease, margin .35s ease";
+      row.style.transform  = "translateX(100%) scale(.9)";
       row.style.opacity    = "0";
-      row.style.transformOrigin = "top";
-    }, 150);
-
-    setTimeout(() => row.remove(), 420);
+      row.style.overflow   = "hidden";
+      row.style.maxHeight  = "0";
+      row.style.marginBottom = "0";
+    }, 550);
+    setTimeout(() => row.remove(), 900);
   }
 
   /* ── Лайтбокс для просмотра фото ── */
@@ -691,7 +667,9 @@
       const row = el.closest(".recentitem");
       const id = row?.dataset?.id;
       if (!id) return;
-      explodeRow(row);
+      const ok = confirm(t("confirm_delete") || "Удалить файл?");
+      if (!ok) return;
+      deleteRow(row);
       const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
       if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
       lastHash = "";

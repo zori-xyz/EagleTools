@@ -1275,6 +1275,15 @@ html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,
   to { stroke-dashoffset: 0; }
 }
 
+@keyframes riShake {
+  0%,100% { transform: translateX(0); }
+  15%      { transform: translateX(-6px) rotate(-1deg); }
+  30%      { transform: translateX(5px) rotate(1deg); }
+  45%      { transform: translateX(-4px) rotate(-.5deg); }
+  60%      { transform: translateX(4px) rotate(.5deg); }
+  75%      { transform: translateX(-2px); }
+}
+
 /* ── Анимированная галочка ── */
 .conv-check__circle {
   stroke-dasharray: 120;
