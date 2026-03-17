@@ -412,54 +412,32 @@ html[data-theme="light"] .btn--secondary:hover { background: rgba(255,255,255,.9
 .btn--premium {
   position: relative; overflow: hidden;
   border: none; color: #fff; font-weight: 700; width: 100%;
-  background: #c9134e;
+  background: linear-gradient(90deg, #e8195a, #7c3aed, #4f46e5, #7c3aed, #e8195a);
+  background-size: 300% 100%;
+  animation: premiumSlide 5s linear infinite, premiumBreath 3s ease-in-out infinite;
   box-shadow: 0 6px 22px rgba(232,25,90,.35);
-  z-index: 0;
-  animation: premiumBreath 3s ease-in-out infinite;
 }
-/* Псевдоэлемент с вращающимся конусным градиентом */
 .btn--premium::before {
   content: '';
-  position: absolute; inset: -100%;
-  background: conic-gradient(
-    from 0deg,
-    #e8195a 0deg,
-    #b5147a 60deg,
-    #7c3aed 120deg,
-    #4f46e5 180deg,
-    #7c3aed 240deg,
-    #b5147a 300deg,
-    #e8195a 360deg
-  );
-  animation: premiumRotate 4s linear infinite;
-  pointer-events: none; z-index: 0;
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.15) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: premiumShine 3s ease-in-out infinite;
+  pointer-events: none;
 }
-/* Внутренний слой чтобы скрыть края конуса */
-.btn--premium::after {
-  content: '';
-  position: absolute; inset: 2px;
-  border-radius: calc(var(--r-md) - 2px);
-  background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%);
-  z-index: 1;
-  animation: premiumColorShift 4s linear infinite;
-}
-.btn--premium > * { position: relative; z-index: 2; }
 .btn--premium:hover { box-shadow: 0 10px 32px rgba(232,25,90,.5); }
 
-@keyframes premiumRotate {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes premiumColorShift {
-  0%   { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
-  25%  { background: linear-gradient(135deg, #8b35e8 0%, #4f46e5 100%); }
-  50%  { background: linear-gradient(135deg, #4f46e5 0%, #d01453 100%); }
-  75%  { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
-  100% { background: linear-gradient(135deg, #d01453 0%, #8b35e8 100%); }
+@keyframes premiumSlide {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 @keyframes premiumBreath {
-  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 6px 22px rgba(232,25,90,.35); }
-  50%       { transform: translateY(-2px) scale(1.005); box-shadow: 0 10px 30px rgba(232,25,90,.48); }
+  0%, 100% { transform: translateY(0); box-shadow: 0 6px 22px rgba(232,25,90,.35); }
+  50%       { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(232,25,90,.48); }
+}
+@keyframes premiumShine {
+  0%        { background-position: 200% 0; }
+  100%      { background-position: -200% 0; }
 }
 
 .btn--sm { height: 38px; border-radius: var(--r-sm); padding: 0 14px; font-size: 13px; }
