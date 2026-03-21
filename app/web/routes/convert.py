@@ -118,6 +118,39 @@ async def api_convert(
     if len(file_bytes) > max_bytes:
         raise HTTPException(status_code=413, detail="file_too_large")
 
+    # ── Валидация magic bytes ──────────────────────────────────
+    _MAGIC: list[tuple[bytes, str]] = [
+        (b"\xff\xd8\xff", "image"),           # JPEG
+        (b"\x89PNG\r\n\x1a\n", "image"),    # PNG
+        (b"RIFF", "video"),                       # AVI/WAV
+        (b"\x00\x00\x00", "video"),            # MP4/MOV (ftyp)
+        (b"\x1aE\xdf\xa3", "video"),           # MKV/WebM
+        (b"ID3", "audio"),                        # MP3
+        (b"\xff\xfb", "audio"),                 # MP3
+        (b"\xff\xf3", "audio"),                 # MP3
+        (b"OggS", "audio"),                       # OGG
+        (b"fLaC", "audio"),                       # FLAC
+        (b"GIF87a", "image"),                     # GIF
+        (b"GIF89a", "image"),                     # GIF
+        (b"WEBP", "image"),                       # WebP (bytes 8-12)
+        (b"%PDF", "pdf"),                         # PDF
+        (b"PK\x03\x04", "document"),            # ZIP-based (docx, xlsx)
+        (b"\xd0\xcf\x11\xe0", "document"),    # MS Office old format
+        (b"\x1f\x8b", "any"),                   # gzip — пропускаем
+    ]
+    header = file_bytes[:12]
+    detected = None
+    for magic, ftype in _MAGIC:
+        if header.startswith(magic) or (ftype == "image" and magic == b"WEBP" and magic in file_bytes[6:14]):
+            detected = ftype
+            break
+
+    # Исполняемые файлы блокируем
+    _BLOCKED_MAGIC = [b"MZ", b"\x7fELF", b"\xca\xfe\xba\xbe"]
+    for bm in _BLOCKED_MAGIC:
+        if header.startswith(bm):
+            raise HTTPException(status_code=400, detail="executable_file_blocked")
+
     # Сохраняем во временный файл
     suffix = Path(payload.filename or "input").suffix or ".bin"
     tmp_in  = TMP_DIR / f"{uuid.uuid4().hex}{suffix}"

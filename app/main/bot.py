@@ -10,6 +10,7 @@ from aiogram.types import BotCommand, Message, Update
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
 
 from app.bot.routers import build_router
+from app.bot.middleware import RateLimitMiddleware
 from app.common.config import settings
 from app.common.logging import setup_logging
 from app.common.pidlock import PidLock
@@ -48,6 +49,8 @@ async def main() -> None:
     bot = Bot(token=settings.effective_bot_token)
     dp = Dispatcher()
 
+    # Rate limiting — 20 запросов в минуту на пользователя
+    dp.message.outer_middleware(RateLimitMiddleware(max_calls=20, window_sec=60))
     # Middleware удаляет все команды автоматически
     dp.update.outer_middleware(DeleteCommandMiddleware())
 
