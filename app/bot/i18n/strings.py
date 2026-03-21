@@ -270,6 +270,8 @@ class Strings:
         )
 
     def premium_invoice_title(self, label: str) -> str:
+        if self.lang == "en":
+            return f"EagleTools Premium — {label}"
         return f"EagleTools Premium — {label}"
 
     def premium_invoice_desc(self, label: str) -> str:
@@ -390,7 +392,9 @@ class Strings:
         return "📋 Plan: Free" if self.lang == "en" else "📋 Тариф: Free"
 
     def profile_premium_until(self, until: str) -> str:
-        return f"⚡️ Premium until {until}"
+        if self.lang == "en":
+            return f"⚡️ Premium until {until}"
+        return f"⚡️ Premium до {until}"
 
     def profile_downloads_today(self, used: int, limit: str) -> str:
         if self.lang == "en":

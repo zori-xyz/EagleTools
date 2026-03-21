@@ -503,13 +503,13 @@
     /* Fallback — копируем ссылку */
     try {
       await navigator.clipboard.writeText(full);
-      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
+      if (typeof window.__eagleToast === "function") window.__eagleToast(window.__tLang === "en" ? "Link copied" : "Ссылка скопирована", "ok");
     } catch {
       /* последний fallback */
       const inp = document.createElement("input");
       inp.value = full; document.body.appendChild(inp);
       inp.select(); document.execCommand("copy"); inp.remove();
-      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
+      if (typeof window.__eagleToast === "function") window.__eagleToast(window.__tLang === "en" ? "Link copied" : "Ссылка скопирована", "ok");
     }
   };
 
@@ -520,4 +520,3 @@
     init();
   }
 
-})();

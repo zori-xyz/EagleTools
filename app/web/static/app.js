@@ -144,7 +144,7 @@
       videoWrap && (videoWrap.style.display = "none");
       audioWrap && (audioWrap.style.display = "");
       controls && (controls.style.display = "");
-      if (titleEl) titleEl.textContent = title || "Аудио";
+      if (titleEl) titleEl.textContent = title || (window.__tLang === "en" ? "Audio" : "Аудио");
       if (audio) {
         audio.src = fullUrl;
         audio.load();

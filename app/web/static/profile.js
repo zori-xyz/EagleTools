@@ -106,7 +106,6 @@
       help_ref_title: "Реферальная система",
       // Help - Privacy
       help_privacy_title: "Конфиденциальность",
-      privacy_policy: "Политика конфиденциальности",
       // Player
       player_open: "🌐 Открыть",
       player_share: "📤 Поделиться",
@@ -130,7 +129,6 @@
       processing: "Обрабатываю",
       conv_reading: "Читаю файл…",
       conv_uploading: "Загружаю…",
-      conv_select_action: "Выбери действие",
       link_copied: "Ссылка скопирована",
       err_save_failed: "Не удалось загрузить файл",
       err_soundcloud: "Ошибка SoundCloud",
@@ -139,8 +137,6 @@
       err_bad_url: "Неверная ссылка",
       err_unknown: "Неизвестная ошибка",
       copy_failed: "Ошибка копирования",
-      player_open: "Открыть",
-      player_share: "Поделиться",
       // Help steps (HTML allowed)
       help_ma_1_html: "Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио",
       help_ma_2_html: "Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты",
@@ -258,8 +254,6 @@
       err_bad_url: "Invalid link",
       err_unknown: "Unknown error",
       copy_failed: "Failed to copy",
-      player_open: "Open",
-      player_share: "Share",
       help_ma_1_html: "Open the <b>Tools</b> tab — paste a link to video or audio",
       help_ma_2_html: "Supports <b>YouTube</b>, <b>SoundCloud</b> and other public sites",
       help_ma_3_html: "Click <b>Download</b> for video (mp4) or <b>MP3</b> for audio",
