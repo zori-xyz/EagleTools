@@ -20,7 +20,6 @@ from app.infra.db.session import SessionMaker
 DATA_DIR = Path(settings.data_dir)
 RESULTS_DIR = (DATA_DIR / "results").resolve()
 STT_DIR = (DATA_DIR / "stt").resolve()
-STT_DIR.mkdir(parents=True, exist_ok=True)
 
 _model: WhisperModel | None = None
 
@@ -59,8 +58,14 @@ async def _gc_loop() -> None:
 
 
 async def startup(ctx) -> None:
+    # Создаём директории при старте воркера
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    STT_DIR.mkdir(parents=True, exist_ok=True)
+    print("[worker] directories ready", flush=True)
     await init_db()
+    print("[worker] db ready", flush=True)
     ctx["gc_task"] = asyncio.create_task(_gc_loop())
+    print("[worker] started", flush=True)
 
 
 async def shutdown(ctx) -> None:
@@ -69,31 +74,78 @@ async def shutdown(ctx) -> None:
         task.cancel()
 
 
+TG_TEXT_LIMIT = 3800
+
+
+async def _notify_user(tg_id: int, text: str, job_id: int) -> None:
+    """Отправляем результат STT пользователю."""
+    from aiogram import Bot
+    from aiogram.types import FSInputFile as AiogramFile
+    bot = Bot(token=settings.effective_bot_token)
+    try:
+        if len(text) <= TG_TEXT_LIMIT:
+            await bot.send_message(
+                chat_id=tg_id,
+                text=f"📝 <b>Распознанный текст:</b>\n\n{text}",
+                parse_mode="HTML",
+            )
+        else:
+            out_txt = STT_DIR / f"{job_id}_result.txt"
+            out_txt.write_text(text, encoding="utf-8")
+            await bot.send_document(
+                chat_id=tg_id,
+                document=AiogramFile(str(out_txt)),
+                caption="📝 Распознанный текст",
+            )
+    finally:
+        await bot.session.close()
+
+
 async def process_stt(ctx, job_id: int) -> None:
+    from sqlalchemy import select as sa_select
+    from sqlalchemy.orm import selectinload
+    from app.infra.db.models.job import Job as JobModel
+
     async with SessionMaker() as session:
-        job = await get_job(session, job_id)
+        # Загружаем job вместе с user через selectinload
+        res = await session.execute(
+            sa_select(JobModel)
+            .where(JobModel.id == job_id)
+            .options(selectinload(JobModel.user))
+        )
+        job = res.scalar_one_or_none()
+
         if not job:
+            print(f"[stt] job {job_id} not found", flush=True)
             return
+
+        tg_id = job.user.tg_id if job.user else None
+        print(f"[stt] job {job_id} started, tg_id={tg_id}", flush=True)
 
         await set_job_status(session, job_id, JobStatus.running)
 
         try:
             src = (RESULTS_DIR / job.file_id).resolve()
-
             try:
                 src.relative_to(RESULTS_DIR)
             except Exception:
                 raise PermissionError("invalid_file_path")
 
             if not src.exists() or not src.is_file():
-                raise FileNotFoundError("input_file_not_found")
+                raise FileNotFoundError(f"file not found: {src}")
 
+            print(f"[stt] transcribing {src.name} ({src.stat().st_size} bytes)", flush=True)
             model = _get_model()
-            segments, info = model.transcribe(str(src), beam_size=5)
+            segments_gen, info = model.transcribe(str(src), beam_size=5)
+            segments = list(segments_gen)
+
+            full_text = " ".join(s.text.strip() for s in segments).strip()
+            print(f"[stt] done, lang={info.language}, chars={len(full_text)}", flush=True)
 
             out = {
                 "language": getattr(info, "language", None),
                 "duration": getattr(info, "duration", None),
+                "text": full_text,
                 "segments": [{"start": s.start, "end": s.end, "text": s.text} for s in segments],
             }
 
@@ -102,7 +154,25 @@ async def process_stt(ctx, job_id: int) -> None:
 
             await set_job_status(session, job_id, JobStatus.done, result_path=str(out_path))
 
+            # Отправляем результат пользователю
+            if tg_id and full_text:
+                try:
+                    await _notify_user(tg_id, full_text, job_id)
+                    print(f"[stt] notified user {tg_id}", flush=True)
+                except Exception as e:
+                    print(f"[stt] notify failed: {e}", flush=True)
+            elif not full_text:
+                print(f"[stt] empty result for job {job_id}", flush=True)
+                if tg_id:
+                    from aiogram import Bot
+                    bot = Bot(token=settings.effective_bot_token)
+                    try:
+                        await bot.send_message(tg_id, "🤷 Не удалось распознать речь — возможно файл слишком тихий или повреждён.")
+                    finally:
+                        await bot.session.close()
+
         except Exception as e:
+            print(f"[stt] job {job_id} error: {type(e).__name__}:{e}", flush=True)
             await set_job_status(session, job_id, JobStatus.failed, error=f"{type(e).__name__}:{e}")
 
 

@@ -15,5 +15,11 @@ async def enqueue_stt(job_id: int) -> None:
     try:
         await redis.enqueue_job("process_stt", job_id)
     finally:
-        redis.close()
-        await redis.wait_closed()
+        try:
+            await redis.aclose()
+        except Exception:
+            try:
+                redis.close()
+                await redis.wait_closed()
+            except Exception:
+                pass
