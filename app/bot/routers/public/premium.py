@@ -260,12 +260,12 @@ async def on_successful_payment(message: Message) -> None:
 @router.callback_query(F.data.startswith("premium:pay:ton:"))
 def _make_ton_deeplink(wallet: str, amount_ton: float, comment: str) -> str:
     """
-    ton://transfer/<wallet>?amount=<nanotons>&text=<comment>
-    Открывает @wallet или Tonkeeper прямо в Telegram.
+    Tonkeeper universal link — работает и как веб и открывает приложение.
+    https://app.tonkeeper.com/transfer/<wallet>?amount=<nanotons>&text=<comment>
     """
     nanotons = int(amount_ton * 1_000_000_000)
     from urllib.parse import quote
-    return f"ton://transfer/{wallet}?amount={nanotons}&text={quote(comment)}"
+    return f"https://app.tonkeeper.com/transfer/{wallet}?amount={nanotons}&text={quote(comment)}"
 
 
 async def cb_pay_ton(cb: CallbackQuery) -> None:
