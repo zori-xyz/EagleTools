@@ -94,6 +94,19 @@ def _http400(detail: str) -> HTTPException:
     return HTTPException(status_code=400, detail=detail)
 
 
+def _pretty_filename(out_path: Path, title: str | None = None, tool: str = "download") -> str:
+    """Генерирует красивое имя: EagleTools_tool_title.ext"""
+    ext = out_path.suffix
+    if title:
+        stem = "".join(c for c in title[:50] if c.isalnum() or c in "_- ").strip()
+    else:
+        stem = out_path.stem[:20]
+    stem = stem or "file"
+    import uuid as _uuid
+    uid = _uuid.uuid4().hex[:6]
+    return f"EagleTools_{tool}_{stem}_{uid}{ext}"
+
+
 def _safe_resolve_under(base: Path, name: str) -> Path:
     p = (base / name).resolve()
     b = base.resolve()
@@ -185,6 +198,10 @@ async def api_save(
                 finally:
                     pass
                 raise HTTPException(status_code=429, detail="daily_limit_reached")
+            pretty = _pretty_filename(out_path, tool="soundcloud")
+            pretty_path = RESULTS_DIR / pretty
+            out_path.rename(pretty_path)
+            out_path = pretty_path
             await _record_save_job(session, user=user, file_id=out_path.name, save_result=None)
             await session.commit()
             return FileOut(
@@ -223,6 +240,10 @@ async def api_save(
             finally:
                 pass
             raise HTTPException(status_code=429, detail="daily_limit_reached")
+        pretty = _pretty_filename(out_path, title=res.title if res else None, tool="video")
+        pretty_path = RESULTS_DIR / pretty
+        out_path.rename(pretty_path)
+        out_path = pretty_path
         await _record_save_job(session, user=user, file_id=out_path.name, save_result=res)
         await session.commit()
         return FileOut(

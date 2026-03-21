@@ -133,7 +133,21 @@ async def api_convert(
         )
 
         # ── Перемещаем результат в RESULTS_DIR ───────────────
-        out_name = f"conv_{uuid.uuid4().hex[:12]}{result.out_path.suffix}"
+        # Красивое имя файла: EagleTools_action_originalname.ext
+        _action_labels = {
+            "video_to_mp3": "audio", "video_to_mp4": "video", "video_to_gif": "gif",
+            "video_compress": "compressed", "video_to_m4a": "audio", "video_stt": "text",
+            "audio_to_mp3": "mp3", "audio_to_wav": "wav", "audio_to_ogg": "ogg",
+            "audio_to_m4a": "m4a", "audio_compress": "compressed", "audio_stt": "text",
+            "img_to_jpg": "jpg", "img_to_png": "png", "img_to_webp": "webp",
+            "img_compress": "compressed",
+        }
+        _action_label = _action_labels.get(action, "converted")
+        _orig_stem = Path(payload.filename or "file").stem[:40]
+        _safe_stem = "".join(c for c in _orig_stem if c.isalnum() or c in "_- ")[:40].strip()
+        _safe_stem = _safe_stem or "file"
+        _uid = uuid.uuid4().hex[:6]
+        out_name = f"EagleTools_{_action_label}_{_safe_stem}_{_uid}{result.out_path.suffix}"
         final_path = RESULTS_DIR / out_name
         shutil.copy2(result.out_path, final_path)
 
@@ -146,9 +160,7 @@ async def api_convert(
             raise HTTPException(status_code=429, detail="quota_exceeded")
 
         # ── Пишем job в историю ───────────────────────────────
-        original_name = Path(payload.filename or "file").name
-        out_stem = Path(payload.filename or "file").stem[:50]
-        display_name = f"{out_stem}{result.out_path.suffix}"
+        display_name = out_name
 
         await create_job(
             session,
