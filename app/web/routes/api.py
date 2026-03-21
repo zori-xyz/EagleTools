@@ -325,13 +325,14 @@ async def api_file(file_id: str, token: str = Query(default="")):
         raise HTTPException(status_code=404, detail="not_found")
     media_type, _ = mimetypes.guess_type(str(p))
     # Форсируем скачивание а не открытие в браузере
-    safe_name = "".join(ch for ch in p.name if ch.isalnum() or ch in "._- ").strip() or "file"
+    # Только ASCII для latin-1 совместимости в заголовке
+    safe_name = "".join(ch for ch in p.name if ord(ch) < 128 and (ch.isalnum() or ch in "._- ")).strip() or "file"
     return FileResponse(
         path=str(p),
         media_type="application/octet-stream",
         filename=safe_name,
         headers={
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Content-Disposition": "attachment; filename="" + safe_name + """,
             "Cache-Control": "private, max-age=3600",
         },
     )

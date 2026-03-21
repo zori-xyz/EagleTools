@@ -127,14 +127,16 @@
 
     if (!drop) return;
 
-    /* Клик на дроп-зону */
-    drop.addEventListener("click", (e) => {
-      if (e.target !== fileInput) fileInput.click();
-    });
-
-    /* Выбор файла */
+    /* Выбор файла — input уже поверх drop зоны через CSS, нативный клик */
     fileInput.addEventListener("change", () => {
       if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    /* Дополнительный клик для браузеров где input не перехватывает */
+    drop.addEventListener("click", (e) => {
+      if (e.target === drop || e.target.closest(".converter-drop__icon") || e.target.closest(".converter-drop__label") || e.target.closest(".converter-drop__sub")) {
+        fileInput.click();
+      }
     });
 
     /* Drag & Drop */
@@ -520,3 +522,4 @@
     init();
   }
 
+});
