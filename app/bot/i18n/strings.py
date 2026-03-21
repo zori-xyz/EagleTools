@@ -374,20 +374,24 @@ class Strings:
             return "💎 Pay in CryptoBot"
         return "💎 Оплатить в CryptoBot"
 
+    @property
     def cryptobot_check_label(self) -> str:
         if self.lang == "en":
             return "🔍 Check payment"
         return "🔍 Проверить оплату"
 
+    @property
     def cryptobot_not_paid(self) -> str:
         if self.lang == "en":
             return "⏳ Payment not found yet. Try in a few seconds."
         return "⏳ Оплата не найдена. Попробуй через несколько секунд."
 
+    @property
     def btn_back_premium(self) -> str:
         return "◀️ Back" if self.lang == "en" else "◀️ Назад"
 
     # ── Profile ───────────────────────────────────────────────────────────────
+    @property
     def profile_plan_free(self) -> str:
         return "📋 Plan: Free" if self.lang == "en" else "📋 Тариф: Free"
 
@@ -409,6 +413,7 @@ class Strings:
     def profile_referrals(self, count: int) -> str:
         return f"👥 Referrals: {count}" if self.lang == "en" else f"👥 Рефералов: {count}"
 
+    @property
     def profile_premium_bonus_ready(self) -> str:
         if self.lang == "en":
             return "✅ Every 3 referrals = +3 days Premium"
@@ -419,11 +424,13 @@ class Strings:
             return f"🎁 Next +3 days Premium: {need} more referral(s)"
         return f"🎁 До +3 дней Premium: ещё {need} реферал(а)"
 
+    @property
     def profile_ref_hint(self) -> str:
         if self.lang == "en":
             return "🎁 For each friend — <b>+5 downloads</b> per day"
         return "🎁 За каждого друга — <b>+5 загрузок</b> в день"
 
+    @property
     def profile_ref_link_label(self) -> str:
         return "🔗 Your link:" if self.lang == "en" else "🔗 Твоя ссылка:"
 
