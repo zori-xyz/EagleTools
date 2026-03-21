@@ -258,6 +258,16 @@ async def on_successful_payment(message: Message) -> None:
 
 
 @router.callback_query(F.data.startswith("premium:pay:ton:"))
+def _make_ton_deeplink(wallet: str, amount_ton: float, comment: str) -> str:
+    """
+    ton://transfer/<wallet>?amount=<nanotons>&text=<comment>
+    Открывает @wallet или Tonkeeper прямо в Telegram.
+    """
+    nanotons = int(amount_ton * 1_000_000_000)
+    from urllib.parse import quote
+    return f"ton://transfer/{wallet}?amount={nanotons}&text={quote(comment)}"
+
+
 async def cb_pay_ton(cb: CallbackQuery) -> None:
     tier_key = cb.data.split(":", 3)[3]
     lang = await _get_lang(cb.from_user.id)
@@ -269,18 +279,29 @@ async def cb_pay_ton(cb: CallbackQuery) -> None:
 
     from app.common.config import settings as app_settings
     ton_wallet = getattr(app_settings, "ton_wallet", None) or "UQAExampleWalletAddressHere"
-    comment = f"eagle_premium_{tier_key}_{cb.from_user.id}"
+    comment    = f"eagle_premium_{tier_key}_{cb.from_user.id}"
+    deeplink   = _make_ton_deeplink(ton_wallet, tier.ton_price, comment)
 
     await cb.answer()
-    await _show_panel(cb, s.premium_ton_text(tier.label, tier.ton_price, ton_wallet, comment), _ton_sent_kb(tier_key, lang))
+    await _show_panel(
+        cb,
+        s.premium_ton_text(tier.label, tier.ton_price, ton_wallet, comment),
+        _ton_sent_kb(tier_key, lang, deeplink),
+    )
 
 
-def _ton_sent_kb(tier_key: str, lang: str) -> InlineKeyboardMarkup:
+def _ton_sent_kb(tier_key: str, lang: str, deeplink: str = "") -> InlineKeyboardMarkup:
     s = t(lang)
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=s.btn_ton_sent, callback_data=f"premium:ton_sent:{tier_key}")],
-        [InlineKeyboardButton(text=s.btn_back_premium, callback_data=f"premium:select:{tier_key}")],
-    ])
+    rows = []
+
+    # Кнопка открывает @wallet / Tonkeeper с уже заполненными данными
+    if deeplink:
+        pay_label = "💎 Оплатить в кошельке" if lang == "ru" else "💎 Pay in wallet"
+        rows.append([InlineKeyboardButton(text=pay_label, url=deeplink)])
+
+    rows.append([InlineKeyboardButton(text=s.btn_ton_sent, callback_data=f"premium:ton_sent:{tier_key}")])
+    rows.append([InlineKeyboardButton(text=s.btn_back_premium, callback_data=f"premium:select:{tier_key}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 @router.callback_query(F.data.startswith("premium:ton_sent:"))
