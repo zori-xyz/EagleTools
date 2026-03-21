@@ -234,6 +234,14 @@ async def _do_convert(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertRe
     if action in {"img_to_jpg", "img_to_png", "img_to_webp", "img_compress"}:
         return await _do_image(in_path, action=action, tmp_dir=tmp_dir)
 
+    # ── PDF ─────────────────────────────────────────────────
+    if action in {"pdf_to_txt", "pdf_to_img", "pdf_compress"}:
+        return await _do_pdf(in_path, action=action, tmp_dir=tmp_dir)
+
+    # ── Документы ────────────────────────────────────────────
+    if action in {"doc_to_pdf", "doc_to_txt"}:
+        return await _do_document(in_path, action=action, tmp_dir=tmp_dir)
+
     raise ConvertError(f"unknown_action:{action}")
 
 
@@ -307,6 +315,111 @@ async def _do_image(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResu
 
     _check_out(out)
     return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+
+async def _do_pdf(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResult:
+    """PDF операции."""
+    stem = _safe_stem(in_path.name)
+
+    if action == "pdf_to_txt":
+        # Извлекаем текст через pdfminer или pymupdf
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(str(in_path))
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+        except ImportError:
+            raise ConvertError("pymupdf_missing")
+        except Exception as e:
+            raise ConvertError(f"pdf_failed:{e}")
+
+        out = tmp_dir / f"{stem}.txt"
+        out.write_text(text.strip(), encoding="utf-8")
+        _check_out(out)
+        return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+    if action == "pdf_to_img":
+        # Конвертируем страницы в PNG через PyMuPDF
+        try:
+            import fitz
+            doc = fitz.open(str(in_path))
+            # Берём первую страницу
+            page = doc[0]
+            mat = fitz.Matrix(2.0, 2.0)  # 2x zoom = хорошее качество
+            pix = page.get_pixmap(matrix=mat)
+            doc.close()
+        except ImportError:
+            raise ConvertError("pymupdf_missing")
+        except Exception as e:
+            raise ConvertError(f"pdf_failed:{e}")
+
+        out = tmp_dir / f"{stem}_page1.png"
+        pix.save(str(out))
+        _check_out(out)
+        return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+    if action == "pdf_compress":
+        # Сжимаем PDF через ghostscript если есть, иначе ffmpeg
+        out = tmp_dir / f"{stem}_compressed.pdf"
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "gs", "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.4",
+                "-dPDFSETTINGS=/ebook", "-dNOPAUSE", "-dQUIET", "-dBATCH",
+                f"-sOutputFile={out}", str(in_path),
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await proc.communicate()
+            if proc.returncode != 0:
+                raise ConvertError("gs_failed")
+        except FileNotFoundError:
+            raise ConvertError("ghostscript_missing")
+        _check_out(out)
+        return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+    raise ConvertError(f"unknown_pdf_action:{action}")
+
+
+async def _do_document(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertResult:
+    """Документы через LibreOffice."""
+    stem = _safe_stem(in_path.name)
+
+    # Находим LibreOffice
+    import shutil
+    lo_bin = shutil.which("libreoffice") or shutil.which("soffice")
+    if not lo_bin:
+        raise ConvertError("libreoffice_missing")
+
+    if action == "doc_to_pdf":
+        proc = await asyncio.create_subprocess_exec(
+            lo_bin, "--headless", "--convert-to", "pdf",
+            "--outdir", str(tmp_dir), str(in_path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            raise ConvertError(f"libreoffice_failed:{err.decode()[:200]}")
+
+        out = tmp_dir / f"{stem}.pdf"
+        _check_out(out)
+        return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+    if action == "doc_to_txt":
+        proc = await asyncio.create_subprocess_exec(
+            lo_bin, "--headless", "--convert-to", "txt:Text",
+            "--outdir", str(tmp_dir), str(in_path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            raise ConvertError(f"libreoffice_failed:{err.decode()[:200]}")
+
+        out = tmp_dir / f"{stem}.txt"
+        _check_out(out)
+        return ConvertResult(out_path=out, tmp_dir=tmp_dir)
+
+    raise ConvertError(f"unknown_doc_action:{action}")
 
 
 def _check_out(path: Path) -> None:

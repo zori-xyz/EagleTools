@@ -50,6 +50,10 @@ ALLOWED_ACTIONS: set[str] = {
     "audio_to_m4a", "audio_compress", "audio_stt",
     # image
     "img_to_jpg", "img_to_png", "img_to_webp", "img_compress",
+    # pdf
+    "pdf_to_txt", "pdf_to_img", "pdf_compress",
+    # documents
+    "doc_to_pdf", "doc_to_txt",
 }
 
 # Читаемые ошибки для фронта
@@ -64,6 +68,10 @@ _ERROR_MAP: dict[str, str] = {
     "file_too_large":     "Файл слишком большой",
     "quota_exceeded":     "Достигнут дневной лимит",
     "unknown_action":     "Неизвестное действие",
+    "pymupdf_missing":    "PyMuPDF не установлен",
+    "libreoffice_missing":"LibreOffice не установлен",
+    "ghostscript_missing":"Ghostscript не установлен",
+    "gs_failed":          "Ошибка сжатия PDF",
 }
 
 def _readable_error(code: str) -> str:
