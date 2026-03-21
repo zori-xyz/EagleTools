@@ -485,11 +485,11 @@
       : status === "expired" ? "exp"
       : status === "failed" || status === "error" ? "err"
       : status === "running" ? "run" : "q";
-    const statusLabel = status === "done" ? (t("done") || "ГОТОВО")
-      : status === "expired" ? "ИСТЁК"
+    const statusLabel = status === "done" ? (t("done") || "ГОТОВО!")
+      : status === "expired"  ? (t("expired") || "ИСТЁК")
       : status === "failed" || status === "error" ? (t("err_unknown") || "ОШИБКА")
-      : status === "running" ? "ОБРАБАТЫВАЮ"
-      : "В ОЧЕРЕДИ";
+      : status === "running"  ? (t("processing") || "ОБРАБАТЫВАЮ")
+      : (t("queued") || "В ОЧЕРЕДИ");
 
     const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
       data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">

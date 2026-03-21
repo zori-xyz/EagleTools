@@ -367,6 +367,21 @@ class Strings:
         )
 
     @property
+    def cryptobot_pay_label(self) -> str:
+        if self.lang == "en":
+            return "💎 Pay in CryptoBot"
+        return "💎 Оплатить в CryptoBot"
+
+    def cryptobot_check_label(self) -> str:
+        if self.lang == "en":
+            return "🔍 Check payment"
+        return "🔍 Проверить оплату"
+
+    def cryptobot_not_paid(self) -> str:
+        if self.lang == "en":
+            return "⏳ Payment not found yet. Try in a few seconds."
+        return "⏳ Оплата не найдена. Попробуй через несколько секунд."
+
     def btn_back_premium(self) -> str:
         return "◀️ Back" if self.lang == "en" else "◀️ Назад"
 

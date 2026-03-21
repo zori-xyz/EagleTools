@@ -116,7 +116,6 @@
       // Actions
       limit_reached: "Дневной лимит исчерпан",
       err_empty_url: "Вставь ссылку",
-      starting: "Загружаем…",
       job_created: "Задание создано",
       done: "Готово!",
       done_in: "Готово за",
@@ -128,6 +127,7 @@
       expired: "Истёк",
       file_expired: "Файл удалён с сервера",
       starting: "Загружаю…",
+      processing: "Обрабатываю",
       conv_reading: "Читаю файл…",
       conv_uploading: "Загружаю…",
       conv_select_action: "Выбери действие",
@@ -199,6 +199,7 @@
       expired: "Expired",
       file_expired: "File deleted from server",
       starting: "Downloading…",
+      processing: "Processing",
       conv_reading: "Reading file…",
       conv_uploading: "Uploading…",
       language: "Language",
@@ -241,7 +242,6 @@
       // Actions
       limit_reached: "Daily limit reached",
       err_empty_url: "Paste a link first",
-      starting: "Loading…",
       job_created: "Job created",
       done: "Done!",
       done_in: "Done in",

@@ -287,8 +287,8 @@ async def cb_pay_ton(cb: CallbackQuery) -> None:
 
     await cb.answer()
 
-    pay_label   = "💎 Оплатить TON" if lang == "ru" else "💎 Pay with TON"
-    check_label = "🔍 Проверить оплату" if lang == "ru" else "🔍 Check payment"
+    pay_label   = s.cryptobot_pay_label
+    check_label = s.cryptobot_check_label
     back_label  = s.btn_back_premium
 
     text = (
@@ -338,8 +338,7 @@ async def cb_ton_check(cb: CallbackQuery) -> None:
         return
 
     if not invoice or invoice.status != "paid":
-        msg = "⏳ Оплата не найдена. Попробуй через несколько секунд." if lang == "ru" else "⏳ Payment not found yet. Try in a few seconds."
-        await cb.answer(msg, show_alert=True)
+        await cb.answer(s.cryptobot_not_paid, show_alert=True)
         return
 
     # Оплата подтверждена — активируем Premium

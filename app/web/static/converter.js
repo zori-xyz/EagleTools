@@ -353,8 +353,8 @@
   function showResult(data) {
     const lang       = getLang();
     const result     = $("convResult");
-    const dlLabel    = lang === "en" ? "Download" : "Скачать";
-    const shareLabel = lang === "en" ? "Share"    : "Поделиться";
+    const dlLabel    = window.__t ? (window.__t("btn_download") || (lang === "en" ? "Download" : "Скачать")) : (lang === "en" ? "Download" : "Скачать");
+    const shareLabel = window.__t ? (window.__t("player_share") || (lang === "en" ? "Share" : "Поделиться")) : (lang === "en" ? "Share" : "Поделиться");
     const url        = data.download_url || "";
     const fname      = data.filename || "file";
 
