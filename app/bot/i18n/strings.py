@@ -310,21 +310,19 @@ class Strings:
         if self.lang == "en":
             return (
                 f"💎 <b>TON Payment — {label}</b>\n\n"
-                f"Amount: <b>{ton} TON</b>\n\n"
-                "Press <b>Pay in wallet</b> — it will open your TON wallet "
-                "with the address and amount already filled in.\n\n"
-                f"Or send manually to:\n<code>{wallet}</code>\n"
-                f"Comment: <code>{comment}</code>\n\n"
-                "After payment press <b>I sent TON</b>."
+                f"Send exactly <b>{ton} TON</b> to:\n"
+                f"<code>{wallet}</code>\n\n"
+                f"In the comment write:\n"
+                f"<code>{comment}</code>\n\n"
+                "After payment, press the button below."
             )
         return (
             f"💎 <b>Оплата TON — {label}</b>\n\n"
-            f"Сумма: <b>{ton} TON</b>\n\n"
-            "Нажми <b>Оплатить в кошельке</b> — откроется твой TON кошелёк "
-            "с уже заполненным адресом и суммой.\n\n"
-            f"Или отправь вручную на:\n<code>{wallet}</code>\n"
-            f"Комментарий: <code>{comment}</code>\n\n"
-            "После оплаты нажми <b>Я отправил TON</b>."
+            f"Отправь ровно <b>{ton} TON</b> на адрес:\n"
+            f"<code>{wallet}</code>\n\n"
+            f"В комментарии укажи:\n"
+            f"<code>{comment}</code>\n\n"
+            "После оплаты нажми кнопку ниже."
         )
 
     def premium_ton_sent_text(self, ton: float, comment: str) -> str:
