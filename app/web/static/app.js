@@ -437,9 +437,14 @@
 
     /* Статус */
     const rawStatus   = String(item?.status || "queued").toLowerCase();
-    const status      = canDl ? "done" : rawStatus;
-    const badgeCls    = status === "done" ? "done" : status === "failed" || status === "error" ? "err" : status === "running" ? "run" : "q";
+    const isExpired   = rawStatus === "expired" || (!canDl && rawStatus === "done");
+    const status      = isExpired ? "expired" : (canDl ? "done" : rawStatus);
+    const badgeCls    = status === "done" ? "done"
+      : status === "expired" ? "exp"
+      : status === "failed" || status === "error" ? "err"
+      : status === "running" ? "run" : "q";
     const statusLabel = status === "done" ? (t("done") || "ГОТОВО")
+      : status === "expired" ? "ИСТЁК"
       : status === "failed" || status === "error" ? (t("err_unknown") || "ОШИБКА")
       : status === "running" ? "ОБРАБАТЫВАЮ"
       : "В ОЧЕРЕДИ";

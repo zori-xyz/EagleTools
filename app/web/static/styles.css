@@ -1008,6 +1008,8 @@ html[data-theme="light"] .ri--doc   .ri-icon { background: rgba(99,102,241,.08);
 .ri-badge--err  { color: var(--err);  background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.22); }
 .ri-badge--run  { color: var(--rose2); background: var(--rose-soft); border-color: var(--rose-edge); }
 .ri-badge--q    { color: var(--warn); background: rgba(251,191,36,.10); border-color: rgba(251,191,36,.22); }
+.ri-badge--exp  { color: var(--text3); background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.10); }
+html[data-theme="light"] .ri-badge--exp { color: rgba(22,18,42,.35); background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.10); }
 
 .ri-size { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 .ri-dot  { width: 2px; height: 2px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }

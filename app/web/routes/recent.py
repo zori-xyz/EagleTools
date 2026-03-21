@@ -30,6 +30,19 @@ def _file_download_url(file_id: str) -> str:
     return f"/api/file/{file_id}?token={token}"
 
 
+def _file_exists(file_id: str) -> bool:
+    """Проверяем существует ли файл на диске."""
+    if not file_id:
+        return False
+    try:
+        from app.common.config import settings
+        from pathlib import Path as _Path
+        p = (_Path(settings.data_dir) / "results" / file_id).resolve()
+        return p.exists() and p.is_file()
+    except Exception:
+        return True  # если не можем проверить — показываем
+
+
 def _to_item(row: dict[str, Any]) -> dict[str, Any]:
     file_id = row.get("file_id") or ""
     ext = ""
@@ -38,12 +51,15 @@ def _to_item(row: dict[str, Any]) -> dict[str, Any]:
 
     # prefer title from DB, fallback to file_id
     title = row.get("title") or file_id or "file"
-    download_url = _file_download_url(file_id) if file_id else None
+
+    # Проверяем есть ли файл на диске — если нет, не даём ссылку
+    file_alive = _file_exists(file_id)
+    download_url = _file_download_url(file_id) if (file_id and file_alive) else None
 
     return {
         "id": row.get("id"),
         "kind": row.get("kind"),
-        "status": row.get("status"),
+        "status": row.get("status") if file_alive else "expired",
         "file_id": file_id,
         "filename": file_id,
         "title": title,
@@ -54,6 +70,7 @@ def _to_item(row: dict[str, Any]) -> dict[str, Any]:
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
         "download_url": download_url,
+        "file_alive": file_alive,
     }
 
 
