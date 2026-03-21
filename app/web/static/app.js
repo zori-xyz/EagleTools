@@ -325,19 +325,28 @@
     if (!url) { toast(t("err_empty_url") || "Вставь ссылку", "warn", "⚠️"); return; }
 
     resetCardUi(card);
-    setProgress(card, 20);
-    setProgressText(card, `<span>${t("starting") || "Загружаем…"}</span>`);
+
+    /* Анимированный прогресс */
+    let fakePct = 5;
+    setProgress(card, fakePct);
+    setProgressText(card, `<span>${t("starting") || "Загружаю…"}</span>`);
+    const progTimer = setInterval(() => {
+      fakePct = Math.min(fakePct + (Math.random() * 6), 88);
+      setProgress(card, fakePct);
+    }, 600);
 
     const t0 = performance.now();
     const r = await apiPost(`/api/save_job?tool=${encodeURIComponent(tool)}`, { url });
+    clearInterval(progTimer);
 
     if (!r.ok) {
-      resetCardUi(card);
+      setProgress(card, 0);
       setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⛔</span><span class="result-file__name muted">${escapeHtml(prettyErr(r))}</span></div></div>`);
       toast(prettyErr(r), "err", "⛔");
       return;
     }
 
+    setProgress(card, 100);
     lastHash = "";
     loadRecents(true);
 
@@ -346,33 +355,42 @@
     const out = extractOut(data, tool);
 
     if (out) {
-      setProgress(card, 0);
-      setProgressText(card, `✓ Готово за ${escapeHtml(secs)}s`);
+      setTimeout(() => {
+        setProgress(card, 0);
+        const isAudio = tool === "audio" || out.displayName.endsWith(".mp3");
+        const dlLabel   = t("btn_download") || "Скачать";
+        const shareLabel = t("player_share") || "Поделиться";
 
-      const isAudio = tool === "audio" || out.displayName.endsWith(".mp3");
-      const icon = isAudio ? "🎵" : "🎬";
-
-      setResult(card, `
-        <div class="result-file">
-          <div class="result-file__top">
-            <span class="result-file__icon">${icon}</span>
-            <span class="result-file__name">${escapeHtml(out.displayName)}</span>
+        setResult(card, `
+          <div class="result-file">
+            <div class="result-file__top">
+              <div class="result-file__icon">
+                <div class="conv-check-anim">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none">
+                    <circle class="cca-circle" cx="24" cy="24" r="20" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
+                    <polyline class="cca-tick" points="14,24 21,31 34,16" stroke="#34d399" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="result-file__name">${escapeHtml(out.displayName)}</span>
+            </div>
+            <div class="result-file__actions">
+              <button class="btn btn--primary btn--sm" type="button"
+                data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}" style="flex:1">
+                <img src="/static/icons/dl.svg" style="width:14px;height:14px;filter:brightness(10);" />
+                ${dlLabel}
+              </button>
+              <button class="btn btn--secondary btn--sm" type="button"
+                data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
+                data-title="${escapeHtml(out.displayName)}">
+                <img src="/static/icons/share-2.svg" style="width:14px;height:14px;" />
+                ${shareLabel}
+              </button>
+            </div>
           </div>
-          <div class="result-file__actions">
-            <button class="btn btn--secondary btn--sm" type="button"
-              data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}">
-              🌐 Открыть
-            </button>
-            <button class="btn btn--primary btn--sm" type="button"
-              data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
-              data-title="${escapeHtml(out.displayName)}">
-              📤 Поделиться
-            </button>
-          </div>
-        </div>
-      `);
-
-      toast(t("done") || "Готово!", "ok", "✅");
+        `);
+        toast(t("done") || "Готово!", "ok", "✅");
+      }, 300);
       return;
     }
 
