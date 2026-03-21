@@ -125,12 +125,16 @@
     const fileClear = $("convFileClear");
     const runBtn    = $("convRunBtn");
 
-    if (!drop) return;
+    console.log("[conv] init, drop=", !!drop, "fileInput=", !!fileInput);
+    if (!drop) { console.error("[conv] convDrop not found!"); return; }
 
-    /* Выбор файла — input уже поверх drop зоны через CSS, нативный клик */
-    fileInput.addEventListener("change", () => {
+    /* Выбор файла — используем и change и input для совместимости с Telegram WebApp */
+    function onFileChosen() {
+      console.log("[conv] onFileChosen, files:", fileInput.files && fileInput.files.length);
       if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
-    });
+    }
+    fileInput.addEventListener("change", onFileChosen);
+    fileInput.addEventListener("input",  onFileChosen);
 
     /* Дополнительный клик для браузеров где input не перехватывает */
     drop.addEventListener("click", (e) => {
@@ -156,6 +160,7 @@
 
   /* ── Обработка выбранного файла ── */
   function handleFile(file) {
+    console.log("[conv] handleFile:", file.name, file.size, file.type);
     var isPremium = false;
     try { isPremium = !!(window.EagleProfile && window.EagleProfile.isPremium && window.EagleProfile.isPremium()); } catch(e) {}
     const maxSize = isPremium ? MAX_SIZE_PREMIUM : MAX_SIZE_FREE;
