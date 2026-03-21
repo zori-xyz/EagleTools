@@ -131,7 +131,6 @@ async def cb_pay_stars(cb: CallbackQuery) -> None:
         return
     await cb.answer()
 
-    # Send invoice WITHOUT reply_markup (Telegram only allows Pay button there)
     invoice_msg = await cb.message.answer_invoice(
         title=s.premium_invoice_title(tier.label),
         description=s.premium_invoice_desc(tier.label),
@@ -140,13 +139,11 @@ async def cb_pay_stars(cb: CallbackQuery) -> None:
         prices=[LabeledPrice(label=f"Premium {tier.label}", amount=tier.stars_price)],
     )
 
-    # Send cancel button as a separate message right after
     cancel_msg = await cb.message.answer(
         "Передумал? Отмени платёж:",
         reply_markup=_invoice_cancel_kb(tier_key, invoice_msg.message_id),
     )
 
-    # Store both message ids: invoice:{invoice_id}:{cancel_id}
     async with SessionMaker() as session:
         user = await repo.get_or_create(session, cb.from_user.id)
         user.active_tool = f"invoice:{invoice_msg.message_id}:{cancel_msg.message_id}"
@@ -156,24 +153,20 @@ async def cb_pay_stars(cb: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("premium:invoice_cancel:"))
 async def cb_invoice_cancel(cb: CallbackQuery) -> None:
     await cb.answer("Отменено")
-    # callback_data: premium:invoice_cancel:{tier_key}:{invoice_msg_id}
     parts = cb.data.split(":")
     invoice_msg_id = int(parts[-1]) if parts[-1].isdigit() else None
 
-    # Delete invoice message
     if invoice_msg_id:
         try:
             await cb.bot.delete_message(chat_id=cb.message.chat.id, message_id=invoice_msg_id)
         except Exception:
             pass
 
-    # Delete cancel button message
     try:
         await cb.message.delete()
     except Exception:
         pass
 
-    # Clear stored invoice id
     async with SessionMaker() as session:
         user = await repo.get_or_create(session, cb.from_user.id)
         if user.active_tool and user.active_tool.startswith("invoice:"):
@@ -200,7 +193,6 @@ async def on_successful_payment(message: Message) -> None:
     lang = await _get_lang(tg_id)
     s = t(lang)
 
-    # Delete the invoice message + cancel button message
     try:
         async with SessionMaker() as session:
             user = await repo.get_or_create(session, tg_id)
@@ -220,7 +212,6 @@ async def on_successful_payment(message: Message) -> None:
     except Exception:
         log.warning("Could not delete invoice messages for user %s", tg_id)
 
-    # Delete Telegram's system "payment successful" message
     try:
         await message.delete()
     except Exception:
@@ -240,7 +231,6 @@ async def on_successful_payment(message: Message) -> None:
         tier = TIER_BY_KEY[tier_key]
         until = s.premium_activated_forever if tier_key == "forever" else user.premium_until.strftime("%d.%m.%Y")
 
-        # Show success on the existing panel message
         current = await _get_panel(tg_id)
         ref = await safe_edit_or_send(
             bot=message.bot,
@@ -257,6 +247,8 @@ async def on_successful_payment(message: Message) -> None:
         await message.answer(s.premium_payment_error)
 
 
+# ── TON via CryptoBot ─────────────────────────────────────────────────────────
+
 @router.callback_query(F.data.startswith("premium:pay:ton:"))
 async def cb_pay_ton(cb: CallbackQuery) -> None:
     tier_key = cb.data.split(":", 3)[3]
@@ -268,78 +260,121 @@ async def cb_pay_ton(cb: CallbackQuery) -> None:
         return
 
     from app.common.config import settings as app_settings
-    ton_wallet = getattr(app_settings, "ton_wallet", None) or "UQAExampleWalletAddressHere"
-    comment = f"eagle_premium_{tier_key}_{cb.from_user.id}"
+    from app.domain.services.cryptobot import CryptoBotClient
 
-    await cb.answer()
-    await _show_panel(cb, s.premium_ton_text(tier.label, tier.ton_price, ton_wallet, comment), _ton_sent_kb(tier_key, lang))
-
-
-def _ton_sent_kb(tier_key: str, lang: str) -> InlineKeyboardMarkup:
-    s = t(lang)
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=s.btn_ton_sent, callback_data=f"premium:ton_sent:{tier_key}")],
-        [InlineKeyboardButton(text=s.btn_back_premium, callback_data=f"premium:select:{tier_key}")],
-    ])
-
-
-@router.callback_query(F.data.startswith("premium:ton_sent:"))
-async def cb_ton_sent(cb: CallbackQuery) -> None:
-    tier_key = cb.data.split(":", 2)[2]
-    lang = await _get_lang(cb.from_user.id)
-    s = t(lang)
-    tier = TIER_BY_KEY.get(tier_key)
-    tg_id = cb.from_user.id
-    comment = f"eagle_premium_{tier_key}_{tg_id}"
-    await cb.answer()
-    await _show_panel(cb, s.premium_ton_sent_text(tier.ton_price, comment), None)
-
-    # Notify admin channel
-    from app.common.config import settings as app_settings
-    channel_id = getattr(app_settings, "admin_channel_id", None)
-    log.info("TON notification: channel_id=%s tier=%s tg_id=%s", channel_id, tier_key, tg_id)
-
-    if not channel_id:
-        log.warning("ADMIN_CHANNEL_ID not set, skipping notification")
+    token = getattr(app_settings, "cryptobot_token", None)
+    if not token:
+        await cb.answer("❌ CryptoBot не настроен", show_alert=True)
         return
 
-    async with SessionMaker() as session:
-        user = await repo.get_or_create(session, tg_id)
+    tg_id = cb.from_user.id
+    payload = f"premium_{tier_key}_{tg_id}"
+    desc = f"EagleTools Premium — {tier.label}"
 
-    name = user.first_name or "—"
-    username = f"@{user.username}" if user.username else f"tg_id: {tg_id}"
+    try:
+        client = CryptoBotClient(token)
+        invoice = await client.create_invoice(
+            amount=tier.ton_price,
+            asset="TON",
+            payload=payload,
+            description=desc,
+            expires_in=3600,
+        )
+    except Exception as e:
+        log.exception("CryptoBot invoice creation failed: %s", e)
+        await cb.answer("❌ Ошибка создания счёта", show_alert=True)
+        return
+
+    await cb.answer()
+
+    pay_label   = "💎 Оплатить TON" if lang == "ru" else "💎 Pay with TON"
+    check_label = "🔍 Проверить оплату" if lang == "ru" else "🔍 Check payment"
+    back_label  = s.btn_back_premium
 
     text = (
-        "💎 <b>Новая заявка на TON Premium</b>\n\n"
-        f"👤 {name} · {username}\n"
-        f"🆔 <code>{tg_id}</code>\n"
-        f"📦 Тариф: <b>{tier.label}</b> · {tier.ton_price} TON\n"
-        f"💬 Комментарий: <code>{comment}</code>\n\n"
-        "Проверь транзакцию и выдай Premium:"
+        f"💎 <b>Оплата TON — {tier.label}</b>\n\n"
+        f"Сумма: <b>{tier.ton_price} TON</b>\n\n"
+        "Нажми кнопку ниже — откроется CryptoBot с готовым счётом.\n"
+        "После оплаты нажми <b>Проверить оплату</b>."
+    ) if lang == "ru" else (
+        f"💎 <b>TON Payment — {tier.label}</b>\n\n"
+        f"Amount: <b>{tier.ton_price} TON</b>\n\n"
+        "Press the button below — CryptoBot will open with a ready invoice.\n"
+        "After payment press <b>Check payment</b>."
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=f"✅ Выдать {tier.label}",
-            callback_data=f"admin:channel_grant:{tg_id}:{tier_key}",
-        )],
-        [InlineKeyboardButton(
-            text="❌ Отклонить",
-            callback_data=f"admin:channel_reject:{tg_id}",
-        )],
+        [InlineKeyboardButton(text=pay_label, url=invoice.pay_url)],
+        [InlineKeyboardButton(text=check_label, callback_data=f"premium:ton_check:{tier_key}:{invoice.invoice_id}")],
+        [InlineKeyboardButton(text=back_label, callback_data=f"premium:select:{tier_key}")],
     ])
 
+    await _show_panel(cb, text, kb)
+
+
+@router.callback_query(F.data.startswith("premium:ton_check:"))
+async def cb_ton_check(cb: CallbackQuery) -> None:
+    parts      = cb.data.split(":")
+    tier_key   = parts[2]
+    invoice_id = int(parts[3])
+    lang = await _get_lang(cb.from_user.id)
+    s = t(lang)
+    tier = TIER_BY_KEY.get(tier_key)
+
+    from app.common.config import settings as app_settings
+    from app.domain.services.cryptobot import CryptoBotClient
+
+    token = getattr(app_settings, "cryptobot_token", None)
+    if not token:
+        await cb.answer("❌ CryptoBot не настроен", show_alert=True)
+        return
+
     try:
-        await cb.bot.send_message(
-            chat_id=channel_id,
-            text=text,
-            reply_markup=kb,
+        client = CryptoBotClient(token)
+        invoice = await client.get_invoice(invoice_id)
+    except Exception as e:
+        log.exception("CryptoBot check failed: %s", e)
+        await cb.answer("❌ Ошибка проверки", show_alert=True)
+        return
+
+    if not invoice or invoice.status != "paid":
+        msg = "⏳ Оплата не найдена. Попробуй через несколько секунд." if lang == "ru" else "⏳ Payment not found yet. Try in a few seconds."
+        await cb.answer(msg, show_alert=True)
+        return
+
+    # Оплата подтверждена — активируем Premium
+    tg_id = cb.from_user.id
+    await cb.answer()
+
+    try:
+        async with SessionMaker() as session:
+            user = await activate_premium(
+                session,
+                tg_id=tg_id,
+                tier_key=tier_key,
+                payment_method="cryptobot_ton",
+                payment_payload={"invoice_id": invoice_id},
+            )
+            await session.commit()
+
+        until = s.premium_activated_forever if tier_key == "forever" else user.premium_until.strftime("%d.%m.%Y")
+        current = await _get_panel(tg_id)
+        ref = await safe_edit_or_send(
+            bot=cb.bot,
+            chat_id=cb.message.chat.id,
+            text=s.premium_activated(tier.label, until),
+            reply_markup=None,
+            current=current,
             parse_mode="HTML",
         )
-        log.info("TON notification sent to channel %s OK", channel_id)
-    except Exception as e:
-        log.exception("Could not send TON notification to channel %s: %s", channel_id, e)
+        await _save_panel(tg_id, ref)
 
+    except Exception:
+        log.exception("Failed to activate premium after CryptoBot payment")
+        await cb.message.answer(s.premium_payment_error)
+
+
+# ── Referral ──────────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "premium:referral")
 async def cb_referral(cb: CallbackQuery) -> None:

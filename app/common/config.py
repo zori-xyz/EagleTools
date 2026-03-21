@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     # =========================
 
     ton_wallet: Optional[str] = Field(default=None, validation_alias="TON_WALLET")
+    cryptobot_token: Optional[str] = Field(default=None, validation_alias="CRYPTOBOT_TOKEN")
 
     # =========================
     # ADMIN
