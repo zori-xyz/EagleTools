@@ -106,25 +106,47 @@
     el.style.background = `linear-gradient(to right, #e8195a 0%, #e8195a ${p}%, rgba(255,255,255,.10) ${p}%, rgba(255,255,255,.10) 100%)`;
   }
 
-  function openPlayer(url, title, isAudio) {
+  function openPlayer(url, title, isAudio, isImage) {
     playerUrl = url; playerTitle = title || ""; playerIsAudio = isAudio;
     const modal = $("#playerModal");
     const video = $("#playerVideo"), audio = $("#playerAudio");
     const videoWrap = $("#playerVideoWrap"), audioWrap = $("#playerAudioWrap");
     const controls = $("#playerControls");
     const titleEl = $("#playerAudioTitle");
+    const fullUrl = url.startsWith("http") ? url : window.location.origin + url;
 
     // stop previous
     if (video) { video.pause(); video.src = ""; }
     if (audio) { audio.pause(); audio.src = ""; }
 
-    if (isAudio) {
+    // Убираем старый image viewer если есть
+    const oldImg = document.getElementById("playerImageWrap");
+    if (oldImg) oldImg.remove();
+
+    if (isImage) {
+      /* GIF и другие изображения — показываем как картинку */
+      audioWrap && (audioWrap.style.display = "none");
+      videoWrap && (videoWrap.style.display = "none");
+      controls && (controls.style.display = "none");
+
+      const imgWrap = document.createElement("div");
+      imgWrap.id = "playerImageWrap";
+      imgWrap.style.cssText = "text-align:center;padding:8px 0;";
+      const img = document.createElement("img");
+      img.src = fullUrl;
+      img.style.cssText = "max-width:100%;max-height:60vh;border-radius:12px;object-fit:contain;display:block;margin:0 auto;";
+      img.alt = title || "";
+      imgWrap.appendChild(img);
+      const body = document.querySelector(".player-modal__body");
+      if (body) body.insertBefore(imgWrap, body.firstChild);
+
+    } else if (isAudio) {
       videoWrap && (videoWrap.style.display = "none");
       audioWrap && (audioWrap.style.display = "");
       controls && (controls.style.display = "");
       if (titleEl) titleEl.textContent = title || "Аудио";
       if (audio) {
-        audio.src = url.startsWith("http") ? url : window.location.origin + url;
+        audio.src = fullUrl;
         audio.load();
         bindAudioControls(audio);
       }
@@ -133,7 +155,7 @@
       videoWrap && (videoWrap.style.display = "");
       controls && (controls.style.display = "none");
       if (video) {
-        video.src = url.startsWith("http") ? url : window.location.origin + url;
+        video.src = fullUrl;
         video.load();
       }
     }
@@ -153,6 +175,8 @@
     const video = $("#playerVideo"), audio = $("#playerAudio");
     if (video) { video.pause(); video.src = ""; }
     if (audio) { audio.pause(); audio.src = ""; }
+    const imgWrap = document.getElementById("playerImageWrap");
+    if (imgWrap) imgWrap.remove();
     modal && modal.classList.remove("is-open");
   }
 
@@ -657,10 +681,8 @@
     if (action === "recent-play") {
       const isImage = el.dataset.image === "true";
       if (isImage) {
-        /* Показываем фото в лайтбоксе */
-        const url = el.dataset.url || "";
-        const title = el.dataset.title || "";
-        showImageViewer(url, title);
+        /* Показываем фото/GIF в плеере */
+        openPlayer(el.dataset.url || "", el.dataset.title || "", false, true);
         return;
       }
       const url = el.dataset.url || "";
