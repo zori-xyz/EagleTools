@@ -125,22 +125,16 @@
     const fileClear = $("convFileClear");
     const runBtn    = $("convRunBtn");
 
-    console.log("[conv] init, drop=", !!drop, "fileInput=", !!fileInput);
-    if (!drop) { console.error("[conv] convDrop not found!"); return; }
+    if (!drop) return;
 
-    /* Выбор файла — используем и change и input для совместимости с Telegram WebApp */
-    function onFileChosen() {
-      console.log("[conv] onFileChosen, files:", fileInput.files && fileInput.files.length);
-      if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
-    }
-    fileInput.addEventListener("change", onFileChosen);
-    fileInput.addEventListener("input",  onFileChosen);
-
-    /* Дополнительный клик для браузеров где input не перехватывает */
+    /* Клик на дроп-зону */
     drop.addEventListener("click", (e) => {
-      if (e.target === drop || e.target.closest(".converter-drop__icon") || e.target.closest(".converter-drop__label") || e.target.closest(".converter-drop__sub")) {
-        fileInput.click();
-      }
+      if (e.target !== fileInput) fileInput.click();
+    });
+
+    /* Выбор файла */
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
     });
 
     /* Drag & Drop */
@@ -160,7 +154,6 @@
 
   /* ── Обработка выбранного файла ── */
   function handleFile(file) {
-    console.log("[conv] handleFile:", file.name, file.size, file.type);
     var isPremium = false;
     try { isPremium = !!(window.EagleProfile && window.EagleProfile.isPremium && window.EagleProfile.isPremium()); } catch(e) {}
     const maxSize = isPremium ? MAX_SIZE_PREMIUM : MAX_SIZE_FREE;
@@ -360,8 +353,8 @@
   function showResult(data) {
     const lang       = getLang();
     const result     = $("convResult");
-    const dlLabel    = window.__t ? (window.__t("btn_download") || (lang === "en" ? "Download" : "Скачать")) : (lang === "en" ? "Download" : "Скачать");
-    const shareLabel = window.__t ? (window.__t("player_share") || (lang === "en" ? "Share" : "Поделиться")) : (lang === "en" ? "Share" : "Поделиться");
+    const dlLabel    = lang === "en" ? "Download" : "Скачать";
+    const shareLabel = lang === "en" ? "Share"    : "Поделиться";
     const url        = data.download_url || "";
     const fname      = data.filename || "file";
 
@@ -510,13 +503,13 @@
     /* Fallback — копируем ссылку */
     try {
       await navigator.clipboard.writeText(full);
-      if (typeof window.__eagleToast === "function") window.__eagleToast(window.__tLang === "en" ? "Link copied" : "Ссылка скопирована", "ok");
+      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
     } catch {
       /* последний fallback */
       const inp = document.createElement("input");
       inp.value = full; document.body.appendChild(inp);
       inp.select(); document.execCommand("copy"); inp.remove();
-      if (typeof window.__eagleToast === "function") window.__eagleToast(window.__tLang === "en" ? "Link copied" : "Ссылка скопирована", "ok");
+      if (typeof window.__eagleToast === "function") window.__eagleToast("Ссылка скопирована", "ok");
     }
   };
 
@@ -527,4 +520,4 @@
     init();
   }
 
-});
+})();
