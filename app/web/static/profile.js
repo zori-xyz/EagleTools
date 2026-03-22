@@ -107,8 +107,8 @@
       // Help - Privacy
       help_privacy_title: "Конфиденциальность",
       // Player
-      player_open: "🌐 Открыть",
-      player_share: "📤 Поделиться",
+      player_open: "Открыть",
+      player_share: "Поделиться",
       // Tools
       tool_video_desc: "YouTube и другие платформы",
       tool_audio_desc: "Треки и плейлисты",
@@ -230,8 +230,8 @@
       // Help - Privacy
       help_privacy_title: "Privacy",
       // Player
-      player_open: "🌐 Open",
-      player_share: "📤 Share",
+      player_open: "Open",
+      player_share: "Share",
       // Tools
       tool_video_desc: "YouTube and other platforms",
       tool_audio_desc: "Tracks and playlists",
