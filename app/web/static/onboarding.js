@@ -314,7 +314,7 @@
     "html[data-theme='light'] .et-dot{background:rgba(0,0,0,.12);}",
     /* ── Fake action sheet ── */
     "#et-fake-sheet{",
-    "  position:fixed;left:0;right:0;bottom:0;z-index:9150;",
+    "  position:fixed;left:0;right:0;bottom:0;z-index:9080;",
     "  background:var(--bg2,#1e1b2e);border-radius:20px 20px 0 0;",
     "  padding:0 0 max(16px,env(safe-area-inset-bottom));",
     "  transform:translateY(100%);",
@@ -421,6 +421,7 @@
 
   function applyRect(r) {
     if (!cutout || !ring) return;
+    ring.classList.remove("et-ring-out"); /* restore visibility on any move */
     cutout.setAttribute("x", r.left);
     cutout.setAttribute("y", r.top);
     cutout.setAttribute("width", r.width);
