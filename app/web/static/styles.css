@@ -1367,30 +1367,23 @@ html[data-theme="light"] .skeleton-line {
 
 /* ── Paste button in URL inputs ─────────────────────────────── */
 .toolcard__paste-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--rose);
   background: var(--rose-soft);
   border: 1px solid var(--rose-edge);
-  border-radius: 7px;
-  padding: 4px 9px;
+  border-radius: var(--r-md);
   cursor: pointer;
   font-family: var(--font);
   white-space: nowrap;
   transition: background .15s, opacity .15s;
   line-height: 1;
-  z-index: 2;
 }
 .toolcard__paste-btn:hover  { background: var(--rose-glow); }
 .toolcard__paste-btn:active { opacity: .75; }
-
-/* Ensure position:relative on wrapper for paste btn */
-.toolcard__input-wrap { position: relative; }
-.toolcard__input-wrap .input { padding-right: 72px; }
 
 /* ── Drag-and-drop glow effect on converter drop zone ───────── */
 .converter-drop.is-dragover {
