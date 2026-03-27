@@ -13,7 +13,7 @@ def premium_tiers_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     for tier in TIERS:
         rows.append([
             InlineKeyboardButton(
-                text=f"{tier.label} — ⭐ {tier.stars_price} / 💎 {tier.ton_price} TON",
+                text=f"{tier.localized_label(lang)} — ⭐ {tier.stars_price} / 💎 {tier.ton_price} TON",
                 callback_data=f"premium:select:{tier.key}",
             )
         ])
