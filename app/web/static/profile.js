@@ -149,6 +149,11 @@
       help_ref_3_html: "За каждого друга получаешь <b>+5 загрузок</b> в день навсегда",
       help_ref_4_html: "Каждые <b>3 приглашённых</b> при активном Premium дают <b>+3 дня</b> подписки",
       help_privacy_text: "Мы не храним твои файлы постоянно. Все результаты автоматически удаляются через 24 часа — никто кроме тебя не имеет доступа.",
+      // Format tags
+      tag_video: "Видео",
+      tag_audio: "Аудио",
+      tag_image: "Фото",
+      tag_docs: "Документы",
       // Help - Converter
       help_conv_title: "SMART конвертер файлов",
       help_conv_1_html: "Перетащи файл или нажми зону загрузки — конвертер сам определит тип",
@@ -284,6 +289,11 @@
       help_ref_3_html: "Each friend gives you <b>+5 downloads</b> per day forever",
       help_ref_4_html: "Every <b>3 invited</b> friends (with active Premium) give <b>+3 days</b> of Premium",
       help_privacy_text: "We don't permanently store your files. All results are automatically deleted after 24 hours — only you have access.",
+      // Format tags
+      tag_video: "Video",
+      tag_audio: "Audio",
+      tag_image: "Photo",
+      tag_docs: "Documents",
       // Help - Converter
       help_conv_title: "SMART File Converter",
       help_conv_1_html: "Drop a file or tap the upload zone — the converter detects the type automatically",
