@@ -652,7 +652,7 @@
     _hideSkeleton();
     _recentItems = items || [];
     if (!_recentItems.length) {
-      list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
+      renderEmptyRecent(list);
       return;
     }
     const sortSel = document.getElementById("recentSort");
@@ -677,6 +677,9 @@
     if (action === "open-profile") return setTab("profile");
     if (action === "open-settings") { openSettings(); return; }
     if (action === "close-settings") { closeSettings(); return; }
+    if (action === "switch-to-tools") { setTab("tools"); return; }
+    if (action === "close-action-sheet") { closeActionSheet(); return; }
+    if (action.startsWith("as-")) { await handleActionSheetAction(action); return; }
 
     if (action === "open-upgrade") {
       openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=premium`);
@@ -784,6 +787,253 @@
     }, true);
   }
 
+  // ══════════════════════════════════════════════════════════════
+  // ACTION SHEET
+  // ══════════════════════════════════════════════════════════════
+  let _asItem = null;
+  const _asEl  = () => document.getElementById("actionSheet");
+  const _asTitle = () => document.getElementById("actionSheetTitle");
+  const _asItems = () => document.getElementById("actionSheetItems");
+
+  function _asIcon(path) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  }
+
+  function openActionSheet(item) {
+    const sheet = _asEl(); if (!sheet) return;
+    haptic("light");
+    _asItem = item;
+
+    const name  = (item.title || item.file_id || "").split("/").pop();
+    const canDl = !!(item.download_url);
+    const ext   = (item.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
+    const isImage = ["jpg","jpeg","png","webp","gif","bmp"].includes(ext);
+
+    _asTitle().textContent = name || t("action_file") || "Файл";
+
+    const rows = [];
+    if (canDl) {
+      rows.push({ label: t("action_open")  || "Открыть",          icon: _asIcon('<circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/>'), action:"as-play",  danger:false });
+      rows.push({ label: t("action_dl")    || "Скачать",          icon: _asIcon('<path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>'), action:"as-dl", danger:false });
+      rows.push({ label: t("action_share") || "Поделиться",       icon: _asIcon('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>'), action:"as-share", danger:false });
+      rows.push({ label: t("action_copy")  || "Копировать ссылку",icon: _asIcon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'), action:"as-copy", danger:false });
+      rows.push("sep");
+    }
+    rows.push({ label: t("action_del") || "Удалить", icon: _asIcon('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>'), action:"as-del", danger:true });
+
+    _asItems().innerHTML = rows.map(r => {
+      if (r === "sep") return `<div class="action-sheet__sep"></div>`;
+      return `<button class="action-sheet__item${r.danger ? " action-sheet__item--danger" : ""}" type="button" data-action="${r.action}">
+        <span class="action-sheet__item-icon">${r.icon}</span>
+        <span class="action-sheet__item-label">${escapeHtml(r.label)}</span>
+      </button>`;
+    }).join("");
+
+    sheet.setAttribute("aria-hidden","false");
+    requestAnimationFrame(() => sheet.classList.add("is-open"));
+  }
+
+  function closeActionSheet() {
+    const sheet = _asEl(); if (!sheet) return;
+    sheet.classList.remove("is-open");
+    setTimeout(() => { sheet.setAttribute("aria-hidden","true"); _asItem = null; }, 320);
+  }
+
+  async function handleActionSheetAction(action) {
+    const item = _asItem;
+    closeActionSheet();
+    if (!item) return;
+    await new Promise(r => setTimeout(r, 60));
+
+    const url   = item.download_url || "";
+    const title = item.title || item.file_id || "";
+    const ext   = (item.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
+    const isImage = ["jpg","jpeg","png","webp","gif","bmp"].includes(ext);
+
+    if (action === "as-play") {
+      if (isImage) { openPlayer(url, title, false, true); return; }
+      if (url) openPlayer(url, title, isAudio);
+    } else if (action === "as-dl") {
+      haptic("medium"); openFile(url);
+    } else if (action === "as-share") {
+      if (url) {
+        const full = url.startsWith("http") ? url : window.location.origin + url;
+        try { if (navigator.share) { await navigator.share({ title, url: full }); return; } } catch {}
+        try { await navigator.clipboard.writeText(full); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch {}
+      }
+    } else if (action === "as-copy") {
+      if (url) {
+        const full = url.startsWith("http") ? url : window.location.origin + url;
+        try { await navigator.clipboard.writeText(full); toast(t("copied") || "Скопировано!", "ok", "✅"); haptic("light"); } catch {}
+      }
+    } else if (action === "as-del") {
+      if (item.id === "demo") return; // onboarding demo
+      const row = document.querySelector(`.recentitem[data-id="${CSS.escape(String(item.id))}"]`);
+      if (!row) return;
+      deleteRow(row);
+      const r = await apiDelete(`/api/recent/${encodeURIComponent(item.id)}`);
+      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
+      lastHash = ""; loadRecents(true); hapticNotify("success");
+    }
+  }
+
+  function _initActionSheet() {
+    const bd = document.getElementById("actionSheetBackdrop");
+    if (bd) bd.addEventListener("click", closeActionSheet);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // LONG PRESS → ACTION SHEET
+  // ══════════════════════════════════════════════════════════════
+  function bindLongPress() {
+    let _lpTimer = null, _lpRow = null, _lpMoved = false;
+
+    document.addEventListener("touchstart", e => {
+      const row = e.target.closest(".recentitem[data-id]");
+      if (!row || e.target.closest("[data-action]")) return;
+      _lpRow = row; _lpMoved = false;
+      _lpTimer = setTimeout(() => {
+        if (_lpMoved) return;
+        row.classList.add("is-pressing");
+        haptic("medium");
+        setTimeout(() => {
+          row.classList.remove("is-pressing");
+          const id    = row.dataset.id;
+          const item  = (id === "demo") ? { id:"demo", title:"EagleTools_demo.mp4", download_url:"#", file_id:"demo.mp4" }
+                                        : _recentItems.find(x => String(x.id) === String(id));
+          if (item) openActionSheet(item);
+        }, 180);
+      }, 380);
+    }, { passive: true });
+
+    document.addEventListener("touchmove", () => {
+      _lpMoved = true;
+      clearTimeout(_lpTimer);
+      if (_lpRow) { _lpRow.classList.remove("is-pressing"); _lpRow = null; }
+    }, { passive: true });
+
+    document.addEventListener("touchend", () => {
+      clearTimeout(_lpTimer);
+      if (_lpRow) { _lpRow.classList.remove("is-pressing"); _lpRow = null; }
+    }, { passive: true });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // SWIPE TO DELETE
+  // ══════════════════════════════════════════════════════════════
+  function _addSwipeBg(row) {
+    if (row.querySelector(".ri-swipe-bg")) return;
+    const bg = document.createElement("div");
+    bg.className = "ri-swipe-bg";
+    bg.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span>${escapeHtml(t("action_del") || "Удалить")}</span>`;
+    row.style.position = "relative";
+    row.insertBefore(bg, row.firstChild);
+  }
+
+  function bindSwipeRow(row) {
+    if (row.dataset.swipeBound) return;
+    row.dataset.swipeBound = "1";
+    _addSwipeBg(row);
+
+    const inner = row.querySelector(".ri-inner");
+    const bg    = row.querySelector(".ri-swipe-bg");
+    if (!inner) return;
+
+    let startX, startY, curX = 0, tracking = false, axisLocked = false, isH = false;
+    const THRESHOLD = 88;
+
+    row.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true; axisLocked = false; isH = false; curX = 0;
+      inner.style.transition = "none";
+    }, { passive: true });
+
+    row.addEventListener("touchmove", e => {
+      if (!tracking) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!axisLocked) {
+        axisLocked = true;
+        isH = Math.abs(dx) > Math.abs(dy) + 4;
+      }
+      if (!isH) return;
+      e.preventDefault();
+      curX = Math.min(0, dx);
+      inner.style.transform = `translateX(${curX}px)`;
+      if (bg) bg.style.opacity = Math.min(1, -curX / THRESHOLD);
+    }, { passive: false });
+
+    row.addEventListener("touchend", async () => {
+      if (!tracking || !isH) { tracking = false; return; }
+      tracking = false;
+      inner.style.transition = "transform .25s cubic-bezier(.4,0,.2,1)";
+      if (bg) bg.style.transition = "opacity .25s";
+
+      if (curX < -THRESHOLD) {
+        inner.style.transform = `translateX(-${row.offsetWidth}px)`;
+        if (bg) bg.style.opacity = "1";
+        const id = row.dataset.id;
+        if (id === "demo") { setTimeout(() => row.remove(), 260); return; }
+        hapticNotify("success");
+        setTimeout(async () => {
+          deleteRow(row);
+          const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
+          if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); }
+          else { lastHash = ""; loadRecents(true); }
+        }, 250);
+      } else {
+        inner.style.transform = "translateX(0)";
+        if (bg) bg.style.opacity = "0";
+        curX = 0;
+      }
+    }, { passive: true });
+  }
+
+  function bindSwipeToDelete() {
+    // delegated: bind new rows as they appear
+    const observer = new MutationObserver(() => {
+      document.querySelectorAll(".recentitem[data-id]").forEach(bindSwipeRow);
+    });
+    const list = document.getElementById("recentList");
+    if (list) observer.observe(list, { childList: true, subtree: false });
+    document.querySelectorAll(".recentitem[data-id]").forEach(bindSwipeRow);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // EMPTY STATE
+  // ══════════════════════════════════════════════════════════════
+  function renderEmptyRecent(list) {
+    list.innerHTML = `
+      <div class="recent-empty">
+        <div class="recent-empty__icon">🦅</div>
+        <div class="recent-empty__title">${escapeHtml(t("recent_empty_title") || "Пока пусто")}</div>
+        <div class="recent-empty__sub">${escapeHtml(t("recent_empty_sub") || "Скачай видео или конвертируй файл — он появится здесь")}</div>
+        <button class="btn btn--primary" type="button" data-action="switch-to-tools">${escapeHtml(t("recent_go_tools") || "Перейти к инструментам")}</button>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // HELP BADGE
+  // ══════════════════════════════════════════════════════════════
+  const HELP_BADGE_KEY = "et_help_seen_v1";
+
+  function initHelpBadge() {
+    try { if (localStorage.getItem(HELP_BADGE_KEY)) _hideHelpBadge(); } catch {}
+    const helpBtn = document.getElementById("helpTabBtn");
+    if (helpBtn) helpBtn.addEventListener("click", () => {
+      try { localStorage.setItem(HELP_BADGE_KEY, "1"); } catch {}
+      _hideHelpBadge();
+    }, { once: true });
+  }
+
+  function _hideHelpBadge() {
+    const dot = document.getElementById("helpNewDot");
+    if (dot) dot.remove();
+  }
+
   // ---------- Init ----------
   function init() {
     $$("[data-tool]").forEach(resetCardUi);
@@ -791,7 +1041,17 @@
     bindToolRuns();
     bindGlobalClick();
     initPlayer();
-    document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
+    _initActionSheet();
+    bindLongPress();
+    bindSwipeToDelete();
+    initHelpBadge();
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        const sheet = document.getElementById("actionSheet");
+        if (sheet && sheet.classList.contains("is-open")) { closeActionSheet(); return; }
+        if (isModalOpen()) closeSettings(); else closePlayer();
+      }
+    });
     syncAllSegmini();
     loadRecents(true).catch(() => {});
     /* Сортировка recent */
@@ -801,6 +1061,8 @@
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
     window.__eagleToast = toast;
+    window.__eagleOpenActionSheet = openActionSheet;
+    window.__eagleCloseActionSheet = closeActionSheet;
     requestAnimationFrame(() => {
       const a = $("[data-tab].is-active");
       if (a) syncIndicator(tabsEl, indEl, a);

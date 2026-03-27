@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260330" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260327" />
   </head>
   <body>
     <div class="app">
@@ -39,7 +39,7 @@
         <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Инструменты</button>
         <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">История</button>
         <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Профиль</button>
-        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Помощь</button>
+        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help" id="helpTabBtn">Помощь<span class="tabs__new-dot" id="helpNewDot" aria-hidden="true"></span></button>
       </nav>
 
       <main class="main">
@@ -515,10 +515,20 @@
       </div>
     </div>
 
-    <script src="/static/api.js?v=20260330"></script>
-    <script src="/static/profile.js?v=20260330"></script>
-    <script src="/static/app.js?v=20260330"></script>
-    <script src="/static/converter.js?v=20260330"></script>
-    <script src="/static/onboarding.js?v=20260330"></script>
+    <!-- ACTION SHEET -->
+    <div id="actionSheet" class="action-sheet" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="action-sheet__backdrop" id="actionSheetBackdrop"></div>
+      <div class="action-sheet__panel" id="actionSheetPanel">
+        <div class="action-sheet__handle"></div>
+        <div class="action-sheet__title" id="actionSheetTitle"></div>
+        <div id="actionSheetItems"></div>
+      </div>
+    </div>
+
+    <script src="/static/api.js?v=20260327"></script>
+    <script src="/static/profile.js?v=20260327"></script>
+    <script src="/static/app.js?v=20260327"></script>
+    <script src="/static/converter.js?v=20260327"></script>
+    <script src="/static/onboarding.js?v=20260327"></script>
   </body>
 </html>

@@ -174,6 +174,17 @@
       help_bot_converter_title: "Файловый конвертер",
       help_bot_converter_desc: "Отправь любой файл боту — конвертирует аудио, видео в выбранный формат",
       player_sub: "EagleTools",
+      // Action sheet
+      action_open: "Открыть",
+      action_dl: "Скачать",
+      action_share: "Поделиться",
+      action_copy: "Копировать ссылку",
+      action_del: "Удалить",
+      action_file: "Информация о файле",
+      // Recent empty state
+      recent_empty_title: "Пока пусто",
+      recent_empty_sub: "Скачай видео или конвертируй файл — он появится здесь",
+      recent_go_tools: "Перейти к инструментам",
     },
     en: {
       subtitle: "Links → files",
@@ -314,6 +325,17 @@
       help_bot_converter_title: "File converter",
       help_bot_converter_desc: "Send any file to the bot — it converts audio and video to your chosen format",
       player_sub: "EagleTools",
+      // Action sheet
+      action_open: "Open",
+      action_dl: "Download",
+      action_share: "Share",
+      action_copy: "Copy link",
+      action_del: "Delete",
+      action_file: "File info",
+      // Recent empty state
+      recent_empty_title: "Nothing here yet",
+      recent_empty_sub: "Download a video or convert a file — it will appear here",
+      recent_go_tools: "Go to tools",
     },
   };
 
