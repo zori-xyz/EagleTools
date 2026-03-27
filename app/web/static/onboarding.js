@@ -1,9 +1,7 @@
 /* ============================================================
-   EagleTools — Onboarding Tour v5
-   - Steps 1-3: Tools tab cards
-   - Step 4:    Recent tab — demo file appears, long-press → action sheet,
-                then swipe-left → vanish animation
-   - Step 5:    Profile tab
+   EagleTools — Onboarding Tour v6
+   Step 4: demo row → long-press glow → FAKE action sheet slides up
+           (spotlight follows) → auto-dismiss → swipe-left → vanish
    ============================================================ */
 (function () {
   "use strict";
@@ -17,17 +15,17 @@
     return "ru";
   }
 
-  /* ── Demo file HTML ──────────────────────────────────────── */
+  /* ── Demo row ────────────────────────────────────────────── */
   var DEMO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/></svg>';
 
   function buildDemoRow(lang) {
-    var label = lang === "en" ? "DONE" : "ГОТОВО";
     var name  = lang === "en" ? "EagleTools_demo.mp4" : "EagleTools_демо.mp4";
-    var swipeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+    var label = lang === "en" ? "DONE" : "ГОТОВО";
     var delLbl = lang === "en" ? "Delete" : "Удалить";
+    var trashSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
     return (
       '<div class="recentitem ri ri--video" id="et-demo-file" data-id="demo" style="overflow:hidden;">' +
-        '<div class="ri-swipe-bg">' + swipeSvg + '<span>' + delLbl + '</span></div>' +
+        '<div class="ri-swipe-bg">' + trashSvg + '<span>' + delLbl + '</span></div>' +
         '<div class="ri-inner">' +
           '<div class="ri-icon">' + DEMO_ICON + '</div>' +
           '<div class="ri-info">' +
@@ -38,10 +36,8 @@
               '<span class="ri-when">1 ' + (lang === "en" ? "min ago" : "мин назад") + '</span>' +
             '</div>' +
           '</div>' +
-          '<div class="ri-actions">' +
-            '<button class="ri-btn ri-btn--dl" type="button" disabled aria-label="Download">' +
-              '<svg class="ri-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>' +
-            '</button>' +
+          '<div class="ri-actions__hint">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="opacity:.3"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -57,7 +53,6 @@
     var tmp = document.createElement("div");
     tmp.innerHTML = buildDemoRow(lang);
     _demoRow = tmp.firstElementChild;
-    /* Prepend before existing items so it's always visible */
     list.insertBefore(_demoRow, list.firstChild);
   }
 
@@ -67,48 +62,159 @@
     if (old) old.remove();
   }
 
+  /* ── Fake action sheet ───────────────────────────────────── */
+  function buildFakeSheet(lang) {
+    var isEn = lang === "en";
+    var items = [
+      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M14.5 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9.5L14.5 3z"/><polyline points="14 3 14 9 20 9"/></svg>', label: isEn ? "Open" : "Открыть" },
+      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>', label: isEn ? "Download" : "Скачать" },
+      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>', label: isEn ? "Share" : "Поделиться" },
+      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>', label: isEn ? "Delete" : "Удалить", danger: true },
+    ];
+
+    var rowsHtml = items.map(function(it) {
+      return (
+        '<div class="et-fs-item' + (it.danger ? ' et-fs-danger' : '') + '">' +
+          '<div class="et-fs-icon">' + it.icon + '</div>' +
+          '<span class="et-fs-label">' + it.label + '</span>' +
+        '</div>'
+      );
+    }).join('');
+
+    var el = document.createElement("div");
+    el.id = "et-fake-sheet";
+    el.innerHTML =
+      '<div class="et-fs-handle"></div>' +
+      '<div class="et-fs-title">EagleTools_демо.mp4</div>' +
+      rowsHtml;
+    return el;
+  }
+
+  function showFakeSheet(lang, cb) {
+    var old = document.getElementById("et-fake-sheet");
+    if (old) old.remove();
+    var el = buildFakeSheet(lang);
+    document.body.appendChild(el);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        el.classList.add("is-open");
+        setTimeout(function() { cb(el); }, 360);
+      });
+    });
+  }
+
+  function hideFakeSheet(el, cb) {
+    if (!el || !el.parentNode) { if (cb) cb(); return; }
+    el.classList.remove("is-open");
+    setTimeout(function() {
+      el.remove();
+      if (cb) cb();
+    }, 360);
+  }
+
+  /* ── Demo sequence ───────────────────────────────────────── */
+  function runDemoSequence(lang, doneCb) {
+    var row = document.getElementById("et-demo-file");
+    if (!row) { doneCb(); return; }
+
+    /* 1. Fade out tip, let overlay stay */
+    tip.classList.remove("et-visible");
+
+    /* 2. Move spotlight to demo row */
+    function spotRow() {
+      var er = row.getBoundingClientRect();
+      if (!er.width) return;
+      var PAD = 8;
+      applyRect({ top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 });
+    }
+
+    setTimeout(function() {
+      spotRow();
+
+      /* 3. Long-press glow (600ms) */
+      setTimeout(function() {
+        row.classList.add("is-pressing");
+
+        setTimeout(function() {
+          row.classList.remove("is-pressing");
+
+          /* 4. Fake action sheet slides up */
+          showFakeSheet(lang, function(sheetEl) {
+
+            /* 5. Move spotlight to action sheet */
+            var sr = sheetEl.getBoundingClientRect();
+            applyRect({ top: sr.top - 8, left: sr.left - 8, width: sr.width + 16, height: sr.height + 16 });
+
+            /* 6. Auto-dismiss after 2s */
+            setTimeout(function() {
+              hideFakeSheet(sheetEl, function() {
+
+                /* 7. Spotlight back on the row */
+                spotRow();
+
+                /* 8. Swipe-left animation */
+                setTimeout(function() {
+                  row.classList.add("is-swiping");
+
+                  /* 9. Vanish */
+                  setTimeout(function() {
+                    row.classList.add("is-vanishing");
+                    setTimeout(function() {
+                      removeDemoFile();
+                      doneCb();
+                    }, 500);
+                  }, 420);
+                }, 700);
+              });
+            }, 2000);
+          });
+        }, 700); /* hold the glow */
+      }, 400); /* pause before glow */
+    }, 200);
+  }
+
   /* ── Steps ───────────────────────────────────────────────── */
   var STEPS = {
     ru: [
       {
         tab: "tools", target: "#converterCard", badge: "NEW ✦",
         title: "🧠 SMART конвертер",
-        text: "Брось любой файл — видео, аудио, фото, PDF или документ. Конвертер сам определит тип и предложит только нужные действия: конвертация, сжатие, распознавание речи.",
+        text: "Брось любой файл — видео, аудио, фото, PDF или документ. Конвертер сам определит тип и предложит только нужные действия.",
       },
       {
         tab: "tools", target: "[data-tool='save']",
         title: "⬇️ Скачать видео",
-        text: "Вставь ссылку с YouTube, TikTok, Vimeo или любой другой платформы — получишь готовый MP4 без рекламы и ограничений.",
+        text: "Вставь ссылку с YouTube, TikTok, Vimeo или любой другой платформы — получишь готовый MP4 без рекламы.",
       },
       {
         tab: "tools", target: "[data-tool='audio']",
         title: "🎵 Музыка с SoundCloud",
-        text: "Ссылка на трек или плейлист — и у тебя готовый MP3. Работает со всеми публичными треками SoundCloud.",
+        text: "Ссылка на трек или плейлист — и у тебя готовый MP3. Работает со всеми публичными треками.",
       },
       {
         tab: "recent", target: "#et-demo-file",
         title: "🗂 История загрузок",
-        text: "Все твои файлы хранятся здесь 24 часа. Нажми <b>Далее</b> чтобы увидеть, как работает меню действий и свайп для удаления.",
-        onEnter: function(lang) { injectDemoFile(lang || "ru"); },
+        text: "Файлы хранятся 24 часа. Нажми <b>Далее</b> — покажу как работает меню и свайп-удаление.",
+        onEnter: function(lang) { injectDemoFile(lang); },
         onLeave: function() { removeDemoFile(); },
-        onNext: function(cb) { runDemoSequence("ru", cb); },
+        onNext: function(cb) { runDemoSequence(getLang(), cb); },
       },
       {
         tab: "profile", target: "[data-tab='profile']",
         title: "👤 Твой профиль",
-        text: "Следи за дневным лимитом загрузок. Приглашай друзей по реферальной ссылке — за каждого получаешь +5 загрузок в день навсегда.",
+        text: "Следи за дневным лимитом. Приглашай друзей по реферальной ссылке — за каждого +5 загрузок в день навсегда.",
       },
     ],
     en: [
       {
         tab: "tools", target: "#converterCard", badge: "NEW ✦",
         title: "🧠 SMART Converter",
-        text: "Drop any file — video, audio, photo, PDF or document. The converter detects the type automatically and suggests only relevant actions: convert, compress, transcribe speech.",
+        text: "Drop any file — video, audio, photo, PDF or document. The converter detects the type and suggests the right actions automatically.",
       },
       {
         tab: "tools", target: "[data-tool='save']",
         title: "⬇️ Download video",
-        text: "Paste a link from YouTube, TikTok, Vimeo or any other platform — get a clean MP4 file without ads or restrictions.",
+        text: "Paste a link from YouTube, TikTok, Vimeo or any platform — get a clean MP4 without ads.",
       },
       {
         tab: "tools", target: "[data-tool='audio']",
@@ -118,64 +224,18 @@
       {
         tab: "recent", target: "#et-demo-file",
         title: "🗂 Download history",
-        text: "All your files are stored here for 24 hours. Tap <b>Next</b> to see the action menu and swipe-to-delete in action.",
-        onEnter: function(lang) { injectDemoFile(lang || "en"); },
+        text: "Files are stored for 24 hours. Tap <b>Next</b> — I'll show how the action menu and swipe-to-delete work.",
+        onEnter: function(lang) { injectDemoFile(lang); },
         onLeave: function() { removeDemoFile(); },
-        onNext: function(cb) { runDemoSequence("en", cb); },
+        onNext: function(cb) { runDemoSequence(getLang(), cb); },
       },
       {
         tab: "profile", target: "[data-tab='profile']",
         title: "👤 Your profile",
-        text: "Track your daily download limit. Invite friends with your referral link — each one earns you +5 downloads per day, forever.",
+        text: "Track your daily limit. Invite friends via referral link — each one gives you +5 downloads per day forever.",
       },
     ],
   };
-
-  /* ── Demo animation sequence ─────────────────────────────── */
-  function runDemoSequence(lang, doneCb) {
-    var row = document.getElementById("et-demo-file");
-    if (!row) { doneCb(); return; }
-
-    /* 1. Long-press glow */
-    setTimeout(function() {
-      row.classList.add("is-pressing");
-
-      /* 2. Open action sheet with demo item */
-      setTimeout(function() {
-        row.classList.remove("is-pressing");
-        var demoItem = { id: "demo", title: "EagleTools_demo.mp4", download_url: "#", file_id: "demo.mp4" };
-        if (typeof window.__eagleOpenActionSheet === "function") {
-          window.__eagleOpenActionSheet(demoItem);
-        }
-
-        /* 3. Close action sheet after a moment */
-        setTimeout(function() {
-          if (typeof window.__eagleCloseActionSheet === "function") {
-            window.__eagleCloseActionSheet();
-          }
-
-          /* 4. Swipe animation */
-          setTimeout(function() {
-            row = document.getElementById("et-demo-file");
-            if (!row) { doneCb(); return; }
-            row.classList.add("is-swiping");
-
-            /* 5. Vanish */
-            setTimeout(function() {
-              row = document.getElementById("et-demo-file");
-              if (row) row.classList.add("is-vanishing");
-
-              /* 6. Proceed */
-              setTimeout(function() {
-                removeDemoFile();
-                doneCb();
-              }, 450);
-            }, 420);
-          }, 500);
-        }, 1400);
-      }, 600);
-    }, 200);
-  }
 
   /* ── CSS ─────────────────────────────────────────────────── */
   var CSS = [
@@ -186,8 +246,8 @@
     "  position:fixed;border:2px solid #e8195a;border-radius:14px;",
     "  box-shadow:0 0 0 3px rgba(232,25,90,.18),0 0 24px rgba(232,25,90,.25);",
     "  pointer-events:none;z-index:9100;",
-    "  transition:top .32s cubic-bezier(.4,0,.2,1),left .32s cubic-bezier(.4,0,.2,1),",
-    "             width .32s cubic-bezier(.4,0,.2,1),height .32s cubic-bezier(.4,0,.2,1);",
+    "  transition:top .38s cubic-bezier(.4,0,.2,1),left .38s cubic-bezier(.4,0,.2,1),",
+    "             width .38s cubic-bezier(.4,0,.2,1),height .38s cubic-bezier(.4,0,.2,1);",
     "}",
     "#et-tip{",
     "  position:fixed;z-index:9200;width:min(292px,calc(100vw - 24px));",
@@ -221,6 +281,32 @@
     "html[data-theme='light'] #et-tip{background:#fff;border-color:rgba(208,20,83,.18);box-shadow:0 12px 40px rgba(80,40,140,.13);}",
     "html[data-theme='light'] #et-tip::before{background:#fff;border-color:rgba(208,20,83,.18);}",
     "html[data-theme='light'] .et-dot{background:rgba(0,0,0,.12);}",
+    /* ── Fake action sheet ── */
+    "#et-fake-sheet{",
+    "  position:fixed;left:0;right:0;bottom:0;z-index:9150;",
+    "  background:var(--bg2,#1e1b2e);border-radius:20px 20px 0 0;",
+    "  padding:0 0 max(16px,env(safe-area-inset-bottom));",
+    "  transform:translateY(100%);",
+    "  transition:transform .36s cubic-bezier(.32,1,.6,1);",
+    "  box-shadow:0 -8px 48px rgba(0,0,0,.55);",
+    "  pointer-events:none;",
+    "}",
+    "#et-fake-sheet.is-open{transform:translateY(0);pointer-events:all;}",
+    "html[data-theme='light'] #et-fake-sheet{background:#f2f2f7;}",
+    ".et-fs-handle{width:36px;height:4px;background:rgba(128,128,128,.25);border-radius:2px;margin:10px auto 6px;}",
+    ".et-fs-title{font-size:13px;color:var(--text3,rgba(255,255,255,.35));text-align:center;padding:4px 20px 12px;",
+    "  border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;",
+    "  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
+    "html[data-theme='light'] .et-fs-title{color:rgba(0,0,0,.35);border-color:rgba(0,0,0,.06);}",
+    ".et-fs-item{display:flex;align-items:center;gap:14px;padding:13px 20px;",
+    "  font-size:15px;font-weight:400;color:var(--text,rgba(255,255,255,.88));}",
+    "html[data-theme='light'] .et-fs-item{color:rgba(0,0,0,.85);}",
+    ".et-fs-danger{color:#ef4444 !important;}",
+    ".et-fs-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.07);",
+    "  display:flex;align-items:center;justify-content:center;flex-shrink:0;}",
+    "html[data-theme='light'] .et-fs-icon{background:rgba(0,0,0,.06);}",
+    ".et-fs-danger .et-fs-icon{background:rgba(239,68,68,.12);}",
+    ".et-fs-label{font-family:var(--font,'DM Sans',sans-serif);}",
   ].join("\n");
 
   var current = 0, steps = [], overlay, ring, tip, cutout, styleEl, resizeHandler, rafId;
@@ -236,6 +322,8 @@
 
   function cleanup() {
     removeDemoFile();
+    var fs = document.getElementById("et-fake-sheet");
+    if (fs) fs.remove();
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (resizeHandler) { window.removeEventListener("resize", resizeHandler); resizeHandler = null; }
     if (overlay) { overlay.remove(); overlay = null; }
@@ -330,20 +418,18 @@
     tip.classList.remove("et-visible");
     switchTab(step.tab);
 
-    /* onEnter: delay to let loadRecents() finish re-rendering before injecting demo */
-    var enterDelay = (typeof step.onEnter === "function") ? 700 : 0;
-    if (typeof step.onEnter === "function") {
-      setTimeout(function() { step.onEnter(lang); }, enterDelay);
-    }
+    /* onEnter: delay to let loadRecents() re-render before injecting demo */
+    var hasEnter = typeof step.onEnter === "function";
+    if (hasEnter) setTimeout(function() { step.onEnter(lang); }, 700);
+
+    var pollMax = hasEnter ? 25 : 6;
+    var pollMs  = hasEnter ? 120 : 60;
+    var tries = 0;
 
     setTimeout(function() {
-      /* Poll for target — give extra time if onEnter needs to inject elements */
-      var maxTries = (typeof step.onEnter === "function") ? 20 : 6;
-      var pollMs   = (typeof step.onEnter === "function") ? 100 : 60;
-      var tries = 0;
       function tryFind() {
         var el = document.querySelector(step.target);
-        if (!el && tries++ < maxTries) { setTimeout(tryFind, pollMs); return; }
+        if (!el && tries++ < pollMax) { setTimeout(tryFind, pollMs); return; }
         if (!el) { doNext(); return; }
 
         scrollToEl(el, function() {
@@ -382,12 +468,12 @@
           if (isLast) {
             nextBtn.onclick = finish;
           } else if (typeof step.onNext === "function") {
-            /* Custom "Next" — run demo sequence, then advance */
             nextBtn.onclick = function() {
               nextBtn.disabled = true;
+              tip.querySelector(".et-skip").style.opacity = "0";
               tip.querySelector(".et-skip").style.pointerEvents = "none";
               step.onNext(function() {
-                tip.classList.remove("et-visible");
+                /* After demo: slide tip out, advance */
                 setTimeout(function() { current++; renderStep(current); }, 180);
               });
             };
@@ -414,10 +500,11 @@
 
   function finish() {
     try { localStorage.setItem(STORAGE_KEY, "1"); } catch {}
-    /* Clean up demo if present */
     var step = steps[current];
     if (step && typeof step.onLeave === "function") step.onLeave();
     tip.classList.remove("et-visible");
+    var fs = document.getElementById("et-fake-sheet");
+    if (fs) fs.remove();
     setTimeout(function() {
       if (!overlay) return;
       overlay.style.transition = "opacity .28s ease";
@@ -451,8 +538,13 @@
     tip    = document.getElementById("et-tip");
     cutout = document.getElementById("et-cutout");
 
+    /* Tap outside tooltip → next step (skip during demo) */
     overlay.addEventListener("click", function(e) {
-      if (!tip.contains(e.target)) doNext();
+      if (tip.contains(e.target)) return;
+      var fs = document.getElementById("et-fake-sheet");
+      if (fs && fs.contains(e.target)) return;
+      if (steps[current] && typeof steps[current].onNext === "function") return; /* demo step — ignore taps */
+      doNext();
     });
 
     resizeHandler = function() {
@@ -462,9 +554,8 @@
       if (!el) return;
       var er = el.getBoundingClientRect();
       var PAD = 6;
-      var r = { top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 };
-      applyRect(r);
-      positionTip(r);
+      applyRect({ top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 });
+      positionTip({ top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 });
     };
     window.addEventListener("resize", resizeHandler);
 
