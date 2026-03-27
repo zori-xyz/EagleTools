@@ -17,6 +17,7 @@
     if (obj && typeof obj === "object") {
       if (obj.lang === "ru" || obj.lang === "en") out.lang = obj.lang;
       if (obj.theme === "dark" || obj.theme === "light") out.theme = obj.theme;
+      if (obj.theme_manual === true) out.theme_manual = true;
     }
     return out;
   }

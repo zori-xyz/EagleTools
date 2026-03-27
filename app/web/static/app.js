@@ -444,13 +444,13 @@
             <div class="result-file__actions">
               <button class="btn btn--primary btn--sm" type="button"
                 data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}" style="flex:1">
-                <img src="/static/icons/dl.svg" style="width:14px;height:14px;filter:brightness(10);" />
+                <img src="/static/icons/dl.svg" class="icon" />
                 ${dlLabel}
               </button>
               <button class="btn btn--secondary btn--sm" type="button"
                 data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
                 data-title="${escapeHtml(out.displayName)}">
-                <img src="/static/icons/share-2.svg" style="width:14px;height:14px;" />
+                <img src="/static/icons/share-2.svg" class="icon" />
                 ${shareLabel}
               </button>
             </div>
