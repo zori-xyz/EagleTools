@@ -1303,3 +1303,189 @@ html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,
 @keyframes convTick {
   to { stroke-dashoffset: 0; }
 }
+/* ============================================================
+   EagleTools — UI Improvements (2026-03)
+   Skeleton loading · Paste button · Drag glow · Help conv
+   Bot commands · i18n apply for new nodes
+   ============================================================ */
+
+/* ── Skeleton loading ────────────────────────────────────────── */
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.skeleton-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s infinite ease-in-out;
+}
+
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s infinite ease-in-out;
+}
+.skeleton-line--lg  { height: 13px; width: 70%; }
+.skeleton-line--md  { height: 13px; width: 50%; }
+.skeleton-line--sm  { height: 10px; width: 40%; }
+
+html[data-theme="light"] .skeleton-icon,
+html[data-theme="light"] .skeleton-line {
+  background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.06) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s infinite ease-in-out;
+}
+
+/* ── Paste button in URL inputs ─────────────────────────────── */
+.toolcard__paste-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rose);
+  background: var(--rose-soft);
+  border: 1px solid var(--rose-edge);
+  border-radius: 7px;
+  padding: 4px 9px;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: background .15s, opacity .15s;
+  line-height: 1;
+  z-index: 2;
+}
+.toolcard__paste-btn:hover  { background: var(--rose-glow); }
+.toolcard__paste-btn:active { opacity: .75; }
+
+/* Ensure position:relative on wrapper for paste btn */
+.toolcard__input-wrap { position: relative; }
+.toolcard__input-wrap .input { padding-right: 72px; }
+
+/* ── Drag-and-drop glow effect on converter drop zone ───────── */
+.converter-drop.is-dragover {
+  border-color: var(--rose) !important;
+  box-shadow: 0 0 0 3px var(--rose-glow), inset 0 0 20px rgba(232,25,90,.06);
+  background: var(--rose-soft);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+
+/* ── Help — Converter grid ──────────────────────────────────── */
+.help-conv-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.help-conv-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.help-conv-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  min-width: 70px;
+  text-align: center;
+}
+.help-conv-tag--video   { background: rgba(232,25,90,.13);  color: #e8195a;  border: 1px solid rgba(232,25,90,.22); }
+.help-conv-tag--audio   { background: rgba(124,58,237,.13); color: #a855f7;  border: 1px solid rgba(124,58,237,.22); }
+.help-conv-tag--image   { background: rgba(5,150,105,.12);  color: #10b981;  border: 1px solid rgba(5,150,105,.22); }
+.help-conv-tag--pdf     { background: rgba(217,119,6,.12);  color: #f59e0b;  border: 1px solid rgba(217,119,6,.22); }
+.help-conv-tag--doc     { background: rgba(8,145,178,.12);  color: #06b6d4;  border: 1px solid rgba(8,145,178,.22); }
+
+html[data-theme="light"] .help-conv-tag--video   { background: rgba(232,25,90,.08);  }
+html[data-theme="light"] .help-conv-tag--audio   { background: rgba(124,58,237,.08); }
+html[data-theme="light"] .help-conv-tag--image   { background: rgba(5,150,105,.08);  }
+html[data-theme="light"] .help-conv-tag--pdf     { background: rgba(217,119,6,.08);  }
+html[data-theme="light"] .help-conv-tag--doc     { background: rgba(8,145,178,.08);  }
+
+.help-conv-desc {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+  padding-top: 2px;
+}
+
+.help-conv-hint {
+  font-size: 12px;
+  color: var(--text3);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  line-height: 1.55;
+}
+
+/* ── Help — Bot commands ────────────────────────────────────── */
+.help-bot-commands {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.help-bot-cmd {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.help-bot-cmd code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--rose);
+}
+
+html[data-theme="light"] .help-bot-cmd code {
+  background: rgba(0,0,0,.05);
+}
+
+/* ── Premium limit bar color ────────────────────────────────── */
+.usage-progress__fill[data-warn="true"] {
+  background: var(--warn);
+}
+.usage-progress__fill[data-critical="true"] {
+  background: var(--err);
+}

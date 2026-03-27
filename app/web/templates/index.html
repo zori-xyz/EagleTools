@@ -113,6 +113,7 @@
                 <div class="toolcard__input-wrap">
                   <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
                   <input class="input" data-role="url" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
+                  <button class="toolcard__paste-btn" data-role="paste" type="button" data-i18n="btn_paste">Вставить</button>
                 </div>
                 <button class="btn btn--video" data-role="run" type="button">
                   <img src="/static/icons/download.svg" class="icon" alt="" />
@@ -144,6 +145,7 @@
                 <div class="toolcard__input-wrap">
                   <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
                   <input class="input" data-role="url" type="url" placeholder="https://soundcloud.com/..." autocomplete="off" />
+                  <button class="toolcard__paste-btn" data-role="paste" type="button" data-i18n="btn_paste">Вставить</button>
                 </div>
                 <button class="btn btn--audio-orange" data-role="run" type="button">
                   <img src="/static/icons/music.svg" class="icon" alt="" />
@@ -177,7 +179,14 @@
               </select>
             </div>
           </div>
-          <div id="recentList" class="recentlist"></div>
+          <div id="recentList" class="recentlist">
+            <!-- skeleton shown while loading -->
+            <div class="skeleton-list" id="recentSkeleton" aria-hidden="true">
+              <div class="skeleton-item"><div class="skeleton-icon"></div><div class="skeleton-lines"><div class="skeleton-line skeleton-line--lg"></div><div class="skeleton-line skeleton-line--sm"></div></div></div>
+              <div class="skeleton-item"><div class="skeleton-icon"></div><div class="skeleton-lines"><div class="skeleton-line skeleton-line--md"></div><div class="skeleton-line skeleton-line--sm"></div></div></div>
+              <div class="skeleton-item"><div class="skeleton-icon"></div><div class="skeleton-lines"><div class="skeleton-line skeleton-line--lg"></div><div class="skeleton-line skeleton-line--sm"></div></div></div>
+            </div>
+          </div>
         </section>
 
         <!-- ======== PROFILE ======== -->
@@ -277,20 +286,40 @@
           <h1 class="h1" data-i18n="help_title">Помощь</h1>
           <div class="help-page">
 
+            <!-- Mini App usage -->
             <div class="card help-section">
               <div class="help-section__title">
                 <span class="help-section__title-icon"><img src="/static/icons/wrench.svg" class="icon icon--muted" style="width:17px;height:17px;" alt="" /></span>
                 <span data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
               </div>
               <div class="help-steps">
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma1">Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma2">Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma3">Нажми <b>Скачать</b> для видео (mp4) или <b>MP3</b> для аудио</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma4">После загрузки нажми <b>Открыть</b> или <b>Поделиться</b></div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma5">Все файлы видны во вкладке <b>История</b></div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma1">Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио и нажми <b>Скачать</b></div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma2">Поддерживаются <b>YouTube</b>, <b>TikTok</b>, <b>SoundCloud</b>, <b>Vimeo</b> и другие платформы</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma3">Для конвертации файлов — перетащи его в <b>SMART конвертер</b> и выбери действие</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma4">После готовности нажми <b>Открыть</b> для воспроизведения или <b>Поделиться</b> для отправки</div></div>
+                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma5">Все файлы хранятся во вкладке <b>История</b> — можно скачать повторно до истечения срока</div></div>
               </div>
             </div>
 
+            <!-- SMART Converter -->
+            <div class="card help-section">
+              <div class="help-section__title">
+                <span class="help-section__title-icon">
+                  <img src="/static/icons/fmt-video.svg" class="icon icon--rose" style="width:17px;height:17px;" alt="" />
+                </span>
+                <span data-i18n="help_conv_title">SMART конвертер файлов</span>
+              </div>
+              <div class="help-conv-grid">
+                <div class="help-conv-row"><span class="help-conv-tag help-conv-tag--video">Видео</span><span class="help-conv-desc" id="hcv2">MP3, MP4, GIF, сжатие, распознавание речи</span></div>
+                <div class="help-conv-row"><span class="help-conv-tag help-conv-tag--audio">Аудио</span><span class="help-conv-desc" id="hcv3">MP3, WAV, OGG, M4A, сжатие, расшифровка</span></div>
+                <div class="help-conv-row"><span class="help-conv-tag help-conv-tag--image">Фото</span><span class="help-conv-desc" id="hcv4">JPG, PNG, WebP, сжатие</span></div>
+                <div class="help-conv-row"><span class="help-conv-tag help-conv-tag--pdf">PDF</span><span class="help-conv-desc" id="hcv5">Извлечь текст, страницы как картинки, сжатие</span></div>
+                <div class="help-conv-row"><span class="help-conv-tag help-conv-tag--doc">Документы</span><span class="help-conv-desc" id="hcv6">DOCX, XLSX → PDF или текст</span></div>
+              </div>
+              <div class="help-conv-hint" id="hcv1">Перетащи файл в конвертер — он сам определит тип и покажет только нужные действия.</div>
+            </div>
+
+            <!-- Bot features -->
             <div class="card help-section">
               <div class="help-section__title">
                 <span class="help-section__title-icon">🤖</span>
@@ -302,7 +331,7 @@
                     <img src="/static/icons/music.svg" class="icon icon--violet icon--lg" alt="" />
                   </div>
                   <div class="help-feature__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
-                  <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в mp3, wav или другой формат</div>
+                  <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в MP3, WAV, M4A или Opus</div>
                 </div>
                 <div class="help-feature">
                   <div class="help-feature__icon"><img src="/static/icons/microphone.svg" class="icon icon--rose icon--lg" alt="" /></div>
@@ -310,8 +339,14 @@
                   <div class="help-feature__desc" data-i18n="help_bot_stt_desc">Отправь голосовое или аудио — бот расшифрует текст с помощью Whisper AI</div>
                 </div>
               </div>
+              <div class="help-bot-commands">
+                <div class="help-bot-cmd"><code>/quota</code> — посмотреть сколько запросов осталось сегодня</div>
+                <div class="help-bot-cmd"><code>/profile</code> — твой профиль и Premium статус</div>
+                <div class="help-bot-cmd"><code>/settings</code> — язык и настройки</div>
+              </div>
             </div>
 
+            <!-- Premium -->
             <div class="card help-section">
               <div class="help-section__title">
                 <span class="help-section__title-icon">⚡️</span>
@@ -319,28 +354,30 @@
               </div>
               <div class="help-prem-list">
                 <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_2">Приоритетная обработка заданий</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_3">Доступ ко всем будущим функциям</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_4">Поддержка развития проекта</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_2">Файлы до 500 МБ вместо 100 МБ</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_3">Видео до 2 часов вместо 10 минут</span></div>
+                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_4">Доступ ко всем будущим функциям</span></div>
               </div>
               <div style="margin-top:14px">
                 <button class="btn btn--premium" type="button" data-action="open-upgrade">⚡️ <span data-i18n="upgrade_premium">Получить Premium</span></button>
               </div>
             </div>
 
+            <!-- Referral -->
             <div class="card help-section">
               <div class="help-section__title">
                 <span class="help-section__title-icon">🎁</span>
                 <span data-i18n="help_ref_title">Реферальная система</span>
               </div>
               <div class="help-ref-steps">
-                <div class="help-ref-step"><div class="help-ref-step__num">1</div><div class="help-ref-step__text" id="hrf1">Скопируй реферальную ссылку во вкладке Профиль</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">2</div><div class="help-ref-step__text" id="hrf2">Поделись с друзьями — пусть запустят бота по ней</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">3</div><div class="help-ref-step__text" id="hrf3">За каждого друга получишь <b>+5 загрузок</b> в день</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">4</div><div class="help-ref-step__text" id="hrf4">Каждые <b>3 приглашённых</b> дают Premium +3 дня</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">1</div><div class="help-ref-step__text" id="hrf1">Скопируй реферальную ссылку во вкладке <b>Профиль</b></div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">2</div><div class="help-ref-step__text" id="hrf2">Поделись с друзьями — пусть перейдут по ней и запустят бота</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">3</div><div class="help-ref-step__text" id="hrf3">За каждого друга получаешь <b>+5 загрузок</b> в день навсегда</div></div>
+                <div class="help-ref-step"><div class="help-ref-step__num">4</div><div class="help-ref-step__text" id="hrf4">Каждые <b>3 приглашённых</b> при активном Premium дают <b>+3 дня</b> подписки</div></div>
               </div>
             </div>
 
+            <!-- Privacy -->
             <div class="card help-section">
               <div class="help-section__title">
                 <img src="/static/icons/shield.svg" class="icon icon--ok help-section__title-icon" alt="" />
@@ -348,7 +385,7 @@
               </div>
               <div class="help-privacy-note">
                 <span class="help-privacy-note__icon">🛡</span>
-                <span id="hpriv">Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.</span>
+                <span id="hpriv">Мы не храним твои файлы постоянно. Все результаты автоматически удаляются через 24 часа — никто кроме тебя не имеет доступа.</span>
               </div>
               <button class="btn help-btn-privacy" type="button" data-action="open-privacy">
                 <img src="/static/icons/shield.svg" class="icon icon--sm" alt="" />
