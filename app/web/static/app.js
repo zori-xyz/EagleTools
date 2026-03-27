@@ -798,6 +798,7 @@
   }
 
   function openActionSheet(item) {
+    if (document.getElementById("et-overlay")) return; // blocked during onboarding
     const sheet = _asEl(); if (!sheet) return;
     haptic("light");
     _asItem = item;
