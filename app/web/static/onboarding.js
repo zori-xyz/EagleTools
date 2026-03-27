@@ -385,6 +385,9 @@
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (resizeHandler) { window.removeEventListener("resize", resizeHandler); resizeHandler = null; }
     if (overlay) { overlay.remove(); overlay = null; }
+    /* ring lives in body, remove separately */
+    var r = document.getElementById("et-ring");
+    if (r) r.remove();
     if (styleEl) { styleEl.remove(); styleEl = null; }
     ring = tip = cutout = null;
     unlockScroll();
@@ -426,15 +429,19 @@
     _setRingRect(r);
   }
 
-  /* Instant teleport — used when entering a new step so ring doesn't slide
-     visibly across the whole screen from the previous step's position.     */
+  /* Instant position + fade-in — for entering a new step.
+     Ring jumps to the correct place (no cross-screen slide) then fades in. */
   function applyRectInstant(r) {
     if (!cutout || !ring) return;
-    ring.classList.remove("et-ring-out");
-    ring.style.transition = "none";
+    /* 1. Disable position transitions, keep only opacity */
+    ring.style.transition = "opacity .32s ease";
     _setRingRect(r);
-    ring.getBoundingClientRect(); /* force reflow */
+    ring.getBoundingClientRect(); /* force reflow so position is committed */
+    /* 2. Restore CSS-defined transitions (position + opacity) */
     ring.style.transition = "";
+    ring.getBoundingClientRect(); /* reflow again */
+    /* 3. Fade in — ring was invisible (et-ring-out), opacity goes 0→1 */
+    ring.classList.remove("et-ring-out");
   }
 
   function _setRingRect(r) {
@@ -575,6 +582,7 @@
     var step = steps[current];
     if (step && typeof step.onLeave === "function") step.onLeave();
     tip.classList.remove("et-visible");
+    if (ring) ring.classList.add("et-ring-out"); /* fade ring out while transitioning */
     setTimeout(function() { current++; renderStep(current); }, 180);
   }
 
@@ -610,13 +618,19 @@
         "</mask></defs>" +
         '<rect width="' + W + '" height="' + H + '" fill="rgba(0,0,0,0.72)" mask="url(#et-mask)"/>' +
       "</svg>" +
-      '<div id="et-ring"></div>' +
       '<div id="et-hint"></div>' +
       '<div id="et-tip"></div>';
 
     document.body.appendChild(overlay);
     document.body.classList.add("et-onboarding");
-    ring   = document.getElementById("et-ring");
+
+    /* Ring lives directly in body so its z-index beats #et-fake-sheet
+       which is also a body child (stacking contexts would block it inside overlay) */
+    var ringEl = document.createElement("div");
+    ringEl.id = "et-ring";
+    document.body.appendChild(ringEl);
+
+    ring   = ringEl;
     tip    = document.getElementById("et-tip");
     cutout = document.getElementById("et-cutout");
 
