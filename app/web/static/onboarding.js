@@ -183,8 +183,14 @@
                     row.classList.add("is-vanishing");
 
                     setTimeout(function() {
-                      removeDemoFile();
-                      doneCb();
+                      /* Collapse spotlight smoothly before proceeding */
+                      if (cutout) { cutout.setAttribute("width","0"); cutout.setAttribute("height","0"); }
+                      var ringEl = document.getElementById("et-ring");
+                      if (ringEl) ringEl.classList.add("et-ring-out");
+                      setTimeout(function() {
+                        removeDemoFile();
+                        doneCb();
+                      }, 380);
                     }, T_VANISH);
                   }, T_SWIPE_ANIM);
                 }, T_SWIPE_HINT);
@@ -270,8 +276,10 @@
     "  box-shadow:0 0 0 3px rgba(232,25,90,.18),0 0 24px rgba(232,25,90,.25);",
     "  pointer-events:none;z-index:9100;",
     "  transition:top .38s cubic-bezier(.4,0,.2,1),left .38s cubic-bezier(.4,0,.2,1),",
-    "             width .38s cubic-bezier(.4,0,.2,1),height .38s cubic-bezier(.4,0,.2,1);",
+    "             width .38s cubic-bezier(.4,0,.2,1),height .38s cubic-bezier(.4,0,.2,1),",
+    "             opacity .32s ease;",
     "}",
+    "#et-ring.et-ring-out{opacity:0;}",
     "#et-tip{",
     "  position:fixed;z-index:9200;width:min(292px,calc(100vw - 24px));",
     "  background:var(--bg3,#16131f);border:1px solid rgba(232,25,90,.25);",
