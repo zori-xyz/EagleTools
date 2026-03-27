@@ -18,18 +18,18 @@
 
   var STEPS = {
     ru: [
-      { tab:"tools",   target:"#converterCard",              badge:"NEW ✦", title:"🧠 SMART конвертер",      text:"Просто брось любой файл — видео, аудио, фото, PDF. Приложение само поймёт что это и покажет только нужные действия. Никакой лишней возни." },
-      { tab:"tools",   target:"[data-tool='save']",                         title:"Скачать видео",            text:"Вставь ссылку с YouTube или любой другой платформы — получишь готовый MP4 файл." },
-      { tab:"tools",   target:"[data-tool='audio']",                        title:"Музыка с SoundCloud",      text:"Ссылка на трек или плейлист — и у тебя готовый MP3. Быстро и просто." },
-      { tab:"recent",  target:"[data-tab='recent']",                        title:"История загрузок",         text:"Все твои файлы здесь. Скачивай, слушай и делись прямо из приложения." },
-      { tab:"profile", target:"[data-tab='profile']",                       title:"Твой профиль",             text:"Следи за лимитами, приглашай друзей и получай бонусные загрузки." },
+      { tab:"tools",   target:"#converterCard",              badge:"NEW ✦", title:"🧠 SMART конвертер",      text:"Брось любой файл — видео, аудио, фото, PDF или документ. Конвертер сам определит тип и предложит только нужные действия: конвертация, сжатие, распознавание речи." },
+      { tab:"tools",   target:"[data-tool='save']",                         title:"⬇️ Скачать видео",         text:"Вставь ссылку с YouTube, TikTok, Vimeo или любой другой платформы — получишь готовый MP4 без рекламы и ограничений." },
+      { tab:"tools",   target:"[data-tool='audio']",                        title:"🎵 Музыка с SoundCloud",   text:"Ссылка на трек или плейлист — и у тебя готовый MP3. Работает со всеми публичными треками SoundCloud." },
+      { tab:"recent",  target:"[data-tab='recent']",                        title:"🗂 История загрузок",      text:"Все твои файлы хранятся здесь 24 часа. Скачивай повторно, слушай в плеере и отправляй друзьям прямо из приложения." },
+      { tab:"profile", target:"[data-tab='profile']",                       title:"👤 Твой профиль",          text:"Следи за дневным лимитом загрузок. Приглашай друзей по реферальной ссылке — за каждого получаешь +5 загрузок в день навсегда." },
     ],
     en: [
-      { tab:"tools",   target:"#converterCard",              badge:"NEW ✦", title:"🧠 SMART Converter",       text:"Just drop any file — video, audio, photo, PDF. The app figures out what it is and shows only the actions that make sense. No clutter." },
-      { tab:"tools",   target:"[data-tool='save']",                         title:"Download video",           text:"Paste a YouTube or any other platform link — get a ready MP4 file instantly." },
-      { tab:"tools",   target:"[data-tool='audio']",                        title:"Music from SoundCloud",    text:"Drop a track or playlist link and get a ready MP3. Fast and simple." },
-      { tab:"recent",  target:"[data-tab='recent']",                        title:"Download history",         text:"All your files are here. Download, listen and share right from the app." },
-      { tab:"profile", target:"[data-tab='profile']",                       title:"Your profile",             text:"Track your limits, invite friends and earn bonus downloads." },
+      { tab:"tools",   target:"#converterCard",              badge:"NEW ✦", title:"🧠 SMART Converter",       text:"Drop any file — video, audio, photo, PDF or document. The converter detects the type automatically and suggests only relevant actions: convert, compress, transcribe speech." },
+      { tab:"tools",   target:"[data-tool='save']",                         title:"⬇️ Download video",        text:"Paste a link from YouTube, TikTok, Vimeo or any other platform — get a clean MP4 file without ads or restrictions." },
+      { tab:"tools",   target:"[data-tool='audio']",                        title:"🎵 Music from SoundCloud", text:"Drop a track or playlist link and get a ready MP3. Works with all public SoundCloud tracks." },
+      { tab:"recent",  target:"[data-tab='recent']",                        title:"🗂 Download history",      text:"All your files are stored here for 24 hours. Re-download, play in the player and share with friends — all from inside the app." },
+      { tab:"profile", target:"[data-tab='profile']",                       title:"👤 Your profile",          text:"Track your daily download limit. Invite friends with your referral link — each one earns you +5 downloads per day, forever." },
     ],
   };
 

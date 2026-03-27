@@ -138,16 +138,35 @@
       err_unknown: "Неизвестная ошибка",
       copy_failed: "Ошибка копирования",
       // Help steps (HTML allowed)
-      help_ma_1_html: "Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио",
-      help_ma_2_html: "Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты",
-      help_ma_3_html: "Нажми <b>Скачать</b> для видео (mp4) или <b>MP3</b> для аудио",
-      help_ma_4_html: "После загрузки нажми <b>Открыть</b> или <b>Поделиться</b>",
-      help_ma_5_html: "Все файлы видны во вкладке <b>История</b>",
-      help_ref_1_html: "Скопируй реферальную ссылку во вкладке Профиль",
-      help_ref_2_html: "Поделись с друзьями — пусть запустят бота по ней",
-      help_ref_3_html: "За каждого друга получишь <b>+5 загрузок</b> в день",
-      help_ref_4_html: "Каждые <b>3 приглашённых</b> дают Premium +3 дня",
-      help_privacy_text: "Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.",
+      help_ma_1_html: "Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио и нажми <b>Скачать</b>",
+      help_ma_2_html: "Поддерживаются <b>YouTube</b>, <b>TikTok</b>, <b>SoundCloud</b>, <b>Vimeo</b> и другие платформы",
+      help_ma_3_html: "Для конвертации файлов — перетащи его в <b>SMART конвертер</b> и выбери действие",
+      help_ma_4_html: "После готовности нажми <b>Открыть</b> для воспроизведения или <b>Поделиться</b> для отправки",
+      help_ma_5_html: "Все файлы хранятся во вкладке <b>История</b> — можно скачать повторно до истечения срока",
+      help_ref_1_html: "Скопируй реферальную ссылку во вкладке <b>Профиль</b>",
+      help_ref_2_html: "Поделись с друзьями — пусть перейдут по ней и запустят бота",
+      help_ref_3_html: "За каждого друга получаешь <b>+5 загрузок</b> в день навсегда",
+      help_ref_4_html: "Каждые <b>3 приглашённых</b> при активном Premium дают <b>+3 дня</b> подписки",
+      help_privacy_text: "Мы не храним твои файлы постоянно. Все результаты автоматически удаляются через 24 часа — никто кроме тебя не имеет доступа.",
+      // Help - Converter
+      help_conv_title: "SMART конвертер файлов",
+      help_conv_1_html: "Перетащи файл или нажми зону загрузки — конвертер сам определит тип",
+      help_conv_2_html: "Для <b>видео</b>: MP3, MP4, GIF, сжатие, распознавание речи",
+      help_conv_3_html: "Для <b>аудио</b>: MP3, WAV, OGG, M4A, сжатие, расшифровка",
+      help_conv_4_html: "Для <b>изображений</b>: JPG, PNG, WebP, сжатие",
+      help_conv_5_html: "Для <b>PDF</b>: извлечь текст, страницы как картинки, сжатие",
+      help_conv_6_html: "Для <b>документов</b> (DOCX, XLSX...): конвертация в PDF или текст",
+      // Quota
+      quota_daily: "запросов в день",
+      quota_left: "осталось сегодня",
+      quota_unlimited: "безлимит",
+      // Skeleton / loading states
+      loading: "Загрузка…",
+      // Paste button
+      btn_paste: "Вставить",
+      // New bot features
+      help_bot_converter_title: "Файловый конвертер",
+      help_bot_converter_desc: "Отправь любой файл боту — конвертирует аудио, видео в выбранный формат",
       player_sub: "EagleTools",
     },
     en: {
@@ -254,16 +273,35 @@
       err_bad_url: "Invalid link",
       err_unknown: "Unknown error",
       copy_failed: "Failed to copy",
-      help_ma_1_html: "Open the <b>Tools</b> tab — paste a link to video or audio",
-      help_ma_2_html: "Supports <b>YouTube</b>, <b>SoundCloud</b> and other public sites",
-      help_ma_3_html: "Click <b>Download</b> for video (mp4) or <b>MP3</b> for audio",
-      help_ma_4_html: "After download click <b>Open</b> or <b>Share</b>",
-      help_ma_5_html: "All files are visible in the <b>Recent</b> tab",
-      help_ref_1_html: "Copy your referral link from the Profile tab",
-      help_ref_2_html: "Share it with friends — have them start the bot via your link",
-      help_ref_3_html: "Each friend gives you <b>+5 downloads</b> per day",
-      help_ref_4_html: "Every <b>3 invited</b> friends give Premium +3 days",
-      help_privacy_text: "We don't store your files. All uploaded files are automatically deleted after downloading.",
+      help_ma_1_html: "Open the <b>Tools</b> tab — paste a link to video or audio and tap <b>Download</b>",
+      help_ma_2_html: "Supports <b>YouTube</b>, <b>TikTok</b>, <b>SoundCloud</b>, <b>Vimeo</b> and more",
+      help_ma_3_html: "To convert files — drag it into the <b>SMART converter</b> and pick an action",
+      help_ma_4_html: "When ready, tap <b>Open</b> to play or <b>Share</b> to send to someone",
+      help_ma_5_html: "All files live in the <b>Recent</b> tab — re-download until they expire",
+      help_ref_1_html: "Copy your referral link from the <b>Profile</b> tab",
+      help_ref_2_html: "Share it with friends — have them follow the link and start the bot",
+      help_ref_3_html: "Each friend gives you <b>+5 downloads</b> per day forever",
+      help_ref_4_html: "Every <b>3 invited</b> friends (with active Premium) give <b>+3 days</b> of Premium",
+      help_privacy_text: "We don't permanently store your files. All results are automatically deleted after 24 hours — only you have access.",
+      // Help - Converter
+      help_conv_title: "SMART File Converter",
+      help_conv_1_html: "Drop a file or tap the upload zone — the converter detects the type automatically",
+      help_conv_2_html: "For <b>video</b>: MP3, MP4, GIF, compress, speech-to-text",
+      help_conv_3_html: "For <b>audio</b>: MP3, WAV, OGG, M4A, compress, transcribe",
+      help_conv_4_html: "For <b>images</b>: JPG, PNG, WebP, compress",
+      help_conv_5_html: "For <b>PDF</b>: extract text, pages as images, compress",
+      help_conv_6_html: "For <b>documents</b> (DOCX, XLSX...): convert to PDF or plain text",
+      // Quota
+      quota_daily: "requests per day",
+      quota_left: "left today",
+      quota_unlimited: "unlimited",
+      // Skeleton / loading states
+      loading: "Loading…",
+      // Paste button
+      btn_paste: "Paste",
+      // New bot features
+      help_bot_converter_title: "File converter",
+      help_bot_converter_desc: "Send any file to the bot — it converts audio and video to your chosen format",
       player_sub: "EagleTools",
     },
   };
@@ -277,8 +315,20 @@
   }
 
   function applyTheme() {
+    // Auto-detect Telegram theme on first load; manual override stored in localStorage
     const s = getSettings();
-    document.documentElement.setAttribute("data-theme", s.theme);
+    let theme = s.theme;
+    try {
+      const tgScheme = window.Telegram?.WebApp?.colorScheme;
+      if (tgScheme === "dark" || tgScheme === "light") {
+        const rawSettings = readSettingsRaw();
+        // If the user never manually set a theme, follow Telegram
+        if (!rawSettings || !safeJsonParse(rawSettings)?.theme_manual) {
+          theme = tgScheme;
+        }
+      }
+    } catch {}
+    document.documentElement.setAttribute("data-theme", theme);
   }
 
   function setHtml(id, html) {
@@ -317,6 +367,14 @@
 
     // Help - Privacy
     setHtml("hpriv", dict?.[L]?.help_privacy_text ?? dict?.en?.help_privacy_text);
+
+    // Help - Converter steps
+    setHtml("hcv1", dict?.[L]?.help_conv_1_html ?? dict?.en?.help_conv_1_html);
+    setHtml("hcv2", dict?.[L]?.help_conv_2_html ?? dict?.en?.help_conv_2_html);
+    setHtml("hcv3", dict?.[L]?.help_conv_3_html ?? dict?.en?.help_conv_3_html);
+    setHtml("hcv4", dict?.[L]?.help_conv_4_html ?? dict?.en?.help_conv_4_html);
+    setHtml("hcv5", dict?.[L]?.help_conv_5_html ?? dict?.en?.help_conv_5_html);
+    setHtml("hcv6", dict?.[L]?.help_conv_6_html ?? dict?.en?.help_conv_6_html);
 
     // Player labels
     setText2("playerOpenLabel", dict?.[L]?.player_open ?? dict?.en?.player_open);
@@ -481,7 +539,7 @@
   }
 
   function setLang(lang) { saveSettings({ lang }); init(); }
-  function setTheme(theme) { saveSettings({ theme }); init(); }
+  function setTheme(theme) { saveSettings({ theme, theme_manual: true }); init(); }
 
   function init() {
     applyTheme();

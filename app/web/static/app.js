@@ -79,6 +79,48 @@
     return t("err_unknown") || "Неизвестная ошибка";
   }
 
+  // ---------- Haptic Feedback ----------
+  function haptic(type = "light") {
+    try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.(type); } catch {}
+  }
+  function hapticNotify(type = "success") {
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.(type); } catch {}
+  }
+
+  // ---------- Paste button handler ----------
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-role='paste']");
+    if (!btn) return;
+    const wrap = btn.closest(".toolcard__input-wrap");
+    if (!wrap) return;
+    const inp = wrap.querySelector("[data-role='url']");
+    if (!inp) return;
+    haptic("light");
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && (text.startsWith("http://") || text.startsWith("https://"))) {
+        inp.value = text.trim();
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        hapticNotify("success");
+      } else {
+        toast(t("err_bad_url") || "Неверная ссылка", "err", "⚠️");
+        hapticNotify("error");
+      }
+    } catch {
+      toast(t("copy_failed") || "Ошибка копирования", "err", "⚠️");
+    }
+  });
+
+  // ---------- Drag-and-drop glow on converter drop zone ----------
+  (() => {
+    const drop = document.getElementById("convDrop");
+    if (!drop) return;
+    let dragCount = 0;
+    document.addEventListener("dragenter", () => { dragCount++; drop.classList.add("is-dragover"); });
+    document.addEventListener("dragleave", () => { dragCount = Math.max(0, dragCount - 1); if (dragCount === 0) drop.classList.remove("is-dragover"); });
+    document.addEventListener("drop", () => { dragCount = 0; drop.classList.remove("is-dragover"); });
+  })();
+
   // ---------- Open / Share ----------
   function openFile(url) {
     if (!url) return;
@@ -367,6 +409,7 @@
       setProgress(card, 0);
       setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⛔</span><span class="result-file__name muted">${escapeHtml(prettyErr(r))}</span></div></div>`);
       toast(prettyErr(r), "err", "⛔");
+      hapticNotify("error");
       return;
     }
 
@@ -414,6 +457,7 @@
           </div>
         `);
         toast(t("done") || "Готово!", "ok", "✅");
+        hapticNotify("success");
       }, 300);
       return;
     }
@@ -422,6 +466,7 @@
     setProgressText(card, "");
     setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⏳</span><span class="result-file__name muted">${escapeHtml(t("queued") || "В очереди")}</span></div></div>`);
     toast(t("job_created") || "Задание создано", "ok", "✅");
+    hapticNotify("success");
   }
 
   function bindToolRuns() {
@@ -643,8 +688,8 @@
       window.open("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2", "_blank"); return;
     }
 
-    if (action === "open-file") { openFile(el.dataset.url || ""); return; }
-    if (action === "share-file") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
+    if (action === "open-file") { haptic("medium"); openFile(el.dataset.url || ""); return; }
+    if (action === "share-file") { haptic("light"); await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "lang") {
       const v = el.dataset.value;
@@ -693,7 +738,7 @@
       return;
     }
 
-    if (action === "recent-dl") { openFile(el.dataset.url || ""); return; }
+    if (action === "recent-dl") { haptic("medium"); openFile(el.dataset.url || ""); return; }
     if (action === "recent-share") {
       const shareUrl = el.dataset.url || "";
       const shareTitle = el.dataset.title || "";

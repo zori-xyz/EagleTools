@@ -12,6 +12,7 @@ from app.bot.keyboards.profile import profile_kb
 from app.bot.keyboards.main import main_menu_kb
 from app.bot.keyboards.tools import tools_kb
 from app.domain.services.panel import PanelRef, safe_edit_or_send, delete_message_safe
+from app.domain.services.quota import get_quota_state
 from app.domain.services.referrals import apply_referral_start, parse_ref_code
 from app.domain.services.user_repo import UserRepo
 from app.infra.db.session import SessionMaker
@@ -156,6 +157,11 @@ async def cmd_profile(message: Message) -> None:
     await show_profile(message)
 
 
+@router.message(Command("quota"))
+async def cmd_quota(message: Message) -> None:
+    await show_quota(message)
+
+
 # ── Screens ───────────────────────────────────────────────────────────────────
 
 async def show_menu(message: Message) -> None:
@@ -186,6 +192,19 @@ async def show_profile(message: Message) -> None:
         user = await repo.get_or_create(session, uid)
         is_premium = bool(user.premium_until and user.premium_until > datetime.now(timezone.utc))
     await _show(message, text, profile_kb(is_premium, lang))
+
+
+async def show_quota(message: Message) -> None:
+    uid = message.from_user.id
+    lang = await _get_lang(uid)
+    s = t(lang)
+    async with SessionMaker() as session:
+        user = await repo.get_or_create(session, uid)
+        state = await get_quota_state(session, user)
+    used = int(state.used_today or 0)
+    limit = int(state.daily_limit or 0)
+    text = s.quota_status(used, limit, state.is_unlimited)
+    await _show(message, text, profile_kb(state.is_unlimited, lang))
 
 
 # ── Callbacks ─────────────────────────────────────────────────────────────────

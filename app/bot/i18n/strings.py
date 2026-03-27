@@ -234,6 +234,36 @@ class Strings:
             return "⛔ <b>Daily limit reached</b>\n\nGet <b>Premium</b> for unlimited downloads."
         return "⛔ <b>Дневной лимит исчерпан</b>\n\nПолучи <b>Premium</b> для безлимитных загрузок."
 
+    def quota_status(self, used: int, limit: int | str, is_unlimited: bool) -> str:
+        if is_unlimited:
+            if self.lang == "en":
+                return (
+                    "📊 <b>Your quota</b>\n\n"
+                    "⚡️ Premium — unlimited downloads\n"
+                    f"Used today: {used}"
+                )
+            return (
+                "📊 <b>Твоя квота</b>\n\n"
+                "⚡️ Premium — безлимитные загрузки\n"
+                f"Использовано сегодня: {used}"
+            )
+        left = max(0, int(limit) - used)
+        if self.lang == "en":
+            return (
+                "📊 <b>Your quota</b>\n\n"
+                f"Used today: {used} / {limit}\n"
+                f"Remaining: {left}\n\n"
+                "Invite a friend → <b>+5 downloads/day</b>\n"
+                "Get <b>Premium</b> → unlimited"
+            )
+        return (
+            "📊 <b>Твоя квота</b>\n\n"
+            f"Использовано сегодня: {used} / {limit}\n"
+            f"Осталось: {left}\n\n"
+            "Пригласи друга → <b>+5 загрузок/день</b>\n"
+            "Получи <b>Premium</b> → безлимит"
+        )
+
     def mode_title(self, mode: str) -> str:
         if self.lang == "en":
             return {"audio": "Converting", "stt": "Recognizing"}.get(mode, "Processing")
