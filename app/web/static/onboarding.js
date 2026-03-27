@@ -130,11 +130,23 @@
 
     var isEn = lang === "en";
 
+    /* ─── timing constants (ms) ─────────────────────────── */
+    var T_BEFORE_HINT   = 300;   /* settle before first hint       */
+    var T_HINT_READ     = 1200;  /* user reads "Зажми и держи…"    */
+    var T_GLOW          = 1000;  /* long-press glow duration        */
+    var T_SHEET_ANIMATE = 420;   /* fake sheet slide-in             */
+    var T_SHEET_RECT    = 100;   /* extra wait for getBCR to settle */
+    var T_SHEET_READ    = 3500;  /* user reads action sheet options */
+    var T_SWIPE_HINT    = 1200;  /* user reads swipe hint           */
+    var T_SWIPE_ANIM    = 700;   /* translateX animation            */
+    var T_VANISH        = 600;   /* collapse animation              */
+
     setTimeout(function() {
       spotRow();
 
-      /* 3. Long-press glow — show hint */
-      showHint(isEn ? "Hold to open menu…" : "Зажми и держи…");
+      /* ── Phase 1: long-press hint + glow ── */
+      showHint(isEn ? "Hold to open actions…" : "Зажми для меню действий…");
+
       setTimeout(function() {
         row.classList.add("is-pressing");
 
@@ -142,45 +154,46 @@
           row.classList.remove("is-pressing");
           hideHint();
 
-          /* 4. Fake action sheet slides up */
+          /* ── Phase 2: fake sheet slides up ── */
           showFakeSheet(lang, function(sheetEl) {
-
-            /* 5. Move spotlight to action sheet — wait a beat for rect to settle */
-            showHint(isEn ? "Action menu" : "Меню действий");
+            /* spotlight moves to cover the sheet */
             setTimeout(function() {
               var sr = sheetEl.getBoundingClientRect();
-              applyRect({ top: sr.top - 8, left: 0, width: window.innerWidth, height: sr.height + 24 });
-            }, 80);
+              applyRect({ top: Math.max(4, sr.top - 12), left: 0,
+                          width: window.innerWidth, height: sr.height + 20 });
+              showHint(isEn ? "Tap any action from the menu" : "Любое действие из меню");
+            }, T_SHEET_RECT);
 
-            /* 6. Auto-dismiss after 2.2s */
+            /* ── Phase 3: dismiss sheet ── */
             setTimeout(function() {
               hideHint();
               hideFakeSheet(sheetEl, function() {
 
-                /* 7. Spotlight back on the row */
+                /* spotlight back on row */
                 spotRow();
 
-                /* 8. Swipe-left animation — show hint */
+                /* ── Phase 4: swipe-to-delete ── */
+                showHint(isEn ? "← Swipe left to delete" : "← Потяни влево — удалить");
+
                 setTimeout(function() {
-                  showHint(isEn ? "← Swipe left to delete" : "← Потяни влево — удалить");
                   row.classList.add("is-swiping");
 
-                  /* 9. Vanish */
                   setTimeout(function() {
                     hideHint();
                     row.classList.add("is-vanishing");
+
                     setTimeout(function() {
                       removeDemoFile();
                       doneCb();
-                    }, 500);
-                  }, 600);
-                }, 500);
+                    }, T_VANISH);
+                  }, T_SWIPE_ANIM);
+                }, T_SWIPE_HINT);
               });
-            }, 2200);
+            }, T_SHEET_READ);
           });
-        }, 700);
-      }, 400);
-    }, 200);
+        }, T_GLOW);
+      }, T_HINT_READ);
+    }, T_BEFORE_HINT);
   }
 
   /* ── Steps ───────────────────────────────────────────────── */
@@ -319,14 +332,15 @@
     ".et-fs-label{font-family:var(--font,'DM Sans',sans-serif);}",
     /* ── Hint label (shown during demo) ── */
     "#et-hint{",
-    "  position:fixed;left:50%;transform:translateX(-50%) translateY(6px);",
-    "  bottom:calc(max(16px,env(safe-area-inset-bottom)) + 16px);",
+    "  position:fixed;left:50%;top:72px;",
+    "  transform:translateX(-50%) translateY(-10px);",
     "  z-index:9210;",
-    "  background:rgba(232,25,90,.92);color:#fff;",
-    "  font-size:13px;font-weight:500;font-family:var(--font,'DM Sans',sans-serif);",
-    "  padding:7px 18px;border-radius:20px;",
+    "  background:rgba(232,25,90,.95);color:#fff;",
+    "  font-size:14px;font-weight:600;font-family:var(--font,'DM Sans',sans-serif);",
+    "  padding:9px 22px;border-radius:20px;",
     "  white-space:nowrap;pointer-events:none;",
-    "  opacity:0;transition:opacity .22s ease,transform .22s ease;",
+    "  box-shadow:0 4px 20px rgba(232,25,90,.4);",
+    "  opacity:0;transition:opacity .3s ease,transform .3s ease;",
     "}",
     "#et-hint.et-hint--visible{opacity:1;transform:translateX(-50%) translateY(0);}",
   ].join("\n");
