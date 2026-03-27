@@ -9,9 +9,8 @@ from aiogram.types import Message
 from aiogram.types.input_file import FSInputFile
 
 from app.bot.i18n import t
+from app.bot.keyboards.premium import premium_limit_kb
 from app.common.config import settings
-from app.domain.services.progress import run_countdown
-from app.domain.services.user_repo import UserRepo
 from app.domain.services.media import (
     tg_download_to_path,
     convert_audio_from_file,
@@ -20,6 +19,9 @@ from app.domain.services.media import (
     transcribe_to_text,
     SttError,
 )
+from app.domain.services.progress import run_countdown
+from app.domain.services.quota import QuotaExceeded, consume_quota, get_quota_state
+from app.domain.services.user_repo import UserRepo
 from app.infra.db.session import get_sessionmaker
 
 router = Router()
@@ -118,14 +120,12 @@ async def _handle_audio_from_message(message: Message, lang: str) -> None:
 
 
 async def _handle_stt_from_message(message: Message, lang: str) -> None:
+    # NOTE: STT_SEM.locked() is already checked in on_file() before quota
+    # consumption, so we do NOT repeat the check here.
     s = t(lang)
     size = _media_file_size(message)
     if size and size > TG_SAFE_MAX_BYTES:
         await message.reply(s.file_too_big)
-        return
-
-    if STT_SEM.locked():
-        await message.reply(s.stt_busy)
         return
 
     base = _tmp_dir() / "stt"
@@ -195,7 +195,10 @@ async def _handle_stt_from_message(message: Message, lang: str) -> None:
             await message.reply(msg)
 
     except Exception as e:
-        msg = f"❌ STT error: {e}"
+        # FIX #17: don't leak internal error details to users
+        import logging as _logging
+        _logging.getLogger(__name__).exception("STT unexpected error: %s", e)
+        msg = s.convert_error
         try:
             if status:
                 await status.edit_text(msg)
@@ -222,20 +225,13 @@ async def on_text(message: Message):
     await message.reply(t(lang).url_in_miniapp)
 
 
-from app.domain.services.quota import QuotaExceeded, consume_quota, get_quota_state
-from app.domain.services.user_repo import UserRepo as _UserRepoQuota
-from app.bot.keyboards.premium import premium_limit_kb
-
-_quota_repo = _UserRepoQuota()
-
-
 async def _check_and_consume_quota(message: Message, lang: str) -> bool:
     """Returns True if quota ok, False if exceeded (sends message)."""
     tg_id = message.from_user.id
     s = t(lang)
     sm = get_sessionmaker()
     async with sm() as session:
-        user = await _quota_repo.get_or_create(session, tg_id)
+        user = await repo.get_or_create(session, tg_id)
         state = await get_quota_state(session, user)
 
         if not state.is_unlimited and state.used_today >= state.daily_limit:
@@ -268,6 +264,13 @@ async def on_file(message: Message):
     mode = await get_mode(message.from_user.id)
     if not mode:
         await message.reply(s.no_mode_selected)
+        return
+
+    # FIX #4: for STT mode, check semaphore BEFORE consuming quota.
+    # Previously quota was consumed first, then STT_SEM.locked() check
+    # inside _handle_stt_from_message returned "busy" — quota was lost.
+    if mode == "stt" and STT_SEM.locked():
+        await message.reply(s.stt_busy)
         return
 
     if not await _check_and_consume_quota(message, lang):

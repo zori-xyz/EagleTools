@@ -401,7 +401,14 @@ async def _do_document(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertR
         if proc.returncode != 0:
             raise ConvertError(f"libreoffice_failed:{err.decode()[:200]}")
 
-        out = tmp_dir / f"{stem}.pdf"
+        # FIX #6: LibreOffice names the output after the ORIGINAL input filename,
+        # not after _safe_stem(). For files with Cyrillic/non-ASCII names,
+        # _safe_stem() strips all characters and produces a UUID, while LibreOffice
+        # creates "Мой документ.pdf". We find the output by extension instead.
+        pdf_files = [f for f in tmp_dir.iterdir() if f.suffix.lower() == ".pdf" and f.is_file()]
+        if not pdf_files:
+            raise ConvertError("output_empty")
+        out = pdf_files[0]
         _check_out(out)
         return ConvertResult(out_path=out, tmp_dir=tmp_dir)
 
@@ -415,7 +422,11 @@ async def _do_document(in_path: Path, *, action: str, tmp_dir: Path) -> ConvertR
         if proc.returncode != 0:
             raise ConvertError(f"libreoffice_failed:{err.decode()[:200]}")
 
-        out = tmp_dir / f"{stem}.txt"
+        # FIX #6: same as doc_to_pdf — find output by extension
+        txt_files = [f for f in tmp_dir.iterdir() if f.suffix.lower() == ".txt" and f.is_file()]
+        if not txt_files:
+            raise ConvertError("output_empty")
+        out = txt_files[0]
         _check_out(out)
         return ConvertResult(out_path=out, tmp_dir=tmp_dir)
 

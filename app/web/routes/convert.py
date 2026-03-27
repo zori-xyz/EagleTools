@@ -119,31 +119,39 @@ async def api_convert(
         raise HTTPException(status_code=413, detail="file_too_large")
 
     # ── Валидация magic bytes ──────────────────────────────────
+    # FIX #3: WebP has RIFF at bytes 0-3 and WEBP at bytes 8-11.
+    # Old code had RIFF before WEBP in the list, so WebP files were always
+    # detected as "video". Now WebP is handled first via a dedicated check.
     _MAGIC: list[tuple[bytes, str]] = [
-        (b"\xff\xd8\xff", "image"),           # JPEG
-        (b"\x89PNG\r\n\x1a\n", "image"),    # PNG
-        (b"RIFF", "video"),                       # AVI/WAV
-        (b"\x00\x00\x00", "video"),            # MP4/MOV (ftyp)
-        (b"\x1aE\xdf\xa3", "video"),           # MKV/WebM
-        (b"ID3", "audio"),                        # MP3
-        (b"\xff\xfb", "audio"),                 # MP3
-        (b"\xff\xf3", "audio"),                 # MP3
-        (b"OggS", "audio"),                       # OGG
-        (b"fLaC", "audio"),                       # FLAC
-        (b"GIF87a", "image"),                     # GIF
-        (b"GIF89a", "image"),                     # GIF
-        (b"WEBP", "image"),                       # WebP (bytes 8-12)
-        (b"%PDF", "pdf"),                         # PDF
-        (b"PK\x03\x04", "document"),            # ZIP-based (docx, xlsx)
-        (b"\xd0\xcf\x11\xe0", "document"),    # MS Office old format
-        (b"\x1f\x8b", "any"),                   # gzip — пропускаем
+        (b"\xff\xd8\xff", "image"),         # JPEG
+        (b"\x89PNG\r\n\x1a\n", "image"),   # PNG
+        (b"GIF87a", "image"),               # GIF
+        (b"GIF89a", "image"),               # GIF
+        (b"%PDF", "pdf"),                   # PDF
+        (b"PK\x03\x04", "document"),       # ZIP-based (docx, xlsx)
+        (b"\xd0\xcf\x11\xe0", "document"), # MS Office old format
+        (b"ID3", "audio"),                  # MP3 (ID3 tag)
+        (b"\xff\xfb", "audio"),             # MP3
+        (b"\xff\xf3", "audio"),             # MP3
+        (b"OggS", "audio"),                 # OGG
+        (b"fLaC", "audio"),                 # FLAC
+        (b"\x1aE\xdf\xa3", "video"),        # MKV/WebM
+        (b"\x00\x00\x00", "video"),         # MP4/MOV (ftyp box)
+        (b"\x1f\x8b", "any"),               # gzip
     ]
     header = file_bytes[:12]
     detected = None
-    for magic, ftype in _MAGIC:
-        if header.startswith(magic) or (ftype == "image" and magic == b"WEBP" and magic in file_bytes[6:14]):
-            detected = ftype
-            break
+
+    # WebP: bytes 0-3 == RIFF AND bytes 8-11 == WEBP — must check before generic RIFF
+    if file_bytes[:4] == b"RIFF" and file_bytes[8:12] == b"WEBP":
+        detected = "image"
+    elif file_bytes[:4] == b"RIFF":
+        detected = "video"  # AVI, WAV
+    else:
+        for magic, ftype in _MAGIC:
+            if header.startswith(magic):
+                detected = ftype
+                break
 
     # Исполняемые файлы блокируем
     _BLOCKED_MAGIC = [b"MZ", b"\x7fELF", b"\xca\xfe\xba\xbe"]
@@ -159,7 +167,7 @@ async def api_convert(
     try:
         TMP_DIR.mkdir(parents=True, exist_ok=True)
         tmp_in.write_bytes(file_bytes)
-        written = len(file_bytes)
+        # FIX #11: removed unused `written` variable
 
 
 
