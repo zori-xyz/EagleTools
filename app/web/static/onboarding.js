@@ -330,15 +330,20 @@
     tip.classList.remove("et-visible");
     switchTab(step.tab);
 
-    /* onEnter callback — e.g. inject demo row */
-    if (typeof step.onEnter === "function") step.onEnter(lang);
+    /* onEnter: delay to let loadRecents() finish re-rendering before injecting demo */
+    var enterDelay = (typeof step.onEnter === "function") ? 700 : 0;
+    if (typeof step.onEnter === "function") {
+      setTimeout(function() { step.onEnter(lang); }, enterDelay);
+    }
 
     setTimeout(function() {
-      /* If target doesn't exist yet (race with onEnter), poll briefly */
+      /* Poll for target — give extra time if onEnter needs to inject elements */
+      var maxTries = (typeof step.onEnter === "function") ? 20 : 6;
+      var pollMs   = (typeof step.onEnter === "function") ? 100 : 60;
       var tries = 0;
       function tryFind() {
         var el = document.querySelector(step.target);
-        if (!el && tries++ < 6) { setTimeout(tryFind, 60); return; }
+        if (!el && tries++ < maxTries) { setTimeout(tryFind, pollMs); return; }
         if (!el) { doNext(); return; }
 
         scrollToEl(el, function() {

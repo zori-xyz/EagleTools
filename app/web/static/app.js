@@ -536,24 +536,14 @@
       : status === "running"  ? (t("processing") || "ОБРАБАТЫВАЮ")
       : (t("queued") || "В ОЧЕРЕДИ");
 
-    const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
-      data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
-      <svg class="ri-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
-    </button>`;
-
-    const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
-      <svg class="ri-btn-icon ri-btn-icon--del" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-    </button>`;
-
-    const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
-      data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-      data-audio="${isAudio}" data-image="${isImage}" aria-label="Play">
-      <svg viewBox="0 0 24 24" fill="#ffffff" width="14" height="14"><path d="M8 5v14l11-7z"/></svg>
-    </button>` : "";
+    /* Tap-to-open datasets on the row inner (long press = action sheet) */
+    const tapAttrs = canDl
+      ? `data-action="recent-play" data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" data-audio="${isAudio}" data-image="${isImage}"`
+      : "";
 
     return `
       <div class="recentitem ri ${typeClass}" data-id="${escapeHtml(id)}">
-        <div class="ri-inner">
+        <div class="ri-inner" ${tapAttrs}>
           <div class="ri-icon">${icon}</div>
           <div class="ri-info">
             <div class="ri-name">${escapeHtml(title)}</div>
@@ -564,8 +554,8 @@
               ${when ? `<span class="ri-date">${escapeHtml(when)}</span>` : ""}
             </div>
           </div>
-          <div class="ri-actions">
-            ${playBtn}${dlBtn}${delBtn}
+          <div class="ri-actions__hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="opacity:.3"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
           </div>
         </div>
       </div>
@@ -651,14 +641,22 @@
     const list = $("#recentList"); if (!list) return;
     _hideSkeleton();
     _recentItems = items || [];
+
+    /* Preserve onboarding demo row across re-renders */
+    const demoEl = document.getElementById("et-demo-file");
+
     if (!_recentItems.length) {
       renderEmptyRecent(list);
-      return;
+    } else {
+      const sortSel = document.getElementById("recentSort");
+      const sortVal = sortSel ? sortSel.value : "date_desc";
+      const sorted  = sortItems(_recentItems, sortVal);
+      list.innerHTML = sorted.map(recentRow).join("");
     }
-    const sortSel = document.getElementById("recentSort");
-    const sortVal = sortSel ? sortSel.value : "date_desc";
-    const sorted  = sortItems(_recentItems, sortVal);
-    list.innerHTML = sorted.map(recentRow).join("");
+
+    if (demoEl && !list.contains(demoEl)) {
+      list.insertBefore(demoEl, list.firstChild);
+    }
   }
 
   async function loadRecents(silent = true) {
@@ -887,15 +885,18 @@
   // ══════════════════════════════════════════════════════════════
   // LONG PRESS → ACTION SHEET
   // ══════════════════════════════════════════════════════════════
+  let _lpFired = false; // blocks click after a long press fires
+
   function bindLongPress() {
     let _lpTimer = null, _lpRow = null, _lpMoved = false;
 
     document.addEventListener("touchstart", e => {
       const row = e.target.closest(".recentitem[data-id]");
-      if (!row || e.target.closest("[data-action]")) return;
-      _lpRow = row; _lpMoved = false;
+      if (!row) return;
+      _lpRow = row; _lpMoved = false; _lpFired = false;
       _lpTimer = setTimeout(() => {
         if (_lpMoved) return;
+        _lpFired = true;
         row.classList.add("is-pressing");
         haptic("medium");
         setTimeout(() => {
@@ -918,6 +919,11 @@
       clearTimeout(_lpTimer);
       if (_lpRow) { _lpRow.classList.remove("is-pressing"); _lpRow = null; }
     }, { passive: true });
+
+    /* Suppress click that fires right after a long press */
+    document.addEventListener("click", e => {
+      if (_lpFired) { _lpFired = false; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
   }
 
   // ══════════════════════════════════════════════════════════════
