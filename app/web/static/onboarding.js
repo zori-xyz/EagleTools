@@ -120,12 +120,13 @@
     /* 1. Fade out tip, let overlay stay */
     tip.classList.remove("et-visible");
 
-    /* 2. Move spotlight to demo row */
-    function spotRow() {
+    /* 2. Spotlight helpers */
+    function spotRow(instant) {
       var er = row.getBoundingClientRect();
       if (!er.width) return;
       var PAD = 8;
-      applyRect({ top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 });
+      var r = { top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 };
+      if (instant) applyRectInstant(r); else applyRect(r);
     }
 
     var isEn = lang === "en";
@@ -134,15 +135,14 @@
     var T_BEFORE_HINT   = 300;   /* settle before first hint       */
     var T_HINT_READ     = 1200;  /* user reads "Зажми и держи…"    */
     var T_GLOW          = 1000;  /* long-press glow duration        */
-    var T_SHEET_ANIMATE = 420;   /* fake sheet slide-in             */
-    var T_SHEET_RECT    = 100;   /* extra wait for getBCR to settle */
+    var T_SHEET_RECT    = 160;   /* wait for sheet BCR to settle    */
     var T_SHEET_READ    = 3500;  /* user reads action sheet options */
     var T_SWIPE_HINT    = 1200;  /* user reads swipe hint           */
     var T_SWIPE_ANIM    = 700;   /* translateX animation            */
     var T_VANISH        = 600;   /* collapse animation              */
 
     setTimeout(function() {
-      spotRow();
+      spotRow(true); /* instant — ring comes from faded/previous state */
 
       /* ── Phase 1: long-press hint + glow ── */
       showHint(isEn ? "Hold to open actions…" : "Зажми для меню действий…");
@@ -419,15 +419,36 @@
     rafId = requestAnimationFrame(poll);
   }
 
+  /* Animated move — used within a step (spotlight follows action sheet etc.) */
   function applyRect(r) {
     if (!cutout || !ring) return;
-    ring.classList.remove("et-ring-out"); /* restore visibility on any move */
-    cutout.setAttribute("x", r.left);
-    cutout.setAttribute("y", r.top);
-    cutout.setAttribute("width", r.width);
-    cutout.setAttribute("height", r.height);
+    ring.classList.remove("et-ring-out");
+    _setRingRect(r);
+  }
 
-    var W = window.innerWidth, H = window.innerHeight;
+  /* Instant teleport — used when entering a new step so ring doesn't slide
+     visibly across the whole screen from the previous step's position.     */
+  function applyRectInstant(r) {
+    if (!cutout || !ring) return;
+    ring.classList.remove("et-ring-out");
+    ring.style.transition = "none";
+    _setRingRect(r);
+    ring.getBoundingClientRect(); /* force reflow */
+    ring.style.transition = "";
+  }
+
+  function _setRingRect(r) {
+    var H = window.innerHeight;
+    /* Clamp rect so ring never overflows the screen bottom */
+    var top    = Math.max(0, r.top);
+    var height = Math.min(r.height, H - top - 4);
+
+    cutout.setAttribute("x", r.left);
+    cutout.setAttribute("y", top);
+    cutout.setAttribute("width", r.width);
+    cutout.setAttribute("height", height);
+
+    var W = window.innerWidth;
     var svg = document.getElementById("et-svg");
     if (svg) {
       svg.setAttribute("viewBox", "0 0 " + W + " " + H);
@@ -436,10 +457,10 @@
       });
     }
 
-    ring.style.top    = r.top    + "px";
-    ring.style.left   = r.left   + "px";
-    ring.style.width  = r.width  + "px";
-    ring.style.height = r.height + "px";
+    ring.style.top    = top    + "px";
+    ring.style.left   = r.left + "px";
+    ring.style.width  = r.width + "px";
+    ring.style.height = height  + "px";
   }
 
   function positionTip(r) {
@@ -496,7 +517,7 @@
           var PAD = 6;
           var r   = { top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 };
 
-          applyRect(r);
+          applyRectInstant(r); /* teleport, no slide-in from previous position */
 
           var isLast = idx === steps.length - 1;
           var dots   = steps.map(function(_, i) {
