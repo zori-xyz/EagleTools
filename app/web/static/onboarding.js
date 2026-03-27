@@ -128,48 +128,58 @@
       applyRect({ top: er.top - PAD, left: er.left - PAD, width: er.width + PAD * 2, height: er.height + PAD * 2 });
     }
 
+    var isEn = lang === "en";
+
     setTimeout(function() {
       spotRow();
 
-      /* 3. Long-press glow (600ms) */
+      /* 3. Long-press glow — show hint */
+      showHint(isEn ? "Hold to open menu…" : "Зажми и держи…");
       setTimeout(function() {
         row.classList.add("is-pressing");
 
         setTimeout(function() {
           row.classList.remove("is-pressing");
+          hideHint();
 
           /* 4. Fake action sheet slides up */
           showFakeSheet(lang, function(sheetEl) {
 
-            /* 5. Move spotlight to action sheet */
-            var sr = sheetEl.getBoundingClientRect();
-            applyRect({ top: sr.top - 8, left: sr.left - 8, width: sr.width + 16, height: sr.height + 16 });
-
-            /* 6. Auto-dismiss after 2s */
+            /* 5. Move spotlight to action sheet — wait a beat for rect to settle */
+            showHint(isEn ? "Action menu" : "Меню действий");
             setTimeout(function() {
+              var sr = sheetEl.getBoundingClientRect();
+              applyRect({ top: sr.top - 8, left: 0, width: window.innerWidth, height: sr.height + 24 });
+            }, 80);
+
+            /* 6. Auto-dismiss after 2.2s */
+            setTimeout(function() {
+              hideHint();
               hideFakeSheet(sheetEl, function() {
 
                 /* 7. Spotlight back on the row */
                 spotRow();
 
-                /* 8. Swipe-left animation */
+                /* 8. Swipe-left animation — show hint */
                 setTimeout(function() {
+                  showHint(isEn ? "← Swipe left to delete" : "← Потяни влево — удалить");
                   row.classList.add("is-swiping");
 
                   /* 9. Vanish */
                   setTimeout(function() {
+                    hideHint();
                     row.classList.add("is-vanishing");
                     setTimeout(function() {
                       removeDemoFile();
                       doneCb();
                     }, 500);
-                  }, 420);
-                }, 700);
+                  }, 600);
+                }, 500);
               });
-            }, 2000);
+            }, 2200);
           });
-        }, 700); /* hold the glow */
-      }, 400); /* pause before glow */
+        }, 700);
+      }, 400);
     }, 200);
   }
 
@@ -307,6 +317,18 @@
     "html[data-theme='light'] .et-fs-icon{background:rgba(0,0,0,.06);}",
     ".et-fs-danger .et-fs-icon{background:rgba(239,68,68,.12);}",
     ".et-fs-label{font-family:var(--font,'DM Sans',sans-serif);}",
+    /* ── Hint label (shown during demo) ── */
+    "#et-hint{",
+    "  position:fixed;left:50%;transform:translateX(-50%) translateY(6px);",
+    "  bottom:calc(max(16px,env(safe-area-inset-bottom)) + 16px);",
+    "  z-index:9210;",
+    "  background:rgba(232,25,90,.92);color:#fff;",
+    "  font-size:13px;font-weight:500;font-family:var(--font,'DM Sans',sans-serif);",
+    "  padding:7px 18px;border-radius:20px;",
+    "  white-space:nowrap;pointer-events:none;",
+    "  opacity:0;transition:opacity .22s ease,transform .22s ease;",
+    "}",
+    "#et-hint.et-hint--visible{opacity:1;transform:translateX(-50%) translateY(0);}",
   ].join("\n");
 
   var current = 0, steps = [], overlay, ring, tip, cutout, styleEl, resizeHandler, rafId;
@@ -320,8 +342,22 @@
     document.documentElement.style.overflow = "";
   }
 
+  /* ── Hint label ──────────────────────────────────────────── */
+  function showHint(text) {
+    var h = document.getElementById("et-hint");
+    if (!h) return;
+    h.textContent = text;
+    h.classList.add("et-hint--visible");
+  }
+  function hideHint() {
+    var h = document.getElementById("et-hint");
+    if (h) h.classList.remove("et-hint--visible");
+  }
+
   function cleanup() {
+    document.body.classList.remove("et-onboarding");
     removeDemoFile();
+    hideHint();
     var fs = document.getElementById("et-fake-sheet");
     if (fs) fs.remove();
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
@@ -531,9 +567,11 @@
         '<rect width="' + W + '" height="' + H + '" fill="rgba(0,0,0,0.72)" mask="url(#et-mask)"/>' +
       "</svg>" +
       '<div id="et-ring"></div>' +
+      '<div id="et-hint"></div>' +
       '<div id="et-tip"></div>';
 
     document.body.appendChild(overlay);
+    document.body.classList.add("et-onboarding");
     ring   = document.getElementById("et-ring");
     tip    = document.getElementById("et-tip");
     cutout = document.getElementById("et-cutout");

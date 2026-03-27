@@ -1496,6 +1496,8 @@ html[data-theme="light"] .help-bot-cmd code {
   display: flex; flex-direction: column; justify-content: flex-end;
   pointer-events: none; visibility: hidden;
 }
+/* Onboarding hides real action sheet completely */
+body.et-onboarding .action-sheet { display: none !important; }
 .action-sheet.is-open { pointer-events: all; visibility: visible; }
 
 .action-sheet__backdrop {
