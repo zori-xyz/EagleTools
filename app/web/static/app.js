@@ -96,18 +96,38 @@
     const inp = wrap.querySelector("[data-role='url']");
     if (!inp) return;
     haptic("light");
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text && (text.startsWith("http://") || text.startsWith("https://"))) {
-        inp.value = text.trim();
+
+    function applyPaste(text) {
+      const v = (text || "").trim();
+      if (v.startsWith("http://") || v.startsWith("https://")) {
+        inp.value = v;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        hapticNotify("success");
+      } else if (v) {
+        /* paste whatever the user has — they may want to paste partial text */
+        inp.value = v;
         inp.dispatchEvent(new Event("input", { bubbles: true }));
         hapticNotify("success");
       } else {
         toast(t("err_bad_url") || "Неверная ссылка", "err", "⚠️");
-        hapticNotify("error");
       }
+    }
+
+    /* Telegram WebApp clipboard API works in iOS WebView where
+       navigator.clipboard.readText() is blocked (requires system permission) */
+    if (window.Telegram?.WebApp?.readTextFromClipboard) {
+      window.Telegram.WebApp.readTextFromClipboard(txt => applyPaste(txt));
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      applyPaste(text);
     } catch {
-      toast(t("copy_failed") || "Ошибка копирования", "err", "⚠️");
+      /* Last resort — focus input so user can long-press → Paste */
+      inp.focus();
+      inp.select();
+      toast(t("btn_paste") || "Вставить", "ok", "📋");
     }
   });
 

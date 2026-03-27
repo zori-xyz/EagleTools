@@ -863,11 +863,12 @@ html[data-theme="dark"] .btn img.icon { filter: invert(1); opacity: .85; }
 html[data-theme="dark"] .btn--video img.icon { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg) brightness(90%); }
 html[data-theme="dark"] .btn--audio-orange img.icon { filter: invert(40%) sepia(60%) saturate(3000%) hue-rotate(240deg) brightness(90%); }
 html[data-theme="dark"] .btn--primary img.icon { filter: invert(20%) sepia(90%) saturate(5000%) hue-rotate(320deg) brightness(90%); }
-/* Result card download/share buttons — white icons regardless of theme */
+/* Result card download/share buttons */
 .result-file__actions .btn img.icon,
-html[data-theme="dark"] .result-file__actions .btn img.icon,
-html[data-theme="light"] .result-file__actions .btn img.icon { filter: brightness(0) invert(1); opacity: .9; }
-html[data-theme="light"] .result-file__actions .btn--secondary img.icon { filter: brightness(0) invert(0); opacity: .55; }
+html[data-theme="dark"] .result-file__actions .btn img.icon { filter: brightness(0) invert(1); opacity: .9; }
+/* Light theme: primary button keeps white icon, secondary gets dark icon */
+html[data-theme="light"] .result-file__actions .btn--primary img.icon  { filter: brightness(0) invert(1); opacity: .85; }
+html[data-theme="light"] .result-file__actions .btn--secondary img.icon { filter: brightness(0); opacity: .55; }
 
 /* player skip buttons */
 html[data-theme="dark"] .player-btn-skip img { filter: invert(1); opacity: .75; }
