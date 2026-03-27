@@ -420,6 +420,14 @@ class Strings:
     def btn_back_premium(self) -> str:
         return "◀️ Back" if self.lang == "en" else "◀️ Назад"
 
+    @property
+    def btn_cancel(self) -> str:
+        return "❌ Cancel" if self.lang == "en" else "❌ Отменить"
+
+    @property
+    def btn_changed_mind(self) -> str:
+        return "Changed your mind? Cancel the payment:" if self.lang == "en" else "Передумал? Отмени платёж:"
+
     # ── Profile ───────────────────────────────────────────────────────────────
     @property
     def profile_plan_free(self) -> str:

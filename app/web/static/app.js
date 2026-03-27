@@ -642,8 +642,14 @@
     }
   }
 
+  function _hideSkeleton() {
+    const sk = document.getElementById("recentSkeleton");
+    if (sk) sk.style.display = "none";
+  }
+
   function renderRecents(items) {
     const list = $("#recentList"); if (!list) return;
+    _hideSkeleton();
     _recentItems = items || [];
     if (!_recentItems.length) {
       list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;

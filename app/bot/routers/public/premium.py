@@ -72,9 +72,9 @@ def _build_tier_text(tier_key: str, lang: str) -> str:
     return t(lang).premium_tier_text(tier.label, tier.stars_price, tier.ton_price)
 
 
-def _invoice_cancel_kb(tier_key: str, invoice_msg_id: int) -> InlineKeyboardMarkup:
+def _invoice_cancel_kb(tier_key: str, invoice_msg_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Отменить", callback_data=f"premium:invoice_cancel:{tier_key}:{invoice_msg_id}")],
+        [InlineKeyboardButton(text=t(lang).btn_cancel, callback_data=f"premium:invoice_cancel:{tier_key}:{invoice_msg_id}")],
     ])
 
 
@@ -140,8 +140,8 @@ async def cb_pay_stars(cb: CallbackQuery) -> None:
     )
 
     cancel_msg = await cb.message.answer(
-        "Передумал? Отмени платёж:",
-        reply_markup=_invoice_cancel_kb(tier_key, invoice_msg.message_id),
+        s.btn_changed_mind,
+        reply_markup=_invoice_cancel_kb(tier_key, invoice_msg.message_id, lang),
     )
 
     async with SessionMaker() as session:
