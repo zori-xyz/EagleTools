@@ -2,99 +2,241 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True)
 class Strings:
     lang: str
 
-    # ── Menu ──────────────────────────────────────────────────────────────────
+    # ── /start welcome ────────────────────────────────────────────────────────
     @property
-    def menu_text(self) -> str:
+    def welcome_text(self) -> str:
         if self.lang == "en":
             return (
                 "🦅 <b>EagleTools</b>\n\n"
-                "• 🎧 Convert to audio\n"
-                "• 📝 Speech to text\n"
-                "• 🌐 More tools in our miniapp\n\n"
-                "Choose a section:"
+                "Just send me a link or a file — I'll figure out the rest.\n\n"
+                "<b>Links:</b> YouTube · TikTok · Instagram · Twitter · VK · and more\n"
+                "<b>Files:</b> convert audio, extract audio from video, transcribe speech\n\n"
+                "Everything else is in the mini app 👇"
             )
         return (
             "🦅 <b>EagleTools</b>\n\n"
-            "• 🎧 Конвертировать в аудио\n"
-            "• 📝 Распознать речь в текст\n"
-            "• 🌐 Полезные инструменты в нашем miniapp\n\n"
-            "Выбери раздел:"
-        )
-
-    @property
-    def tools_text(self) -> str:
-        if self.lang == "en":
-            return (
-                "🧰 <b>Tools</b>\n\n"
-                "Choose a mode and send a file.\n\n"
-                "🌐 More tools in our miniapp."
-            )
-        return (
-            "🧰 <b>Инструменты</b>\n\n"
-            "Выбери режим и отправь файл.\n\n"
-            "🌐 Полезные инструменты в нашем miniapp."
+            "Просто отправь мне ссылку или файл — я разберусь сам.\n\n"
+            "<b>Ссылки:</b> YouTube · TikTok · Instagram · Twitter · VK · и другие\n"
+            "<b>Файлы:</b> конвертировать аудио, извлечь звук из видео, расшифровать речь\n\n"
+            "Всё остальное — в мини-приложении 👇"
         )
 
     @property
     def settings_text(self) -> str:
         if self.lang == "en":
-            return "⚙️ <b>Settings</b>\n\nChoose what to configure:"
-        return "⚙️ <b>Настройки</b>\n\nВыбери что настроить:"
+            return "⚙️ <b>Settings</b>"
+        return "⚙️ <b>Настройки</b>"
 
-    def mode_audio_text(self, fmt: str) -> str:
-        fmt_name = _fmt_name(fmt)
+    # ── Link detection / processing ───────────────────────────────────────────
+    def link_detected(self, platform_label: str) -> str:
+        if self.lang == "en":
+            return f"{platform_label}\n\nWhat should I do with this link?"
+        return f"{platform_label}\n\nЧто делаем со ссылкой?"
+
+    @property
+    def link_processing(self) -> str:
+        return "⏳ Downloading…" if self.lang == "en" else "⏳ Скачиваю…"
+
+    @property
+    def link_processing_audio(self) -> str:
+        return "⏳ Extracting audio…" if self.lang == "en" else "⏳ Извлекаю аудио…"
+
+    @property
+    def link_processing_stt(self) -> str:
+        return "⏳ Downloading and transcribing…" if self.lang == "en" else "⏳ Скачиваю и распознаю…"
+
+    @property
+    def link_done(self) -> str:
+        return "✅ Done" if self.lang == "en" else "✅ Готово"
+
+    @property
+    def link_error(self) -> str:
         if self.lang == "en":
             return (
-                f"🎧 <b>Mode: Convert to audio</b>\n\n"
-                f"Format: <b>{fmt_name}</b>\n\n"
-                "Send a voice message, video or audio file."
+                "😔 <b>Couldn't download this.</b>\n\n"
+                "The link might be private, geo-blocked or unsupported.\n"
+                "Try the mini app — it has more options."
             )
         return (
-            f"🎧 <b>Режим: Конвертировать в аудио</b>\n\n"
-            f"Формат: <b>{fmt_name}</b>\n\n"
-            "Отправь голосовое, видео или аудио файл."
+            "😔 <b>Не удалось скачать.</b>\n\n"
+            "Ссылка может быть приватной, заблокированной по региону или неподдерживаемой.\n"
+            "Попробуй через мини-приложение — там больше возможностей."
         )
 
     @property
-    def mode_stt_text(self) -> str:
+    def link_error_too_large(self) -> str:
         if self.lang == "en":
             return (
-                "📝 <b>Mode: Speech to text</b>\n\n"
-                "Send a voice message or audio file."
+                "⚠️ <b>File too large for Telegram</b>\n\n"
+                "Telegram limits file uploads to ~50 MB.\n"
+                "Try the mini app to download directly."
             )
         return (
-            "📝 <b>Режим: Распознать речь в текст</b>\n\n"
-            "Отправь голосовое или аудио файл."
+            "⚠️ <b>Файл слишком большой для Telegram</b>\n\n"
+            "Telegram ограничивает загрузку файлов примерно 50 МБ.\n"
+            "Скачай напрямую через мини-приложение."
         )
 
-    def mode_unknown_text(self, mode: str) -> str:
+    @property
+    def link_error_timeout(self) -> str:
         if self.lang == "en":
-            return f"✅ Mode: {mode}\n\nSend a file."
-        return f"✅ Режим: {mode}\n\nОтправь файл."
+            return "⏳ Download timed out. The server took too long."
+        return "⏳ Загрузка заняла слишком много времени. Попробуй ещё раз."
+
+    # ── File detection / processing ───────────────────────────────────────────
+    def file_detected(self, type_label: str) -> str:
+        if self.lang == "en":
+            return f"{type_label}\n\nWhat should I do with it?"
+        return f"{type_label}\n\nЧто делаем?"
+
+    @property
+    def file_processing(self) -> str:
+        return "⏳ Processing…" if self.lang == "en" else "⏳ Обрабатываю…"
+
+    @property
+    def file_done(self) -> str:
+        return "✅ Done" if self.lang == "en" else "✅ Готово"
+
+    @property
+    def file_error(self) -> str:
+        if self.lang == "en":
+            return "😔 Couldn't process the file. It might be corrupted or unsupported."
+        return "😔 Не удалось обработать файл. Он может быть повреждён или не поддерживается."
+
+    @property
+    def file_too_big(self) -> str:
+        if self.lang == "en":
+            return (
+                "⚠️ <b>File too large</b>\n\n"
+                "Maximum size for bot processing is 19 MB.\n"
+                "Use the mini app for larger files."
+            )
+        return (
+            "⚠️ <b>Файл слишком большой</b>\n\n"
+            "Максимальный размер для обработки в боте — 19 МБ.\n"
+            "Для больших файлов используй мини-приложение."
+        )
+
+    # ── STT ───────────────────────────────────────────────────────────────────
+    @property
+    def stt_preparing(self) -> str:
+        return "🧠 Preparing speech recognition…" if self.lang == "en" else "🧠 Подготавливаю распознавание…"
+
+    @property
+    def stt_recognizing(self) -> str:
+        return "🧠 Recognizing speech…" if self.lang == "en" else "🧠 Распознаю речь…"
+
+    @property
+    def stt_done(self) -> str:
+        return "📝 Transcript:" if self.lang == "en" else "📝 Расшифровка:"
+
+    @property
+    def stt_busy(self) -> str:
+        if self.lang == "en":
+            return "🧠 Speech recognition is busy. Try again in a minute."
+        return "🧠 Распознавание занято. Попробуй через минуту."
+
+    @property
+    def stt_timeout(self) -> str:
+        if self.lang == "en":
+            return "⏳ Recognition took too long. Try a shorter file."
+        return "⏳ Распознавание заняло слишком долго. Попробуй файл покороче."
+
+    @property
+    def stt_empty(self) -> str:
+        if self.lang == "en":
+            return "🤔 Couldn't recognize any speech in this file."
+        return "🤔 Не удалось распознать речь в этом файле."
+
+    # ── Audio conversion ──────────────────────────────────────────────────────
+    @property
+    def convert_done(self) -> str:
+        return "✅ Converted" if self.lang == "en" else "✅ Конвертировано"
+
+    @property
+    def convert_error(self) -> str:
+        if self.lang == "en":
+            return "😔 Conversion failed. Check the file format."
+        return "😔 Не удалось конвертировать. Проверь формат файла."
+
+    # ── Quota ─────────────────────────────────────────────────────────────────
+    def quota_exceeded(self, used: int, limit: int) -> str:
+        if self.lang == "en":
+            return (
+                f"⛔ <b>Daily limit reached</b> ({used}/{limit})\n\n"
+                "Get <b>Premium</b> for unlimited access\n"
+                "or invite a friend — get <b>+5 downloads</b>."
+            )
+        return (
+            f"⛔ <b>Дневной лимит исчерпан</b> ({used}/{limit})\n\n"
+            "Оформи <b>Premium</b> для безлимитного доступа\n"
+            "или пригласи друга — получи <b>+5 загрузок</b>."
+        )
+
+    def quota_exceeded_short(self) -> str:
+        if self.lang == "en":
+            return "⛔ <b>Daily limit reached.</b> Get <b>Premium</b> for unlimited access."
+        return "⛔ <b>Дневной лимит исчерпан.</b> Оформи <b>Premium</b> для безлимита."
 
     # ── Keyboards ─────────────────────────────────────────────────────────────
+
+    # Link action buttons
     @property
-    def btn_tools(self) -> str:
-        return "🧰 Tools" if self.lang == "en" else "🧰 Инструменты"
+    def btn_download_video(self) -> str:
+        return "🎬 Download video" if self.lang == "en" else "🎬 Скачать видео"
+
+    @property
+    def btn_extract_audio(self) -> str:
+        return "🎵 Audio (MP3)" if self.lang == "en" else "🎵 Аудио (MP3)"
+
+    @property
+    def btn_transcribe(self) -> str:
+        return "📝 Transcribe" if self.lang == "en" else "📝 Расшифровать"
+
+    @property
+    def btn_open_app(self) -> str:
+        return "🔗 Open in app" if self.lang == "en" else "🔗 Открыть в приложении"
+
+    @property
+    def btn_download_file(self) -> str:
+        return "💾 Download" if self.lang == "en" else "💾 Скачать"
+
+    # File action buttons
+    @property
+    def btn_convert_format(self) -> str:
+        return "🔄 Convert format" if self.lang == "en" else "🔄 Конвертировать"
+
+    @property
+    def btn_extract_audio_from_video(self) -> str:
+        return "🎵 Extract audio" if self.lang == "en" else "🎵 Извлечь аудио"
+
+    @property
+    def btn_done(self) -> str:
+        return "✓ Done" if self.lang == "en" else "✓ Готово"
+
+    @property
+    def btn_cancel(self) -> str:
+        return "✕ Cancel" if self.lang == "en" else "✕ Отмена"
+
+    # Format picker
+    @property
+    def btn_pick_format(self) -> str:
+        return "Pick format:" if self.lang == "en" else "Выбери формат:"
+
+    # Common navigation
+    @property
+    def btn_back(self) -> str:
+        return "⬅️ Back" if self.lang == "en" else "⬅️ Назад"
 
     @property
     def btn_settings(self) -> str:
         return "⚙️ Settings" if self.lang == "en" else "⚙️ Настройки"
-
-    @property
-    def btn_profile(self) -> str:
-        return "👤 Profile" if self.lang == "en" else "👤 Профиль"
-
-    @property
-    def btn_back(self) -> str:
-        return "⬅️ Back" if self.lang == "en" else "⬅️ Назад"
 
     @property
     def btn_lang_toggle(self) -> str:
@@ -105,169 +247,12 @@ class Strings:
         return "📄 Privacy Policy" if self.lang == "en" else "📄 Политика конфиденциальности"
 
     @property
-    def btn_audio_convert(self) -> str:
-        return "🎧 Convert to audio" if self.lang == "en" else "🎧 Конвертировать в аудио"
-
-    @property
-    def btn_stt(self) -> str:
-        return "📝 Speech to text" if self.lang == "en" else "📝 Распознать речь в текст"
-
-    @property
     def btn_get_premium(self) -> str:
         return "⚡️ Get Premium" if self.lang == "en" else "⚡️ Получить Premium"
 
     @property
     def btn_invite_friend(self) -> str:
-        return "🎁 Invite a friend (+5 downloads)" if self.lang == "en" else "🎁 Пригласить друга (+5 загрузок)"
-
-    # ── Audio format keyboard ─────────────────────────────────────────────────
-    @property
-    def audiofmt_unknown(self) -> str:
-        return "Unknown format" if self.lang == "en" else "Неизвестный формат"
-
-    def audiofmt_text(self, fmt: str) -> str:
-        fmt_name = _fmt_name(fmt)
-        if self.lang == "en":
-            return (
-                f"✅ Mode selected: 🎧 Convert to audio\n"
-                f"Format: {fmt_name}\n\n"
-                "Send a file."
-            )
-        return (
-            f"✅ Режим выбран: 🎧 Конвертировать в аудио\n"
-            f"Формат: {fmt_name}\n\n"
-            "Отправь файл."
-        )
-
-    # ── Smart router ──────────────────────────────────────────────────────────
-    @property
-    def url_in_miniapp(self) -> str:
-        if self.lang == "en":
-            return (
-                "🌐 Links are processed in the Mini App.\n"
-                "Open it via 🧰 Tools → 🌐 Mini App."
-            )
-        return (
-            "🌐 Ссылки обрабатываются в Mini App.\n"
-            "Открой её через 🧰 Инструменты → 🌐 Mini App (ссылки)."
-        )
-
-    @property
-    def no_mode_selected(self) -> str:
-        if self.lang == "en":
-            return "Choose a mode in 🧰 Tools and send the file again."
-        return "Выбери режим в 🧰 Инструментах и отправь файл ещё раз."
-
-    @property
-    def file_too_big(self) -> str:
-        if self.lang == "en":
-            return (
-                "⚠️ File is too large to process via Telegram.\n\n"
-                "Try sending a smaller file or compressing it."
-            )
-        return (
-            "⚠️ Файл слишком большой для обработки через Telegram.\n\n"
-            "Попробуй отправить меньший файл или укоротить/сжать."
-        )
-
-    @property
-    def stt_busy(self) -> str:
-        if self.lang == "en":
-            return "Speech recognition is busy right now. Try again in a minute."
-        return "Сейчас распознавание занято. Попробуй ещё раз через минуту."
-
-    @property
-    def stt_preparing(self) -> str:
-        return "🧠 Preparing…" if self.lang == "en" else "🧠 Подготавливаю распознавание…"
-
-    @property
-    def stt_recognizing(self) -> str:
-        return "🧠 Recognizing…" if self.lang == "en" else "🧠 Распознаю…"
-
-    @property
-    def stt_done(self) -> str:
-        return "✅ Done" if self.lang == "en" else "✅ Готово"
-
-    @property
-    def stt_done_file(self) -> str:
-        return "✅ Done (file)" if self.lang == "en" else "✅ Готово (файл)"
-
-    @property
-    def stt_timeout(self) -> str:
-        if self.lang == "en":
-            return "⏳ Recognition took too long."
-        return "⏳ Распознавание заняло слишком много времени."
-
-    @property
-    def stt_empty(self) -> str:
-        if self.lang == "en":
-            return "Could not recognize speech."
-        return "Не получилось распознать речь."
-
-    @property
-    def convert_error(self) -> str:
-        if self.lang == "en":
-            return "Could not convert the file."
-        return "Не получилось преобразовать файл."
-
-    @property
-    def convert_done(self) -> str:
-        return "✅ Done" if self.lang == "en" else "✅ Готово"
-
-    def quota_exceeded(self, used: int, limit: int) -> str:
-        if self.lang == "en":
-            return (
-                f"⛔ <b>Daily limit reached</b>\n\n"
-                f"Used: {used} / {limit}\n\n"
-                "Get <b>Premium</b> for unlimited downloads\n"
-                "or invite a friend — get +5 downloads."
-            )
-        return (
-            f"⛔ <b>Дневной лимит исчерпан</b>\n\n"
-            f"Использовано: {used} / {limit}\n\n"
-            "Получи <b>Premium</b> для безлимитных загрузок\n"
-            "или пригласи друга — получишь +5 загрузок."
-        )
-
-    def quota_exceeded_short(self) -> str:
-        if self.lang == "en":
-            return "⛔ <b>Daily limit reached</b>\n\nGet <b>Premium</b> for unlimited downloads."
-        return "⛔ <b>Дневной лимит исчерпан</b>\n\nПолучи <b>Premium</b> для безлимитных загрузок."
-
-    def quota_status(self, used: int, limit: int | str, is_unlimited: bool) -> str:
-        if is_unlimited:
-            if self.lang == "en":
-                return (
-                    "📊 <b>Your quota</b>\n\n"
-                    "⚡️ Premium — unlimited downloads\n"
-                    f"Used today: {used}"
-                )
-            return (
-                "📊 <b>Твоя квота</b>\n\n"
-                "⚡️ Premium — безлимитные загрузки\n"
-                f"Использовано сегодня: {used}"
-            )
-        left = max(0, int(limit) - used)
-        if self.lang == "en":
-            return (
-                "📊 <b>Your quota</b>\n\n"
-                f"Used today: {used} / {limit}\n"
-                f"Remaining: {left}\n\n"
-                "Invite a friend → <b>+5 downloads/day</b>\n"
-                "Get <b>Premium</b> → unlimited"
-            )
-        return (
-            "📊 <b>Твоя квота</b>\n\n"
-            f"Использовано сегодня: {used} / {limit}\n"
-            f"Осталось: {left}\n\n"
-            "Пригласи друга → <b>+5 загрузок/день</b>\n"
-            "Получи <b>Premium</b> → безлимит"
-        )
-
-    def mode_title(self, mode: str) -> str:
-        if self.lang == "en":
-            return {"audio": "Converting", "stt": "Recognizing"}.get(mode, "Processing")
-        return {"audio": "Преобразую", "stt": "Распознаю"}.get(mode, "Обрабатываю")
+        return "🎁 Invite friend (+5 downloads)" if self.lang == "en" else "🎁 Пригласить друга (+5 загрузок)"
 
     # ── Premium ───────────────────────────────────────────────────────────────
     @property
@@ -300,8 +285,6 @@ class Strings:
         )
 
     def premium_invoice_title(self, label: str) -> str:
-        if self.lang == "en":
-            return f"EagleTools Premium — {label}"
         return f"EagleTools Premium — {label}"
 
     def premium_invoice_desc(self, label: str) -> str:
@@ -344,7 +327,7 @@ class Strings:
                 f"💎 <b>TON Payment — {label}</b>\n\n"
                 f"Send exactly <b>{ton} TON</b> to:\n"
                 f"<code>{wallet}</code>\n\n"
-                f"In the comment write:\n"
+                f"Comment:\n"
                 f"<code>{comment}</code>\n\n"
                 "After payment, press the button below."
             )
@@ -361,15 +344,15 @@ class Strings:
         if self.lang == "en":
             return (
                 f"⏳ <b>Request received</b>\n\n"
-                f"Waiting for confirmation of {ton} TON transfer.\n"
+                f"Waiting for {ton} TON confirmation.\n"
                 f"Comment: <code>{comment}</code>\n\n"
-                "Usually up to 10 minutes. You'll get a notification after confirmation."
+                "Usually up to 10 minutes. You'll be notified."
             )
         return (
             f"⏳ <b>Заявка принята</b>\n\n"
             f"Ожидаем подтверждение перевода {ton} TON.\n"
             f"Комментарий: <code>{comment}</code>\n\n"
-            "Обычно до 10 минут. После подтверждения придёт уведомление."
+            "Обычно до 10 минут. Придёт уведомление."
         )
 
     @property
@@ -384,12 +367,30 @@ class Strings:
     def btn_pay_ton(self) -> str:
         return "💎 Pay with TON" if self.lang == "en" else "💎 Оплатить TON"
 
+    @property
+    def cryptobot_pay_label(self) -> str:
+        return "💎 Pay in CryptoBot" if self.lang == "en" else "💎 Оплатить в CryptoBot"
+
+    @property
+    def cryptobot_check_label(self) -> str:
+        return "🔍 Check payment" if self.lang == "en" else "🔍 Проверить оплату"
+
+    @property
+    def cryptobot_not_paid(self) -> str:
+        if self.lang == "en":
+            return "⏳ Payment not found yet. Try in a few seconds."
+        return "⏳ Оплата ещё не найдена. Попробуй через пару секунд."
+
+    @property
+    def btn_back_premium(self) -> str:
+        return "◀️ Back" if self.lang == "en" else "◀️ Назад"
+
     # ── Referral ──────────────────────────────────────────────────────────────
     def referral_text(self, link: str) -> str:
         if self.lang == "en":
             return (
                 f"🎁 <b>Referral Program</b>\n\n"
-                f"For each invited friend — <b>+5 downloads</b> per day.\n\n"
+                f"For each friend you invite — <b>+5 downloads</b> per day.\n\n"
                 f"Your link:\n<code>{link}</code>"
             )
         return (
@@ -398,37 +399,24 @@ class Strings:
             f"Твоя ссылка:\n<code>{link}</code>"
         )
 
+    # ── Audio format (keep for backward compat in premium flow) ───────────────
     @property
-    def cryptobot_pay_label(self) -> str:
+    def audiofmt_unknown(self) -> str:
+        return "Unknown format" if self.lang == "en" else "Неизвестный формат"
+
+    def audiofmt_text(self, fmt: str) -> str:
+        fmt_name = _fmt_name(fmt)
         if self.lang == "en":
-            return "💎 Pay in CryptoBot"
-        return "💎 Оплатить в CryptoBot"
+            return f"✅ Format selected: {fmt_name}\n\nSend a file."
+        return f"✅ Формат выбран: {fmt_name}\n\nОтправь файл."
 
-    @property
-    def cryptobot_check_label(self) -> str:
+    # ── Progress / misc ───────────────────────────────────────────────────────
+    def mode_title(self, mode: str) -> str:
         if self.lang == "en":
-            return "🔍 Check payment"
-        return "🔍 Проверить оплату"
+            return {"audio": "Converting", "stt": "Recognizing"}.get(mode, "Processing")
+        return {"audio": "Конвертирую", "stt": "Распознаю"}.get(mode, "Обрабатываю")
 
-    @property
-    def cryptobot_not_paid(self) -> str:
-        if self.lang == "en":
-            return "⏳ Payment not found yet. Try in a few seconds."
-        return "⏳ Оплата не найдена. Попробуй через несколько секунд."
-
-    @property
-    def btn_back_premium(self) -> str:
-        return "◀️ Back" if self.lang == "en" else "◀️ Назад"
-
-    @property
-    def btn_cancel(self) -> str:
-        return "❌ Cancel" if self.lang == "en" else "❌ Отменить"
-
-    @property
-    def btn_changed_mind(self) -> str:
-        return "Changed your mind? Cancel the payment:" if self.lang == "en" else "Передумал? Отмени платёж:"
-
-    # ── Profile ───────────────────────────────────────────────────────────────
+    # ── Profile (kept for referral screen reachable via inline button) ────────
     @property
     def profile_plan_free(self) -> str:
         return "📋 Plan: Free" if self.lang == "en" else "📋 Тариф: Free"
@@ -440,13 +428,13 @@ class Strings:
 
     def profile_downloads_today(self, used: int, limit: str) -> str:
         if self.lang == "en":
-            return f"📊 Downloads today: {used} / {limit}"
-        return f"📊 Загрузок сегодня: {used} / {limit}"
+            return f"📊 Today: {used} / {limit}"
+        return f"📊 Сегодня: {used} / {limit}"
 
     def profile_downloads_left(self, used: int, limit: int, left: int) -> str:
         if self.lang == "en":
-            return f"📊 Downloads today: {used} / {limit}  (left: {left})"
-        return f"📊 Загрузок сегодня: {used} / {limit}  (осталось {left})"
+            return f"📊 Today: {used} / {limit}  ({left} left)"
+        return f"📊 Сегодня: {used} / {limit}  (осталось {left})"
 
     def profile_referrals(self, count: int) -> str:
         return f"👥 Referrals: {count}" if self.lang == "en" else f"👥 Рефералов: {count}"
@@ -459,13 +447,13 @@ class Strings:
 
     def profile_premium_bonus_need(self, need: int) -> str:
         if self.lang == "en":
-            return f"🎁 Next +3 days Premium: {need} more referral(s)"
-        return f"🎁 До +3 дней Premium: ещё {need} реферал(а)"
+            return f"🎁 {need} more referral(s) → +3 days Premium"
+        return f"🎁 Ещё {need} реферал(а) → +3 дня Premium"
 
     @property
     def profile_ref_hint(self) -> str:
         if self.lang == "en":
-            return "🎁 For each friend — <b>+5 downloads</b> per day"
+            return "🎁 Per friend — <b>+5 downloads</b> per day"
         return "🎁 За каждого друга — <b>+5 загрузок</b> в день"
 
     @property
@@ -481,10 +469,8 @@ def _fmt_name(fmt: str | None) -> str:
 
 
 def get_strings(lang: str | None) -> Strings:
-    """Return Strings for the given language code (defaults to Russian)."""
     return Strings(lang="en" if (lang or "").startswith("en") else "ru")
 
 
 def t(lang: str | None) -> Strings:
-    """Shortcut alias for get_strings."""
     return get_strings(lang)
