@@ -61,6 +61,7 @@ async def main() -> None:
             BotCommand(command="menu",     description="Главное меню"),
             BotCommand(command="premium",  description="⚡️ Получить Premium"),
             BotCommand(command="settings", description="Настройки"),
+            BotCommand(command="quota",    description="📊 Мой лимит загрузок"),
         ])
 
         print("✅ Polling started")

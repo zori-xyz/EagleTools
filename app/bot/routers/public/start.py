@@ -15,6 +15,7 @@ from app.bot.i18n import t
 from app.bot.keyboards.main import main_menu_kb
 from app.bot.keyboards.settings import settings_kb
 from app.domain.services.panel import PanelRef, delete_message_safe, safe_edit_or_send
+from app.domain.services.quota import get_quota_state
 from app.domain.services.referrals import apply_referral_start, parse_ref_code
 from app.domain.services.user_repo import UserRepo
 from app.infra.db.session import SessionMaker
@@ -147,6 +148,18 @@ async def cmd_premium(message: Message) -> None:
     await _show(message, build_premium_menu_text(lang), premium_tiers_kb(lang))
 
 
+@router.message(Command("quota"))
+async def cmd_quota(message: Message) -> None:
+    uid = message.from_user.id
+    lang = await _get_lang(uid)
+    s = t(lang)
+    async with SessionMaker() as session:
+        user = await _repo.get_or_create(session, uid)
+        state = await get_quota_state(session, user)
+    text = s.quota_status(int(state.used_today), int(state.daily_limit), state.is_unlimited)
+    await _show(message, text, main_menu_kb(lang))
+
+
 # ── Screen builders ────────────────────────────────────────────────────────────
 
 async def _show_welcome(message: Message) -> None:
@@ -179,8 +192,8 @@ async def cb_toggle_lang(cb: CallbackQuery) -> None:
     async with SessionMaker() as session:
         user = await _repo.get_or_create(session, cb.from_user.id)
         current = user.language_code or "ru"
-        user.language_code = "en" if current == "ru" else "ru"
+        new_lang = "en" if current == "ru" else "ru"
+        user.language_code = new_lang
         await session.commit()
-        new_lang = user.language_code
     s = t(new_lang)
     await _show_from_cb(cb, s.settings_text, settings_kb(new_lang))

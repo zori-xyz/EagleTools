@@ -166,6 +166,24 @@ class Strings:
         return "😔 Не удалось конвертировать. Проверь формат файла."
 
     # ── Quota ─────────────────────────────────────────────────────────────────
+    def quota_status(self, used: int, limit: int, is_unlimited: bool) -> str:
+        if is_unlimited:
+            return (
+                "⚡️ <b>Premium</b> — unlimited downloads"
+                if self.lang == "en" else
+                "⚡️ <b>Premium</b> — безлимитные загрузки"
+            )
+        left = max(0, limit - used)
+        if self.lang == "en":
+            return (
+                f"📊 <b>Downloads today:</b> {used} / {limit}\n"
+                f"Remaining: <b>{left}</b>"
+            )
+        return (
+            f"📊 <b>Загрузки сегодня:</b> {used} / {limit}\n"
+            f"Осталось: <b>{left}</b>"
+        )
+
     def quota_exceeded(self, used: int, limit: int) -> str:
         if self.lang == "en":
             return (
@@ -223,6 +241,10 @@ class Strings:
     @property
     def btn_cancel(self) -> str:
         return "✕ Cancel" if self.lang == "en" else "✕ Отмена"
+
+    @property
+    def btn_changed_mind(self) -> str:
+        return "← Changed my mind" if self.lang == "en" else "← Передумал"
 
     # Format picker
     @property

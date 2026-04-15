@@ -49,6 +49,7 @@ from app.domain.services.media import (
     tg_download_to_path,
     transcribe_to_text,
 )
+from app.domain.services.panel import delete_message_safe
 from app.domain.services.quota import QuotaExceeded, consume_quota, get_quota_state
 from app.domain.services.user_repo import UserRepo
 from app.infra.db.session import get_sessionmaker
@@ -56,6 +57,14 @@ from app.infra.db.session import get_sessionmaker
 log = logging.getLogger(__name__)
 router = Router()
 _repo = UserRepo()
+
+# Per-user context: stores the URL or original file Message for active callbacks.
+# Keyed by Telegram user ID.  Only the latest request per user is kept.
+_user_ctx: dict[int, dict] = {}
+
+# Tracks the smart-router panel message per user so we can delete it when a new
+# URL/file arrives (keeps the chat clean — one bot panel at a time).
+_panel_ref: dict[int, tuple[int, int]] = {}  # uid → (chat_id, message_id)
 
 TG_TEXT_LIMIT = 3800
 TG_SAFE_MAX_BYTES = 19 * 1024 * 1024   # 19 MB — Telegram bot file limit
@@ -332,32 +341,33 @@ def _fmt_duration(secs: int | None) -> str:
 async def on_text(message: Message) -> None:
     text = (message.text or "").strip()
     if not _is_url(text):
-        return  # ignore non-URL text (let other handlers deal with it)
+        return  # ignore non-URL text
 
-    lang = await _get_lang(message.from_user.id)
-    category, label = detect_platform(text)
+    uid = message.from_user.id
+    url = text
+    category, label = detect_platform(url)
 
     if category == "web":
-        # Nothing meaningful to do — just point to the app
-        s = t(lang)
-        await message.reply(
-            f"🌐 <b>{label.lstrip('🌐 ')}</b>\n\n"
-            + (
-                "Open this in the mini app to work with its content."
-                if lang == "en" else
-                "Открой в мини-приложении, чтобы работать с контентом."
-            ),
-            reply_markup=link_actions_kb("web", lang),
-            parse_mode="HTML",
-        )
-        return
+        return  # nothing useful for generic web pages in the bot
 
-    intro = _platform_intro(label, lang)
-    await message.reply(
-        intro,
+    lang = await _get_lang(uid)
+
+    # Store URL so callbacks can retrieve it without reply_to_message
+    _user_ctx[uid] = {"url": url}
+
+    # Delete previous smart-router panel to keep chat clean
+    if uid in _panel_ref:
+        old_chat, old_msg = _panel_ref.pop(uid)
+        await delete_message_safe(message.bot, old_chat, old_msg)
+
+    panel = await message.bot.send_message(
+        chat_id=message.chat.id,
+        text=_platform_intro(label, lang),
         reply_markup=link_actions_kb(category, lang),
         parse_mode="HTML",
+        disable_web_page_preview=True,
     )
+    _panel_ref[uid] = (panel.chat.id, panel.message_id)
 
 
 # ── Link action callbacks  (lnk:*) ────────────────────────────────────────────
@@ -365,8 +375,11 @@ async def on_text(message: Message) -> None:
 @router.callback_query(F.data.startswith("lnk:"))
 async def on_link_action(cb: CallbackQuery) -> None:
     action = cb.data.removeprefix("lnk:")
+    uid = cb.from_user.id
 
     if action == "dismiss":
+        _panel_ref.pop(uid, None)
+        _user_ctx.pop(uid, None)
         try:
             await cb.message.delete()
         except Exception:
@@ -374,19 +387,18 @@ async def on_link_action(cb: CallbackQuery) -> None:
         await cb.answer()
         return
 
-    # Recover the original URL from the user's message that was replied to
-    orig = cb.message.reply_to_message
-    if not orig or not orig.text:
+    # Retrieve URL from in-memory context (stored when user sent the URL)
+    url = _user_ctx.get(uid, {}).get("url")
+    if not url:
         await cb.answer(
-            "Link not found — please send it again." if cb.from_user.language_code
-            and cb.from_user.language_code.startswith("en")
+            "Link not found — please send it again."
+            if (cb.from_user.language_code or "").startswith("en")
             else "Ссылка не найдена — отправь её ещё раз.",
             show_alert=True,
         )
         return
 
-    url = orig.text.strip()
-    lang = await _get_lang(cb.from_user.id)
+    lang = await _get_lang(uid)
     s = t(lang)
 
     if not await _check_and_consume_quota_cb(cb, lang):
@@ -553,30 +565,36 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
 
 @router.message(F.voice | F.audio | F.video | F.document)
 async def on_file(message: Message) -> None:
-    lang = await _get_lang(message.from_user.id)
+    uid = message.from_user.id
+    lang = await _get_lang(uid)
     s = t(lang)
 
     size = _media_file_size(message)
     if size and size > TG_SAFE_MAX_BYTES:
-        await message.reply(s.file_too_big, parse_mode="HTML")
-        return
-
-    kind, label = _detect_file_kind(message)
-
-    if kind == "document_other":
-        # We can't do anything useful with generic documents in the bot
-        await message.reply(
-            s.file_detected(f"<b>{label}</b>"),
-            reply_markup=file_actions_kb(kind, lang),
+        await message.bot.send_message(
+            chat_id=message.chat.id,
+            text=s.file_too_big,
             parse_mode="HTML",
         )
         return
 
-    await message.reply(
-        s.file_detected(f"<b>{label}</b>"),
+    kind, label = _detect_file_kind(message)
+
+    # Store original message so callbacks can download the file without reply_to_message
+    _user_ctx[uid] = {"kind": kind, "orig_msg": message}
+
+    # Delete previous smart-router panel to keep chat clean
+    if uid in _panel_ref:
+        old_chat, old_msg = _panel_ref.pop(uid)
+        await delete_message_safe(message.bot, old_chat, old_msg)
+
+    panel = await message.bot.send_message(
+        chat_id=message.chat.id,
+        text=s.file_detected(f"<b>{label}</b>"),
         reply_markup=file_actions_kb(kind, lang),
         parse_mode="HTML",
     )
+    _panel_ref[uid] = (panel.chat.id, panel.message_id)
 
 
 # ── File action callbacks  (fl:*) ─────────────────────────────────────────────
@@ -584,8 +602,11 @@ async def on_file(message: Message) -> None:
 @router.callback_query(F.data.startswith("fl:"))
 async def on_file_action(cb: CallbackQuery) -> None:
     action = cb.data.removeprefix("fl:")
+    uid = cb.from_user.id
 
     if action == "dismiss":
+        _panel_ref.pop(uid, None)
+        _user_ctx.pop(uid, None)
         try:
             await cb.message.delete()
         except Exception:
@@ -594,8 +615,7 @@ async def on_file_action(cb: CallbackQuery) -> None:
         return
 
     if action == "fmt":
-        # Show format picker
-        lang = await _get_lang(cb.from_user.id)
+        lang = await _get_lang(uid)
         try:
             await cb.message.edit_reply_markup(reply_markup=format_pick_kb(lang))
         except Exception:
@@ -603,18 +623,19 @@ async def on_file_action(cb: CallbackQuery) -> None:
         await cb.answer()
         return
 
-    # Recover the original file message
-    orig = cb.message.reply_to_message
+    # Retrieve original file message from in-memory context
+    ctx = _user_ctx.get(uid, {})
+    orig: Message | None = ctx.get("orig_msg")
     if not orig:
         await cb.answer(
-            "Original file not found — please send it again." if cb.from_user.language_code
-            and cb.from_user.language_code.startswith("en")
+            "Original file not found — please send it again."
+            if (cb.from_user.language_code or "").startswith("en")
             else "Исходный файл не найден — отправь его ещё раз.",
             show_alert=True,
         )
         return
 
-    lang = await _get_lang(cb.from_user.id)
+    lang = await _get_lang(uid)
     s = t(lang)
 
     if not await _check_and_consume_quota_cb(cb, lang):
@@ -682,23 +703,25 @@ async def _handle_file_stt(
             await cb.message.edit_text(s.stt_empty)
             return
 
-        try:
-            await cb.message.delete()
-        except Exception:
-            pass
-
         full = f"{s.stt_done}\n\n{text}"
         if len(full) <= TG_TEXT_LIMIT:
-            await orig.reply(full)
+            try:
+                await cb.message.edit_text(full, reply_markup=None, parse_mode=None)
+            except Exception:
+                await cb.message.answer(full)
         else:
             work = base / "work"
             work.mkdir(parents=True, exist_ok=True)
             out_txt = work / "result.txt"
             out_txt.write_text(text, encoding="utf-8")
-            await orig.reply_document(
+            await cb.message.answer_document(
                 document=FSInputFile(str(out_txt)),
                 caption=s.stt_done,
             )
+            try:
+                await cb.message.edit_text(s.file_done, reply_markup=None)
+            except Exception:
+                pass
 
     except SttError as e:
         msg = s.stt_timeout if "timeout" in str(e) else s.stt_empty
@@ -737,7 +760,7 @@ async def _handle_file_extract_audio(
         in_path = await tg_download_to_path(cb.bot, orig, dst_dir=tmp_in)
         res = await convert_audio_from_file(in_path, fmt="mp3", workdir=base / "work")
 
-        await orig.reply_document(
+        await cb.message.answer_document(
             document=FSInputFile(str(res.out_path)),
             caption=s.convert_done,
         )
@@ -790,7 +813,7 @@ async def _handle_file_convert(
         in_path = await tg_download_to_path(cb.bot, orig, dst_dir=tmp_in)
         res = await convert_audio_from_file(in_path, fmt=fmt, workdir=base / "work")
 
-        await orig.reply_document(
+        await cb.message.answer_document(
             document=FSInputFile(str(res.out_path)),
             caption=s.convert_done,
         )

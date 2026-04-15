@@ -15,20 +15,15 @@ from typing import Literal
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.bot.i18n import t
-from app.common.config import settings
 
 # Platform category → available actions
 # "media"  : video-hosting sites (YouTube, TikTok, Instagram, …) → video + audio + stt
 # "audio"  : audio-only sites (SoundCloud, Spotify, …) → audio + stt
 # "direct" : direct file URL → download only
-# "web"    : generic web page → open in app only
+# "web"    : generic web page → (nothing useful in bot)
 
 PlatformCategory = Literal["media", "audio", "direct", "web"]
 FileKind = Literal["voice", "audio", "video", "document_audio", "document_video", "document_other"]
-
-
-def _app_url() -> str:
-    return (settings.webapp_url or "").rstrip("/") or "https://t.me"
 
 
 # ── Link keyboards ─────────────────────────────────────────────────────────────
@@ -54,10 +49,7 @@ def link_actions_kb(category: PlatformCategory, lang: str = "ru") -> InlineKeybo
         rows.append([
             InlineKeyboardButton(text=s.btn_download_file, callback_data="lnk:vid"),
         ])
-    # All categories get the "Open in app" URL button
-    rows.append([
-        InlineKeyboardButton(text=s.btn_open_app, url=_app_url()),
-    ])
+
     rows.append([
         InlineKeyboardButton(text=s.btn_cancel, callback_data="lnk:dismiss"),
     ])
@@ -118,11 +110,7 @@ def file_actions_kb(kind: FileKind, lang: str = "ru") -> InlineKeyboardMarkup:
             rows.append([
                 InlineKeyboardButton(text=s.btn_extract_audio_from_video, callback_data="fl:ext_aud"),
             ])
-    else:
-        # Generic document
-        rows.append([
-            InlineKeyboardButton(text=s.btn_open_app, url=_app_url()),
-        ])
+    # Generic documents: nothing to do in bot, just show cancel
 
     rows.append([
         InlineKeyboardButton(text=s.btn_cancel, callback_data="fl:dismiss"),
