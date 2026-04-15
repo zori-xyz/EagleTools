@@ -21,17 +21,15 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
-    Bot,
     CallbackQuery,
     FSInputFile,
     Message,
 )
 
 from app.bot.i18n import t
-from app.bot.keyboards.premium import premium_limit_kb
 from app.bot.keyboards.smart import (
     FileKind,
     PlatformCategory,
