@@ -136,6 +136,14 @@ def format_pick_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def stt_result_kb(dismiss_cb: str, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Shown after a successful STT transcription — just a close button."""
+    s = t(lang)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=s.btn_done, callback_data=dismiss_cb)],
+    ])
+
+
 def after_file_kb(kind: FileKind, last_action: str, lang: str = "ru") -> InlineKeyboardMarkup:
     """Shown after a file operation — offer remaining useful actions."""
     s = t(lang)

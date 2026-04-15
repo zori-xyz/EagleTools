@@ -11,12 +11,15 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message, User as TgUser
 
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
 from app.bot.i18n import t
 from app.bot.keyboards.main import main_menu_kb
 from app.bot.keyboards.settings import settings_kb
+from app.common.config import settings
 from app.domain.services.panel import PanelRef, delete_message_safe, safe_edit_or_send
 from app.domain.services.quota import get_quota_state
-from app.domain.services.referrals import apply_referral_start, parse_ref_code
+from app.domain.services.referrals import apply_referral_start, make_ref_code, parse_ref_code
 from app.domain.services.user_repo import UserRepo
 from app.infra.db.session import SessionMaker
 
@@ -184,6 +187,26 @@ async def cb_settings(cb: CallbackQuery) -> None:
     lang = await _get_lang(cb.from_user.id)
     s = t(lang)
     await _show_from_cb(cb, s.settings_text, settings_kb(lang))
+
+
+@router.callback_query(F.data == "screen:referral")
+async def cb_referral(cb: CallbackQuery) -> None:
+    await cb.answer()
+    uid = cb.from_user.id
+    lang = await _get_lang(uid)
+    s = t(lang)
+
+    code = make_ref_code(uid)
+    bot_username = (settings.bot_username or "").strip()
+    if bot_username:
+        link = f"https://t.me/{bot_username}?start=ref_{code}"
+    else:
+        link = f"https://t.me/?start=ref_{code}"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=s.btn_back, callback_data="screen:menu")],
+    ])
+    await _show_from_cb(cb, s.referral_text(link), kb)
 
 
 @router.callback_query(F.data == "settings:lang")

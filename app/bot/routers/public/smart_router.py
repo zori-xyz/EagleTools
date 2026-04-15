@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import mimetypes
+import uuid
 from pathlib import Path
 from typing import Literal
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
+    Bot,
     CallbackQuery,
     FSInputFile,
     Message,
@@ -38,7 +40,9 @@ from app.bot.keyboards.smart import (
     file_actions_kb,
     format_pick_kb,
     link_actions_kb,
+    stt_result_kb,
 )
+from app.bot.services import ctx_store
 from app.bot.services.api_client import BotApiError, download_url
 from app.common.config import settings
 from app.domain.services.media import (
@@ -58,20 +62,23 @@ log = logging.getLogger(__name__)
 router = Router()
 _repo = UserRepo()
 
-# Per-user context: stores the URL or original file Message for active callbacks.
-# Keyed by Telegram user ID.  Only the latest request per user is kept.
+# ── Per-user state (in-memory; Redis is the persistence fallback) ─────────────
+
+# Stores URL string or file info dict for active callbacks.
 _user_ctx: dict[int, dict] = {}
 
-# Tracks the smart-router panel message per user so we can delete it when a new
-# URL/file arrives (keeps the chat clean — one bot panel at a time).
+# Tracks current panel message so it can be cleaned up on next input.
 _panel_ref: dict[int, tuple[int, int]] = {}  # uid → (chat_id, message_id)
+
+# Prevents double-tap: user IDs currently being processed.
+_processing: set[int] = set()
 
 TG_TEXT_LIMIT = 3800
 TG_SAFE_MAX_BYTES = 19 * 1024 * 1024   # 19 MB — Telegram bot file limit
 STT_SEM = asyncio.Semaphore(1)          # one STT job at a time
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# ── Generic helpers ────────────────────────────────────────────────────────────
 
 async def _get_lang(uid: int) -> str:
     sm = get_sessionmaker()
@@ -101,6 +108,110 @@ def _media_file_size(message: Message) -> int | None:
     return None
 
 
+def _extract_file_info(message: Message) -> tuple[str | None, str]:
+    """Return (file_id, filename) for any media message."""
+    if message.voice:
+        return message.voice.file_id, "voice.ogg"
+    if message.audio:
+        return message.audio.file_id, message.audio.file_name or "audio"
+    if message.video:
+        return message.video.file_id, "video.mp4"
+    if message.document:
+        return message.document.file_id, message.document.file_name or "file"
+    return None, "file"
+
+
+# ── Progress animation ─────────────────────────────────────────────────────────
+
+async def _progress_anim(message: Message, base_text: str, stop: asyncio.Event) -> None:
+    """
+    Edits the progress message every 4 s, appending elapsed seconds.
+    Stops when `stop` is set or on any edit error.
+    """
+    # Strip leading emoji so we can control it
+    stripped = base_text
+    for prefix in ("⏳ ", "⌛ ", "🧠 "):
+        if stripped.startswith(prefix):
+            stripped = stripped[len(prefix):]
+            break
+
+    frames = ["⏳", "⌛"]
+    elapsed = 0
+    while not stop.is_set():
+        await asyncio.sleep(4)
+        if stop.is_set():
+            break
+        elapsed += 4
+        icon = frames[(elapsed // 4) % 2]
+        try:
+            await message.edit_text(
+                f"{icon} {stripped} <i>{elapsed}с</i>",
+                reply_markup=None,
+                parse_mode="HTML",
+            )
+        except Exception:
+            return  # message was edited or deleted, stop silently
+
+
+# ── Auto-delete helper ─────────────────────────────────────────────────────────
+
+async def _delete_after(bot: Bot, chat_id: int, message_id: int, delay: int) -> None:
+    await asyncio.sleep(delay)
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception:
+        pass
+
+
+async def _send_autodelete(
+    bot: Bot,
+    chat_id: int,
+    text: str,
+    parse_mode: str = "HTML",
+    delay: int = 10,
+) -> None:
+    """Send a message and schedule its deletion after `delay` seconds."""
+    try:
+        msg = await bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+    except Exception:
+        return
+    asyncio.create_task(_delete_after(bot, chat_id, msg.message_id, delay))
+
+
+# ── File download helper (supports both Message and file_id fallback) ──────────
+
+async def _download_from_ctx(bot: Bot, ctx: dict, dst_dir: Path) -> Path:
+    """
+    Download a Telegram file using whatever is available in ctx:
+      - 'orig_msg'  → use tg_download_to_path (fast, same session)
+      - 'file_id'   → download directly by file_id (Redis fallback after restart)
+    """
+    orig = ctx.get("orig_msg")
+    if orig is not None:
+        return await tg_download_to_path(bot, orig, dst_dir=dst_dir)
+
+    file_id = ctx.get("file_id")
+    filename = ctx.get("filename", "file")
+    if not file_id:
+        raise ConvertError("no_file_reference")
+
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    safe = f"{uuid.uuid4().hex[:8]}_{filename[:60]}"
+    path = dst_dir / safe
+
+    try:
+        tg_file = await bot.get_file(file_id)
+    except TelegramBadRequest as e:
+        if "file is too big" in str(e).lower():
+            raise ConvertError("tg_file_too_big") from e
+        raise
+
+    await bot.download_file(tg_file.file_path, destination=path)
+    if not path.exists() or path.stat().st_size == 0:
+        raise ConvertError("download_failed")
+    return path
+
+
 # ── Quota helpers ──────────────────────────────────────────────────────────────
 
 async def _check_and_consume_quota(message: Message, lang: str) -> bool:
@@ -111,10 +222,11 @@ async def _check_and_consume_quota(message: Message, lang: str) -> bool:
         user = await _repo.get_or_create(session, tg_id)
         state = await get_quota_state(session, user)
         if not state.is_unlimited and state.used_today >= state.daily_limit:
-            await message.reply(
+            await _send_autodelete(
+                message.bot,
+                message.chat.id,
                 s.quota_exceeded(state.used_today, state.daily_limit),
-                reply_markup=premium_limit_kb(lang),
-                parse_mode="HTML",
+                delay=12,
             )
             return False
         try:
@@ -122,17 +234,17 @@ async def _check_and_consume_quota(message: Message, lang: str) -> bool:
             await session.commit()
         except QuotaExceeded:
             await session.rollback()
-            await message.reply(
+            await _send_autodelete(
+                message.bot,
+                message.chat.id,
                 s.quota_exceeded_short(),
-                reply_markup=premium_limit_kb(lang),
-                parse_mode="HTML",
+                delay=12,
             )
             return False
     return True
 
 
 async def _check_and_consume_quota_cb(cb: CallbackQuery, lang: str) -> bool:
-    """Same check but for callback queries — sends quota message to chat."""
     tg_id = cb.from_user.id
     s = t(lang)
     sm = get_sessionmaker()
@@ -179,7 +291,6 @@ _MEDIA_DOMAINS = {
     "gfycat.com",
     "medal.tv",
     "clips.twitch.tv",
-    "youtu.be",
 }
 
 _AUDIO_DOMAINS = {
@@ -231,40 +342,24 @@ def _extract_domain(url: str) -> str:
 
 
 def detect_platform(url: str) -> tuple[PlatformCategory, str]:
-    """
-    Returns (category, human-readable label).
-    category: "media" | "audio" | "direct" | "web"
-    label:    e.g. "▶️ YouTube", "🔗 Direct link", etc.
-    """
     domain = _extract_domain(url)
-
-    # Check known media platforms
     for key in _MEDIA_DOMAINS:
         if domain == key or domain.endswith("." + key):
-            label = _MEDIA_LABELS.get(key, f"🎬 {domain}")
-            return "media", label
-
-    # Check known audio platforms
+            return "media", _MEDIA_LABELS.get(key, f"🎬 {domain}")
     for key in _AUDIO_DOMAINS:
         if domain == key or domain.endswith("." + key):
-            label = _MEDIA_LABELS.get(key, f"🎵 {domain}")
-            return "audio", label
-
-    # Direct file link by extension
+            return "audio", _MEDIA_LABELS.get(key, f"🎵 {domain}")
     path = url.split("?")[0].lower()
     ext = Path(path).suffix
     if ext in _AUDIO_FILE_EXTS:
         return "direct", "🎵 Audio file"
     if ext in _VIDEO_FILE_EXTS:
         return "direct", "🎬 Video file"
-
-    # Generic web page
     return "web", f"🌐 {domain}" if domain else "🌐 Link"
 
 
 def _platform_intro(label: str, lang: str) -> str:
-    s = t(lang)
-    return s.link_detected(f"<b>{label}</b>")
+    return t(lang).link_detected(f"<b>{label}</b>")
 
 
 # ── File kind detection ────────────────────────────────────────────────────────
@@ -281,37 +376,22 @@ _VIDEO_MIMES = {
 
 
 def _detect_file_kind(message: Message) -> tuple[FileKind, str]:
-    """Returns (kind, human-readable label)."""
     if message.voice:
-        size = _fmt_size(message.voice.file_size)
-        return "voice", f"🎙 Voice message{size}"
-
+        return "voice", f"🎙 Voice message{_fmt_size(message.voice.file_size)}"
     if message.audio:
         title = message.audio.title or message.audio.file_name or "audio"
-        size = _fmt_size(message.audio.file_size)
-        return "audio", f"🎵 {title[:40]}{size}"
-
+        return "audio", f"🎵 {title[:40]}{_fmt_size(message.audio.file_size)}"
     if message.video:
-        dur = _fmt_duration(message.video.duration)
-        size = _fmt_size(message.video.file_size)
-        return "video", f"🎬 Video{dur}{size}"
-
+        return "video", f"🎬 Video{_fmt_duration(message.video.duration)}{_fmt_size(message.video.file_size)}"
     if message.document:
         mime = (message.document.mime_type or "").lower()
         fname = message.document.file_name or ""
         ext = Path(fname).suffix.lower()
-
         if mime in _AUDIO_MIMES or ext in _AUDIO_FILE_EXTS:
-            size = _fmt_size(message.document.file_size)
-            return "document_audio", f"🎵 {fname[:40] or 'Audio file'}{size}"
-
+            return "document_audio", f"🎵 {fname[:40] or 'Audio file'}{_fmt_size(message.document.file_size)}"
         if mime in _VIDEO_MIMES or ext in _VIDEO_FILE_EXTS:
-            size = _fmt_size(message.document.file_size)
-            return "document_video", f"🎬 {fname[:40] or 'Video file'}{size}"
-
-        size = _fmt_size(message.document.file_size)
-        return "document_other", f"📎 {fname[:40] or 'File'}{size}"
-
+            return "document_video", f"🎬 {fname[:40] or 'Video file'}{_fmt_size(message.document.file_size)}"
+        return "document_other", f"📎 {fname[:40] or 'File'}{_fmt_size(message.document.file_size)}"
     return "document_other", "📎 File"
 
 
@@ -341,7 +421,7 @@ def _fmt_duration(secs: int | None) -> str:
 async def on_text(message: Message) -> None:
     text = (message.text or "").strip()
     if not _is_url(text):
-        return  # ignore non-URL text
+        return
 
     uid = message.from_user.id
     url = text
@@ -352,8 +432,9 @@ async def on_text(message: Message) -> None:
 
     lang = await _get_lang(uid)
 
-    # Store URL so callbacks can retrieve it without reply_to_message
-    _user_ctx[uid] = {"url": url}
+    # Store URL — in memory + Redis (for post-restart callbacks)
+    _user_ctx[uid] = {"url": url, "type": "url"}
+    asyncio.create_task(ctx_store.ctx_set(uid, {"url": url, "type": "url"}))
 
     # Delete previous smart-router panel to keep chat clean
     if uid in _panel_ref:
@@ -380,6 +461,7 @@ async def on_link_action(cb: CallbackQuery) -> None:
     if action == "dismiss":
         _panel_ref.pop(uid, None)
         _user_ctx.pop(uid, None)
+        asyncio.create_task(ctx_store.ctx_del(uid))
         try:
             await cb.message.delete()
         except Exception:
@@ -387,8 +469,23 @@ async def on_link_action(cb: CallbackQuery) -> None:
         await cb.answer()
         return
 
-    # Retrieve URL from in-memory context (stored when user sent the URL)
+    # Double-tap protection
+    if uid in _processing:
+        is_en = (cb.from_user.language_code or "").startswith("en")
+        await cb.answer(
+            "Already processing, please wait…" if is_en else "Уже обрабатываю, подожди…",
+            show_alert=True,
+        )
+        return
+
+    # Retrieve URL — in-memory first, then Redis fallback
     url = _user_ctx.get(uid, {}).get("url")
+    if not url:
+        redis_ctx = await ctx_store.ctx_get(uid)
+        url = redis_ctx.get("url")
+        if url:
+            _user_ctx[uid] = redis_ctx  # warm the memory cache
+
     if not url:
         await cb.answer(
             "Link not found — please send it again."
@@ -404,7 +501,6 @@ async def on_link_action(cb: CallbackQuery) -> None:
     if not await _check_and_consume_quota_cb(cb, lang):
         return
 
-    # Show progress immediately
     progress_text = {
         "vid": s.link_processing,
         "aud": s.link_processing_audio,
@@ -417,10 +513,14 @@ async def on_link_action(cb: CallbackQuery) -> None:
         pass
     await cb.answer()
 
-    if action in ("vid", "aud"):
-        await _handle_link_download(cb, url, action, lang)
-    elif action == "stt":
-        await _handle_link_stt(cb, url, lang)
+    _processing.add(uid)
+    try:
+        if action in ("vid", "aud"):
+            await _handle_link_download(cb, url, action, lang)
+        elif action == "stt":
+            await _handle_link_stt(cb, url, lang)
+    finally:
+        _processing.discard(uid)
 
 
 async def _handle_link_download(
@@ -432,9 +532,17 @@ async def _handle_link_download(
     s = t(lang)
     api_action = "audio" if action == "aud" else "video"
 
+    # Start progress animation
+    stop = asyncio.Event()
+    anim = asyncio.create_task(_progress_anim(cb.message, {
+        "vid": s.link_processing,
+        "aud": s.link_processing_audio,
+    }.get(action, s.link_processing), stop))
+
     try:
         result = await download_url(url, action=api_action)
     except BotApiError as e:
+        stop.set(); anim.cancel()
         err = str(e)
         if "too_large" in err:
             await cb.message.edit_text(s.link_error_too_large, parse_mode="HTML")
@@ -443,6 +551,8 @@ async def _handle_link_download(
         else:
             await cb.message.edit_text(s.link_error, parse_mode="HTML")
         return
+    finally:
+        stop.set(); anim.cancel()
 
     filepath = _results_dir() / result.file_id
     if not filepath.exists():
@@ -460,7 +570,6 @@ async def _handle_link_download(
                 caption=f"🎵 {title}" if title else None,
             )
         else:
-            # Try video first, fall back to document for large/unusual formats
             try:
                 await cb.message.answer_video(
                     video=file_input,
@@ -478,7 +587,6 @@ async def _handle_link_download(
         await cb.message.edit_text(s.link_error, parse_mode="HTML")
         return
 
-    # Show follow-up actions on the progress message
     try:
         await cb.message.edit_text(s.link_done, reply_markup=after_link_kb(action, lang))
     except Exception:
@@ -492,10 +600,13 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
         await cb.message.edit_text(s.stt_busy, parse_mode="HTML")
         return
 
-    # Download audio first
+    # Download audio
+    stop_dl = asyncio.Event()
+    anim_dl = asyncio.create_task(_progress_anim(cb.message, s.link_processing_audio, stop_dl))
     try:
         result = await download_url(url, action="audio")
     except BotApiError as e:
+        stop_dl.set(); anim_dl.cancel()
         err = str(e)
         if "too_large" in err:
             await cb.message.edit_text(s.link_error_too_large, parse_mode="HTML")
@@ -504,20 +615,24 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
         else:
             await cb.message.edit_text(s.link_error, parse_mode="HTML")
         return
+    finally:
+        stop_dl.set(); anim_dl.cancel()
 
     filepath = _results_dir() / result.file_id
     if not filepath.exists():
         await cb.message.edit_text(s.link_error, parse_mode="HTML")
         return
 
-    # Transcribe
     model_dir = Path(settings.data_dir) / "models" / "whisper"
     work_dir = _tmp_dir() / "stt"
 
+    # Transcribe with animated progress
+    stop_stt = asyncio.Event()
     try:
         await cb.message.edit_text(s.stt_recognizing)
     except Exception:
         pass
+    anim_stt = asyncio.create_task(_progress_anim(cb.message, s.stt_recognizing, stop_stt))
 
     try:
         async with STT_SEM:
@@ -528,11 +643,12 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
                 timeout_sec=180,
             )
     except SttError as e:
+        stop_stt.set(); anim_stt.cancel()
         msg = s.stt_timeout if "timeout" in str(e) else s.stt_empty
-        await cb.message.edit_text(msg)
+        await cb.message.edit_text(msg, reply_markup=stt_result_kb("lnk:dismiss", lang))
         return
     finally:
-        # Clean up the downloaded audio
+        stop_stt.set(); anim_stt.cancel()
         try:
             filepath.unlink(missing_ok=True)
         except Exception:
@@ -540,17 +656,15 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
 
     text = (res.text or "").strip()
     if not text:
-        await cb.message.edit_text(s.stt_empty)
+        await cb.message.edit_text(s.stt_empty, reply_markup=stt_result_kb("lnk:dismiss", lang))
         return
 
-    try:
-        await cb.message.delete()
-    except Exception:
-        pass
-
-    full = f"{s.stt_done}\n\n{text}"
+    full = f"📝 {s.stt_done}\n\n{text}"
     if len(full) <= TG_TEXT_LIMIT:
-        await cb.message.answer(full)
+        try:
+            await cb.message.edit_text(full, reply_markup=stt_result_kb("lnk:dismiss", lang), parse_mode=None)
+        except Exception:
+            await cb.message.answer(full)
     else:
         work_dir.mkdir(parents=True, exist_ok=True)
         out_txt = work_dir / "result.txt"
@@ -559,6 +673,10 @@ async def _handle_link_stt(cb: CallbackQuery, url: str, lang: str) -> None:
             document=FSInputFile(str(out_txt)),
             caption=s.stt_done,
         )
+        try:
+            await cb.message.edit_text(s.link_done, reply_markup=stt_result_kb("lnk:dismiss", lang))
+        except Exception:
+            pass
 
 
 # ── File handler ───────────────────────────────────────────────────────────────
@@ -571,19 +689,18 @@ async def on_file(message: Message) -> None:
 
     size = _media_file_size(message)
     if size and size > TG_SAFE_MAX_BYTES:
-        await message.bot.send_message(
-            chat_id=message.chat.id,
-            text=s.file_too_big,
-            parse_mode="HTML",
-        )
+        await _send_autodelete(message.bot, message.chat.id, s.file_too_big, delay=10)
         return
 
     kind, label = _detect_file_kind(message)
+    file_id, filename = _extract_file_info(message)
 
-    # Store original message so callbacks can download the file without reply_to_message
-    _user_ctx[uid] = {"kind": kind, "orig_msg": message}
+    # Store context — in memory + Redis
+    ctx_data = {"type": "file", "kind": kind, "orig_msg": message, "file_id": file_id, "filename": filename}
+    _user_ctx[uid] = ctx_data
+    asyncio.create_task(ctx_store.ctx_set(uid, ctx_data))
 
-    # Delete previous smart-router panel to keep chat clean
+    # Delete previous panel
     if uid in _panel_ref:
         old_chat, old_msg = _panel_ref.pop(uid)
         await delete_message_safe(message.bot, old_chat, old_msg)
@@ -607,6 +724,7 @@ async def on_file_action(cb: CallbackQuery) -> None:
     if action == "dismiss":
         _panel_ref.pop(uid, None)
         _user_ctx.pop(uid, None)
+        asyncio.create_task(ctx_store.ctx_del(uid))
         try:
             await cb.message.delete()
         except Exception:
@@ -623,10 +741,24 @@ async def on_file_action(cb: CallbackQuery) -> None:
         await cb.answer()
         return
 
-    # Retrieve original file message from in-memory context
-    ctx = _user_ctx.get(uid, {})
-    orig: Message | None = ctx.get("orig_msg")
-    if not orig:
+    # Double-tap protection
+    if uid in _processing:
+        is_en = (cb.from_user.language_code or "").startswith("en")
+        await cb.answer(
+            "Already processing, please wait…" if is_en else "Уже обрабатываю, подожди…",
+            show_alert=True,
+        )
+        return
+
+    # Retrieve file context — memory first, then Redis fallback
+    ctx = _user_ctx.get(uid)
+    if not ctx or ctx.get("type") != "file":
+        redis_ctx = await ctx_store.ctx_get(uid)
+        if redis_ctx and redis_ctx.get("type") == "file":
+            ctx = redis_ctx
+            _user_ctx[uid] = ctx
+
+    if not ctx or (not ctx.get("orig_msg") and not ctx.get("file_id")):
         await cb.answer(
             "Original file not found — please send it again."
             if (cb.from_user.language_code or "").startswith("en")
@@ -641,7 +773,8 @@ async def on_file_action(cb: CallbackQuery) -> None:
     if not await _check_and_consume_quota_cb(cb, lang):
         return
 
-    kind, _ = _detect_file_kind(orig)
+    orig = ctx.get("orig_msg")
+    kind = ctx.get("kind") or (orig and _detect_file_kind(orig)[0]) or "document_other"
 
     try:
         await cb.message.edit_text(s.file_processing, reply_markup=None)
@@ -649,18 +782,22 @@ async def on_file_action(cb: CallbackQuery) -> None:
         pass
     await cb.answer()
 
-    if action == "stt":
-        await _handle_file_stt(cb, orig, kind, lang)
-    elif action == "ext_aud":
-        await _handle_file_extract_audio(cb, orig, kind, lang)
-    elif action.startswith("conv:"):
-        fmt = action.split(":", 1)[1]
-        await _handle_file_convert(cb, orig, kind, fmt, lang)
+    _processing.add(uid)
+    try:
+        if action == "stt":
+            await _handle_file_stt(cb, ctx, kind, lang)
+        elif action == "ext_aud":
+            await _handle_file_extract_audio(cb, ctx, kind, lang)
+        elif action.startswith("conv:"):
+            fmt = action.split(":", 1)[1]
+            await _handle_file_convert(cb, ctx, kind, fmt, lang)
+    finally:
+        _processing.discard(uid)
 
 
 async def _handle_file_stt(
     cb: CallbackQuery,
-    orig: Message,
+    ctx: dict,
     kind: FileKind,
     lang: str,
 ) -> None:
@@ -679,34 +816,40 @@ async def _handle_file_stt(
     in_path = None
 
     try:
+        stop_dl = asyncio.Event()
+        anim_dl = asyncio.create_task(_progress_anim(cb.message, s.stt_preparing, stop_dl))
         try:
-            await cb.message.edit_text(s.stt_preparing)
+            in_path = await _download_from_ctx(cb.bot, ctx, dst_dir=tmp_in)
+        finally:
+            stop_dl.set(); anim_dl.cancel()
+
+        stop_stt = asyncio.Event()
+        try:
+            await cb.message.edit_text(s.stt_recognizing)
         except Exception:
             pass
+        anim_stt = asyncio.create_task(_progress_anim(cb.message, s.stt_recognizing, stop_stt))
 
-        in_path = await tg_download_to_path(cb.bot, orig, dst_dir=tmp_in)
-
-        async with STT_SEM:
-            try:
-                await cb.message.edit_text(s.stt_recognizing)
-            except Exception:
-                pass
-            res = await transcribe_to_text(
-                in_path,
-                workdir=base / "work",
-                model_dir=model_dir,
-                timeout_sec=180,
-            )
+        try:
+            async with STT_SEM:
+                res = await transcribe_to_text(
+                    in_path,
+                    workdir=base / "work",
+                    model_dir=model_dir,
+                    timeout_sec=180,
+                )
+        finally:
+            stop_stt.set(); anim_stt.cancel()
 
         text = (res.text or "").strip()
         if not text:
-            await cb.message.edit_text(s.stt_empty)
+            await cb.message.edit_text(s.stt_empty, reply_markup=stt_result_kb("fl:dismiss", lang))
             return
 
-        full = f"{s.stt_done}\n\n{text}"
+        full = f"📝 {s.stt_done}\n\n{text}"
         if len(full) <= TG_TEXT_LIMIT:
             try:
-                await cb.message.edit_text(full, reply_markup=None, parse_mode=None)
+                await cb.message.edit_text(full, reply_markup=stt_result_kb("fl:dismiss", lang), parse_mode=None)
             except Exception:
                 await cb.message.answer(full)
         else:
@@ -719,7 +862,7 @@ async def _handle_file_stt(
                 caption=s.stt_done,
             )
             try:
-                await cb.message.edit_text(s.file_done, reply_markup=None)
+                await cb.message.edit_text(s.file_done, reply_markup=stt_result_kb("fl:dismiss", lang))
             except Exception:
                 pass
 
@@ -746,7 +889,7 @@ async def _handle_file_stt(
 
 async def _handle_file_extract_audio(
     cb: CallbackQuery,
-    orig: Message,
+    ctx: dict,
     kind: FileKind,
     lang: str,
 ) -> None:
@@ -757,8 +900,13 @@ async def _handle_file_extract_audio(
     res = None
 
     try:
-        in_path = await tg_download_to_path(cb.bot, orig, dst_dir=tmp_in)
-        res = await convert_audio_from_file(in_path, fmt="mp3", workdir=base / "work")
+        stop = asyncio.Event()
+        anim = asyncio.create_task(_progress_anim(cb.message, s.file_processing, stop))
+        try:
+            in_path = await _download_from_ctx(cb.bot, ctx, dst_dir=tmp_in)
+            res = await convert_audio_from_file(in_path, fmt="mp3", workdir=base / "work")
+        finally:
+            stop.set(); anim.cancel()
 
         await cb.message.answer_document(
             document=FSInputFile(str(res.out_path)),
@@ -794,14 +942,13 @@ async def _handle_file_extract_audio(
 
 async def _handle_file_convert(
     cb: CallbackQuery,
-    orig: Message,
+    ctx: dict,
     kind: FileKind,
     fmt: str,
     lang: str,
 ) -> None:
     s = t(lang)
-    allowed = {"mp3", "m4a", "wav", "opus"}
-    if fmt not in allowed:
+    if fmt not in {"mp3", "m4a", "wav", "opus"}:
         fmt = "mp3"
 
     base = _tmp_dir() / "audio"
@@ -810,8 +957,13 @@ async def _handle_file_convert(
     res = None
 
     try:
-        in_path = await tg_download_to_path(cb.bot, orig, dst_dir=tmp_in)
-        res = await convert_audio_from_file(in_path, fmt=fmt, workdir=base / "work")
+        stop = asyncio.Event()
+        anim = asyncio.create_task(_progress_anim(cb.message, s.file_processing, stop))
+        try:
+            in_path = await _download_from_ctx(cb.bot, ctx, dst_dir=tmp_in)
+            res = await convert_audio_from_file(in_path, fmt=fmt, workdir=base / "work")
+        finally:
+            stop.set(); anim.cancel()
 
         await cb.message.answer_document(
             document=FSInputFile(str(res.out_path)),
