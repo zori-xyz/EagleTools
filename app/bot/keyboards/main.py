@@ -10,10 +10,12 @@ def main_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     s = t(lang)
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=s.btn_tools, callback_data="screen:tools")],
             [
+                InlineKeyboardButton(text="⚡️ Premium", callback_data="premium:open"),
                 InlineKeyboardButton(text=s.btn_settings, callback_data="screen:settings"),
-                InlineKeyboardButton(text=s.btn_profile, callback_data="screen:profile"),
+            ],
+            [
+                InlineKeyboardButton(text=s.btn_invite_friend, callback_data="screen:referral"),
             ],
         ]
     )

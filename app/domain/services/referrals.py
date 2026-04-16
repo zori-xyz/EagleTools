@@ -4,7 +4,7 @@ import base64
 import hashlib
 import hmac
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone  # timezone already imported
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +61,13 @@ def _is_premium_active(u: User) -> bool:
         return False
     if u.premium_until is None:
         return True
-    return u.premium_until > _now()
+    # FIX #5: PostgreSQL may return naive datetimes even for timezone=True columns
+    # depending on asyncpg/SQLAlchemy configuration. Normalize to aware UTC before
+    # comparing, same pattern as quota.py._as_aware_utc().
+    pu = u.premium_until
+    if pu.tzinfo is None:
+        pu = pu.replace(tzinfo=timezone.utc)
+    return pu > _now()
 
 
 async def _get_or_create_user_by_tg(session: AsyncSession, tg_id: int) -> User:

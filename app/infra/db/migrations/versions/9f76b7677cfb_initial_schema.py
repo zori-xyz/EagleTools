@@ -55,6 +55,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_eagle_daily_usage_day'), 'daily_usage', ['day'], unique=False, schema='eagle')
     op.create_index(op.f('ix_eagle_daily_usage_user_id'), 'daily_usage', ['user_id'], unique=False, schema='eagle')
+    # FIX #2: quota.py uses ON CONFLICT (user_id, day) which requires a UNIQUE constraint.
+    op.create_unique_constraint(
+        'uq_daily_usage_user_day', 'daily_usage', ['user_id', 'day'], schema='eagle'
+    )
     op.create_table('jobs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -114,6 +118,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_eagle_jobs_status'), table_name='jobs', schema='eagle')
     op.drop_index(op.f('ix_eagle_jobs_kind'), table_name='jobs', schema='eagle')
     op.drop_table('jobs', schema='eagle')
+    op.drop_constraint('uq_daily_usage_user_day', 'daily_usage', schema='eagle', type_='unique')
     op.drop_index(op.f('ix_eagle_daily_usage_user_id'), table_name='daily_usage', schema='eagle')
     op.drop_index(op.f('ix_eagle_daily_usage_day'), table_name='daily_usage', schema='eagle')
     op.drop_table('daily_usage', schema='eagle')

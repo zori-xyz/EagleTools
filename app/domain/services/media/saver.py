@@ -272,32 +272,40 @@ async def save_media_from_url(
     _ensure_dir(workdir)
     _ensure_dir(out_dir)
 
+    # FIX #1: create a dedicated session-level tmp dir so cleanup_save_result
+    # deletes only this session's temp files, not the entire workdir (data/tmp/).
+    session_tmp = Path(tempfile.mkdtemp(prefix="save_", dir=str(workdir)))
+
+    ytdlp_err: SaveError | None = None
     try:
-        p, meta = await _save_with_ytdlp(url, workdir=workdir, out_dir=out_dir)
+        p, meta = await _save_with_ytdlp(url, workdir=session_tmp, out_dir=out_dir)
         return SaveResult(
             file_id=p.name,
             filename=p.name,
             filepath=str(p),
-            tmp_dir=workdir,
+            tmp_dir=session_tmp,
             title=meta.get("title"),
             source_url=url,
             extractor=meta.get("extractor"),
             size_bytes=meta.get("size_bytes"),
         )
     except SaveError as e:
-        last_err = e
+        ytdlp_err = e
 
     try:
-        p2, meta2 = await _save_direct_http(url, workdir=workdir, out_dir=out_dir, timeout_sec=timeout_sec)
+        p2, meta2 = await _save_direct_http(url, workdir=session_tmp, out_dir=out_dir, timeout_sec=timeout_sec)
         return SaveResult(
             file_id=p2.name,
             filename=p2.name,
             filepath=str(p2),
-            tmp_dir=workdir,
+            tmp_dir=session_tmp,
             title=meta2.get("title"),
             source_url=url,
             extractor=meta2.get("extractor"),
             size_bytes=meta2.get("size_bytes"),
         )
-    except SaveError:
-        raise last_err
+    except SaveError as http_err:
+        # FIX #14: raise the HTTP error (more informative for direct links),
+        # fall back to ytdlp_err only if http gave a generic failure.
+        shutil.rmtree(session_tmp, ignore_errors=True)
+        raise http_err if str(http_err) not in ("save_failed",) else ytdlp_err

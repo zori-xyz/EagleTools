@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 import tempfile
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,8 +49,9 @@ def _ffmpeg_args_for(fmt: str) -> list[str]:
     if fmt == "mp3":
         return ["-vn", "-acodec", "libmp3lame", "-b:a", "192k"]
     if fmt == "m4a":
-        # m4a контейнер + aac кодек
-        return ["-vn", "-acodec", "aac", "-b:a", "192k", "-f", "mp4"]
+        # FIX #8: use -f ipod (not -f mp4) for .m4a — some mobile players
+        # refuse to play .m4a files wrapped in the generic MP4 container.
+        return ["-vn", "-acodec", "aac", "-b:a", "192k", "-f", "ipod"]
     if fmt == "wav":
         return ["-vn", "-acodec", "pcm_s16le"]
     if fmt == "opus":
@@ -111,7 +113,10 @@ async def tg_download_to_path(bot: Bot, message: Message, *, dst_dir: Path) -> P
     if not file_id:
         raise ConvertError("unsupported_media")
 
-    safe_name = _sanitize_filename(filename)
+    # FIX #15: prepend a unique prefix so concurrent downloads from different
+    # users into the same dst_dir don't overwrite each other's files
+    # (e.g. two simultaneous voice.ogg downloads).
+    safe_name = f"{uuid.uuid4().hex[:8]}_{_sanitize_filename(filename)}"
     path = dst_dir / safe_name
 
     try:

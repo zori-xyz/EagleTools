@@ -18,11 +18,10 @@ from app.infra.db.init_db import init_db
 
 
 class DeleteCommandMiddleware(BaseMiddleware):
-    """Удаляет сообщение-команду юзера после обработки."""
+    """Auto-delete user command messages after they're handled."""
 
     async def __call__(self, handler, event: Update, data: dict):
         result = await handler(event, data)
-        # После обработки удаляем команду если это сообщение с командой
         msg: Message | None = getattr(event, "message", None)
         if msg and msg.text and msg.text.startswith("/"):
             try:
@@ -49,9 +48,7 @@ async def main() -> None:
     bot = Bot(token=settings.effective_bot_token)
     dp = Dispatcher()
 
-    # Rate limiting — 20 запросов в минуту на пользователя
     dp.message.outer_middleware(RateLimitMiddleware(max_calls=20, window_sec=60))
-    # Middleware удаляет все команды автоматически
     dp.update.outer_middleware(DeleteCommandMiddleware())
 
     dp.include_router(build_router())
@@ -59,16 +56,13 @@ async def main() -> None:
     try:
         await bot.delete_webhook(drop_pending_updates=True)
 
-        await bot.set_my_commands(
-            [
-                BotCommand(command="start", description="Запуск"),
-                BotCommand(command="menu", description="Открыть меню"),
-                BotCommand(command="tools", description="Инструменты"),
-                BotCommand(command="premium", description="⚡️ Получить Premium"),
-                BotCommand(command="settings", description="Настройки"),
-                BotCommand(command="profile", description="Профиль"),
-            ]
-        )
+        await bot.set_my_commands([
+            BotCommand(command="start",    description="Главное меню"),
+            BotCommand(command="menu",     description="Главное меню"),
+            BotCommand(command="premium",  description="⚡️ Получить Premium"),
+            BotCommand(command="settings", description="Настройки"),
+            BotCommand(command="quota",    description="📊 Мой лимит загрузок"),
+        ])
 
         print("✅ Polling started")
         await dp.start_polling(bot)

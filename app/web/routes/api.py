@@ -332,7 +332,9 @@ async def api_file(file_id: str, token: str = Query(default="")):
         media_type="application/octet-stream",
         filename=safe_name,
         headers={
-            "Content-Disposition": "attachment; filename="" + safe_name + """,
+            # FIX #9: wrap filename in quotes per RFC 6266 — required when
+            # the filename contains spaces (e.g. "EagleTools audio My Track.mp3").
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
             "Cache-Control": "private, max-age=3600",
         },
     )

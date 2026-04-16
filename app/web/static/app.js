@@ -79,6 +79,68 @@
     return t("err_unknown") || "Неизвестная ошибка";
   }
 
+  // ---------- Haptic Feedback ----------
+  function haptic(type = "light") {
+    try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.(type); } catch {}
+  }
+  function hapticNotify(type = "success") {
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.(type); } catch {}
+  }
+
+  // ---------- Paste button handler ----------
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-role='paste']");
+    if (!btn) return;
+    const wrap = btn.closest(".toolcard__input-wrap");
+    if (!wrap) return;
+    const inp = wrap.querySelector("[data-role='url']");
+    if (!inp) return;
+    haptic("light");
+
+    function applyPaste(text) {
+      const v = (text || "").trim();
+      if (v.startsWith("http://") || v.startsWith("https://")) {
+        inp.value = v;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        hapticNotify("success");
+      } else if (v) {
+        /* paste whatever the user has — they may want to paste partial text */
+        inp.value = v;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        hapticNotify("success");
+      } else {
+        toast(t("err_bad_url") || "Неверная ссылка", "err", "⚠️");
+      }
+    }
+
+    /* Telegram WebApp clipboard API works in iOS WebView where
+       navigator.clipboard.readText() is blocked (requires system permission) */
+    if (window.Telegram?.WebApp?.readTextFromClipboard) {
+      window.Telegram.WebApp.readTextFromClipboard(txt => applyPaste(txt));
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      applyPaste(text);
+    } catch {
+      /* Last resort — focus input so user can long-press → Paste */
+      inp.focus();
+      inp.select();
+      toast(t("btn_paste") || "Вставить", "ok", "📋");
+    }
+  });
+
+  // ---------- Drag-and-drop glow on converter drop zone ----------
+  (() => {
+    const drop = document.getElementById("convDrop");
+    if (!drop) return;
+    let dragCount = 0;
+    document.addEventListener("dragenter", () => { dragCount++; drop.classList.add("is-dragover"); });
+    document.addEventListener("dragleave", () => { dragCount = Math.max(0, dragCount - 1); if (dragCount === 0) drop.classList.remove("is-dragover"); });
+    document.addEventListener("drop", () => { dragCount = 0; drop.classList.remove("is-dragover"); });
+  })();
+
   // ---------- Open / Share ----------
   function openFile(url) {
     if (!url) return;
@@ -367,6 +429,7 @@
       setProgress(card, 0);
       setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⛔</span><span class="result-file__name muted">${escapeHtml(prettyErr(r))}</span></div></div>`);
       toast(prettyErr(r), "err", "⛔");
+      hapticNotify("error");
       return;
     }
 
@@ -401,19 +464,20 @@
             <div class="result-file__actions">
               <button class="btn btn--primary btn--sm" type="button"
                 data-action="open-file" data-url="${escapeHtml(out.downloadUrl)}" style="flex:1">
-                <img src="/static/icons/dl.svg" style="width:14px;height:14px;filter:brightness(10);" />
+                <img src="/static/icons/dl.svg" class="icon" />
                 ${dlLabel}
               </button>
               <button class="btn btn--secondary btn--sm" type="button"
                 data-action="share-file" data-url="${escapeHtml(out.downloadUrl)}"
                 data-title="${escapeHtml(out.displayName)}">
-                <img src="/static/icons/share-2.svg" style="width:14px;height:14px;" />
+                <img src="/static/icons/share-2.svg" class="icon" />
                 ${shareLabel}
               </button>
             </div>
           </div>
         `);
         toast(t("done") || "Готово!", "ok", "✅");
+        hapticNotify("success");
       }, 300);
       return;
     }
@@ -422,6 +486,7 @@
     setProgressText(card, "");
     setResult(card, `<div class="result-file"><div class="result-file__top"><span class="result-file__icon">⏳</span><span class="result-file__name muted">${escapeHtml(t("queued") || "В очереди")}</span></div></div>`);
     toast(t("job_created") || "Задание создано", "ok", "✅");
+    hapticNotify("success");
   }
 
   function bindToolRuns() {
@@ -491,24 +556,14 @@
       : status === "running"  ? (t("processing") || "ОБРАБАТЫВАЮ")
       : (t("queued") || "В ОЧЕРЕДИ");
 
-    const dlBtn = `<button class="ri-btn ri-btn--dl" type="button" data-action="recent-dl"
-      data-url="${escapeHtml(downloadUrl)}" ${canDl ? "" : "disabled"} aria-label="Download">
-      <svg class="ri-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
-    </button>`;
-
-    const delBtn = `<button class="ri-btn ri-btn--del" type="button" data-action="recent-del" aria-label="Delete">
-      <svg class="ri-btn-icon ri-btn-icon--del" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-    </button>`;
-
-    const playBtn = canDl ? `<button class="ri-btn ri-btn--play" type="button" data-action="recent-play"
-      data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}"
-      data-audio="${isAudio}" data-image="${isImage}" aria-label="Play">
-      <svg viewBox="0 0 24 24" fill="#ffffff" width="14" height="14"><path d="M8 5v14l11-7z"/></svg>
-    </button>` : "";
+    /* Tap-to-open datasets on the row inner (long press = action sheet) */
+    const tapAttrs = canDl
+      ? `data-action="recent-play" data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}" data-audio="${isAudio}" data-image="${isImage}"`
+      : "";
 
     return `
       <div class="recentitem ri ${typeClass}" data-id="${escapeHtml(id)}">
-        <div class="ri-inner">
+        <div class="ri-inner" ${tapAttrs}>
           <div class="ri-icon">${icon}</div>
           <div class="ri-info">
             <div class="ri-name">${escapeHtml(title)}</div>
@@ -519,8 +574,8 @@
               ${when ? `<span class="ri-date">${escapeHtml(when)}</span>` : ""}
             </div>
           </div>
-          <div class="ri-actions">
-            ${playBtn}${dlBtn}${delBtn}
+          <div class="ri-actions__hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="opacity:.3"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
           </div>
         </div>
       </div>
@@ -597,17 +652,31 @@
     }
   }
 
+  function _hideSkeleton() {
+    const sk = document.getElementById("recentSkeleton");
+    if (sk) sk.style.display = "none";
+  }
+
   function renderRecents(items) {
     const list = $("#recentList"); if (!list) return;
+    _hideSkeleton();
     _recentItems = items || [];
+
+    /* Preserve onboarding demo row across re-renders */
+    const demoEl = document.getElementById("et-demo-file");
+
     if (!_recentItems.length) {
-      list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
-      return;
+      renderEmptyRecent(list);
+    } else {
+      const sortSel = document.getElementById("recentSort");
+      const sortVal = sortSel ? sortSel.value : "date_desc";
+      const sorted  = sortItems(_recentItems, sortVal);
+      list.innerHTML = sorted.map(recentRow).join("");
     }
-    const sortSel = document.getElementById("recentSort");
-    const sortVal = sortSel ? sortSel.value : "date_desc";
-    const sorted  = sortItems(_recentItems, sortVal);
-    list.innerHTML = sorted.map(recentRow).join("");
+
+    if (demoEl && !list.contains(demoEl)) {
+      list.insertBefore(demoEl, list.firstChild);
+    }
   }
 
   async function loadRecents(silent = true) {
@@ -626,6 +695,9 @@
     if (action === "open-profile") return setTab("profile");
     if (action === "open-settings") { openSettings(); return; }
     if (action === "close-settings") { closeSettings(); return; }
+    if (action === "switch-to-tools") { setTab("tools"); return; }
+    if (action === "close-action-sheet") { closeActionSheet(); return; }
+    if (action.startsWith("as-")) { await handleActionSheetAction(action); return; }
 
     if (action === "open-upgrade") {
       openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=premium`);
@@ -643,8 +715,8 @@
       window.open("https://telegra.ph/Politika-konfidencialnosti---EagleTools-03-11-2", "_blank"); return;
     }
 
-    if (action === "open-file") { openFile(el.dataset.url || ""); return; }
-    if (action === "share-file") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
+    if (action === "open-file") { haptic("medium"); openFile(el.dataset.url || ""); return; }
+    if (action === "share-file") { haptic("light"); await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "lang") {
       const v = el.dataset.value;
@@ -693,7 +765,7 @@
       return;
     }
 
-    if (action === "recent-dl") { openFile(el.dataset.url || ""); return; }
+    if (action === "recent-dl") { haptic("medium"); openFile(el.dataset.url || ""); return; }
     if (action === "recent-share") {
       const shareUrl = el.dataset.url || "";
       const shareTitle = el.dataset.title || "";
@@ -733,6 +805,262 @@
     }, true);
   }
 
+  // ══════════════════════════════════════════════════════════════
+  // ACTION SHEET
+  // ══════════════════════════════════════════════════════════════
+  let _asItem = null;
+  const _asEl  = () => document.getElementById("actionSheet");
+  const _asTitle = () => document.getElementById("actionSheetTitle");
+  const _asItems = () => document.getElementById("actionSheetItems");
+
+  function _asIcon(path) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  }
+
+  function openActionSheet(item) {
+    if (document.getElementById("et-overlay")) return; // blocked during onboarding
+    const sheet = _asEl(); if (!sheet) return;
+    haptic("light");
+    _asItem = item;
+
+    const name  = (item.title || item.file_id || "").split("/").pop();
+    const canDl = !!(item.download_url);
+    const ext   = (item.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
+    const isImage = ["jpg","jpeg","png","webp","gif","bmp"].includes(ext);
+
+    _asTitle().textContent = name || t("action_file") || "Файл";
+
+    const rows = [];
+    if (canDl) {
+      rows.push({ label: t("action_open")  || "Открыть",          icon: _asIcon('<circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/>'), action:"as-play",  danger:false });
+      rows.push({ label: t("action_dl")    || "Скачать",          icon: _asIcon('<path d="M12 15V3m0 12-4-4m4 4 4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>'), action:"as-dl", danger:false });
+      rows.push({ label: t("action_share") || "Поделиться",       icon: _asIcon('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>'), action:"as-share", danger:false });
+      rows.push({ label: t("action_copy")  || "Копировать ссылку",icon: _asIcon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'), action:"as-copy", danger:false });
+      rows.push("sep");
+    }
+    rows.push({ label: t("action_del") || "Удалить", icon: _asIcon('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>'), action:"as-del", danger:true });
+
+    _asItems().innerHTML = rows.map(r => {
+      if (r === "sep") return `<div class="action-sheet__sep"></div>`;
+      return `<button class="action-sheet__item${r.danger ? " action-sheet__item--danger" : ""}" type="button" data-action="${r.action}">
+        <span class="action-sheet__item-icon">${r.icon}</span>
+        <span class="action-sheet__item-label">${escapeHtml(r.label)}</span>
+      </button>`;
+    }).join("");
+
+    sheet.setAttribute("aria-hidden","false");
+    requestAnimationFrame(() => sheet.classList.add("is-open"));
+  }
+
+  function closeActionSheet() {
+    const sheet = _asEl(); if (!sheet) return;
+    sheet.classList.remove("is-open");
+    setTimeout(() => { sheet.setAttribute("aria-hidden","true"); _asItem = null; }, 320);
+  }
+
+  async function handleActionSheetAction(action) {
+    const item = _asItem;
+    closeActionSheet();
+    if (!item) return;
+    await new Promise(r => setTimeout(r, 60));
+
+    const url   = item.download_url || "";
+    const title = item.title || item.file_id || "";
+    const ext   = (item.file_id || "").split(".").pop()?.toLowerCase() || "";
+    const isAudio = ["mp3","wav","ogg","flac","m4a","aac","opus"].includes(ext);
+    const isImage = ["jpg","jpeg","png","webp","gif","bmp"].includes(ext);
+
+    if (action === "as-play") {
+      if (isImage) { openPlayer(url, title, false, true); return; }
+      if (url) openPlayer(url, title, isAudio);
+    } else if (action === "as-dl") {
+      haptic("medium"); openFile(url);
+    } else if (action === "as-share") {
+      if (url) {
+        const full = url.startsWith("http") ? url : window.location.origin + url;
+        try { if (navigator.share) { await navigator.share({ title, url: full }); return; } } catch {}
+        try { await navigator.clipboard.writeText(full); toast(t("link_copied") || "Ссылка скопирована", "ok", "📋"); } catch {}
+      }
+    } else if (action === "as-copy") {
+      if (url) {
+        const full = url.startsWith("http") ? url : window.location.origin + url;
+        try { await navigator.clipboard.writeText(full); toast(t("copied") || "Скопировано!", "ok", "✅"); haptic("light"); } catch {}
+      }
+    } else if (action === "as-del") {
+      if (item.id === "demo") return; // onboarding demo
+      const row = document.querySelector(`.recentitem[data-id="${CSS.escape(String(item.id))}"]`);
+      if (!row) return;
+      deleteRow(row);
+      const r = await apiDelete(`/api/recent/${encodeURIComponent(item.id)}`);
+      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
+      lastHash = ""; loadRecents(true); hapticNotify("success");
+    }
+  }
+
+  function _initActionSheet() {
+    const bd = document.getElementById("actionSheetBackdrop");
+    if (bd) bd.addEventListener("click", closeActionSheet);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // LONG PRESS → ACTION SHEET
+  // ══════════════════════════════════════════════════════════════
+  let _lpFired = false; // blocks click after a long press fires
+
+  function bindLongPress() {
+    let _lpTimer = null, _lpRow = null, _lpMoved = false;
+
+    document.addEventListener("touchstart", e => {
+      const row = e.target.closest(".recentitem[data-id]");
+      if (!row) return;
+      _lpRow = row; _lpMoved = false; _lpFired = false;
+      _lpTimer = setTimeout(() => {
+        if (_lpMoved) return;
+        _lpFired = true;
+        row.classList.add("is-pressing");
+        haptic("medium");
+        setTimeout(() => {
+          row.classList.remove("is-pressing");
+          const id    = row.dataset.id;
+          const item  = (id === "demo") ? { id:"demo", title:"EagleTools_demo.mp4", download_url:"#", file_id:"demo.mp4" }
+                                        : _recentItems.find(x => String(x.id) === String(id));
+          if (item) openActionSheet(item);
+        }, 180);
+      }, 380);
+    }, { passive: true });
+
+    document.addEventListener("touchmove", () => {
+      _lpMoved = true;
+      clearTimeout(_lpTimer);
+      if (_lpRow) { _lpRow.classList.remove("is-pressing"); _lpRow = null; }
+    }, { passive: true });
+
+    document.addEventListener("touchend", () => {
+      clearTimeout(_lpTimer);
+      if (_lpRow) { _lpRow.classList.remove("is-pressing"); _lpRow = null; }
+    }, { passive: true });
+
+    /* Suppress click that fires right after a long press */
+    document.addEventListener("click", e => {
+      if (_lpFired) { _lpFired = false; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // SWIPE TO DELETE
+  // ══════════════════════════════════════════════════════════════
+  function _addSwipeBg(row) {
+    if (row.querySelector(".ri-swipe-bg")) return;
+    const bg = document.createElement("div");
+    bg.className = "ri-swipe-bg";
+    bg.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span>${escapeHtml(t("action_del") || "Удалить")}</span>`;
+    row.style.position = "relative";
+    row.insertBefore(bg, row.firstChild);
+  }
+
+  function bindSwipeRow(row) {
+    if (row.dataset.swipeBound) return;
+    row.dataset.swipeBound = "1";
+    _addSwipeBg(row);
+
+    const inner = row.querySelector(".ri-inner");
+    const bg    = row.querySelector(".ri-swipe-bg");
+    if (!inner) return;
+
+    let startX, startY, curX = 0, tracking = false, axisLocked = false, isH = false;
+    const THRESHOLD = 88;
+
+    row.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true; axisLocked = false; isH = false; curX = 0;
+      inner.style.transition = "none";
+    }, { passive: true });
+
+    row.addEventListener("touchmove", e => {
+      if (!tracking) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!axisLocked) {
+        axisLocked = true;
+        isH = Math.abs(dx) > Math.abs(dy) + 4;
+      }
+      if (!isH) return;
+      e.preventDefault();
+      curX = Math.min(0, dx);
+      inner.style.transform = `translateX(${curX}px)`;
+      if (bg) bg.style.opacity = Math.min(1, -curX / THRESHOLD);
+    }, { passive: false });
+
+    row.addEventListener("touchend", async () => {
+      if (!tracking || !isH) { tracking = false; return; }
+      tracking = false;
+      inner.style.transition = "transform .25s cubic-bezier(.4,0,.2,1)";
+      if (bg) bg.style.transition = "opacity .25s";
+
+      if (curX < -THRESHOLD) {
+        inner.style.transform = `translateX(-${row.offsetWidth}px)`;
+        if (bg) bg.style.opacity = "1";
+        const id = row.dataset.id;
+        if (id === "demo") { setTimeout(() => row.remove(), 260); return; }
+        hapticNotify("success");
+        setTimeout(async () => {
+          deleteRow(row);
+          const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
+          if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); }
+          else { lastHash = ""; loadRecents(true); }
+        }, 250);
+      } else {
+        inner.style.transform = "translateX(0)";
+        if (bg) bg.style.opacity = "0";
+        curX = 0;
+      }
+    }, { passive: true });
+  }
+
+  function bindSwipeToDelete() {
+    // delegated: bind new rows as they appear
+    const observer = new MutationObserver(() => {
+      document.querySelectorAll(".recentitem[data-id]").forEach(bindSwipeRow);
+    });
+    const list = document.getElementById("recentList");
+    if (list) observer.observe(list, { childList: true, subtree: false });
+    document.querySelectorAll(".recentitem[data-id]").forEach(bindSwipeRow);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // EMPTY STATE
+  // ══════════════════════════════════════════════════════════════
+  function renderEmptyRecent(list) {
+    list.innerHTML = `
+      <div class="recent-empty">
+        <div class="recent-empty__icon">🦅</div>
+        <div class="recent-empty__title">${escapeHtml(t("recent_empty_title") || "Пока пусто")}</div>
+        <div class="recent-empty__sub">${escapeHtml(t("recent_empty_sub") || "Скачай видео или конвертируй файл — он появится здесь")}</div>
+        <button class="btn btn--primary" type="button" data-action="switch-to-tools">${escapeHtml(t("recent_go_tools") || "Перейти к инструментам")}</button>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // HELP BADGE
+  // ══════════════════════════════════════════════════════════════
+  const HELP_BADGE_KEY = "et_help_seen_v1";
+
+  function initHelpBadge() {
+    try { if (localStorage.getItem(HELP_BADGE_KEY)) _hideHelpBadge(); } catch {}
+    const helpBtn = document.getElementById("helpTabBtn");
+    if (helpBtn) helpBtn.addEventListener("click", () => {
+      try { localStorage.setItem(HELP_BADGE_KEY, "1"); } catch {}
+      _hideHelpBadge();
+    }, { once: true });
+  }
+
+  function _hideHelpBadge() {
+    const dot = document.getElementById("helpNewDot");
+    if (dot) dot.remove();
+  }
+
   // ---------- Init ----------
   function init() {
     $$("[data-tool]").forEach(resetCardUi);
@@ -740,7 +1068,17 @@
     bindToolRuns();
     bindGlobalClick();
     initPlayer();
-    document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
+    _initActionSheet();
+    bindLongPress();
+    bindSwipeToDelete();
+    initHelpBadge();
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        const sheet = document.getElementById("actionSheet");
+        if (sheet && sheet.classList.contains("is-open")) { closeActionSheet(); return; }
+        if (isModalOpen()) closeSettings(); else closePlayer();
+      }
+    });
     syncAllSegmini();
     loadRecents(true).catch(() => {});
     /* Сортировка recent */
@@ -750,6 +1088,8 @@
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
     window.__eagleToast = toast;
+    window.__eagleOpenActionSheet = openActionSheet;
+    window.__eagleCloseActionSheet = closeActionSheet;
     requestAnimationFrame(() => {
       const a = $("[data-tab].is-active");
       if (a) syncIndicator(tabsEl, indEl, a);
