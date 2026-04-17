@@ -1528,29 +1528,82 @@ html[data-theme="dark"] .settings-inline__head img.icon { filter: invert(1); opa
 /* ================================================================
    DELETE CONFIRM inline
    ================================================================ */
-.ri--confirming { animation: riShake .3s ease both; }
-.ri-del-confirm {
-  position: absolute; inset: 0; z-index: 5;
-  background: rgba(248,113,113,.13);
-  border-radius: var(--r-md);
-  border: 1px solid rgba(248,113,113,.3);
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  font-size: 13px; font-weight: 600; color: var(--err);
-  animation: panelIn .18s ease both;
+/* Card highlight while confirming delete */
+.recentitem.is-confirming {
+  border-color: rgba(248,113,113,.45) !important;
+  box-shadow: 0 0 0 2px rgba(248,113,113,.18), var(--sh-md);
+  transition: border-color .18s, box-shadow .18s;
 }
-html[data-theme="light"] .ri-del-confirm { background: rgba(185,28,28,.07); border-color: rgba(185,28,28,.2); }
-.ri-del-confirm button {
-  padding: 5px 12px; border-radius: 8px; border: 1px solid var(--err);
-  background: rgba(248,113,113,.18); color: var(--err);
-  font-size: 12px; font-weight: 700; cursor: pointer;
-  font-family: var(--font);
+.recentitem.is-confirming .ri-inner {
+  filter: blur(1.5px);
+  opacity: 0.45;
+  pointer-events: none;
+  transition: filter .18s, opacity .18s;
+}
+
+/* ================================================================
+   DELETE BOTTOM SHEET
+   ================================================================ */
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes sheetDown {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+.del-sheet {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  z-index: 900;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-xl);
+  padding: 20px 20px 18px;
+  box-shadow: 0 -4px 40px rgba(0,0,0,.55), var(--sh-xl);
+  animation: sheetUp .28s cubic-bezier(.34,1.1,.64,1) both;
+}
+html[data-theme="light"] .del-sheet {
+  background: #ffffff;
+  border-color: rgba(0,0,0,.08);
+  box-shadow: 0 -4px 40px rgba(0,0,0,.18), 0 8px 28px rgba(0,0,0,.1);
+}
+.del-sheet.is-closing { animation: sheetDown .2s ease both; }
+.del-sheet__title {
+  font-size: 16px; font-weight: 700;
+  color: var(--err); margin-bottom: 6px;
+  text-align: center;
+}
+.del-sheet__name {
+  font-size: 13px; color: var(--text2);
+  text-align: center; margin-bottom: 18px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.del-sheet__btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.del-sheet__cancel, .del-sheet__ok {
+  padding: 13px 10px; border-radius: var(--r-md);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  border: none; font-family: var(--font);
   -webkit-tap-highlight-color: transparent;
+  transition: opacity .12s, transform .1s;
+  active: transform scale(.97);
 }
-.ri-del-confirm button:hover { background: rgba(248,113,113,.28); }
-.ri-del-confirm .ri-del-cancel {
-  background: transparent; border-color: var(--border2); color: var(--text2);
+.del-sheet__cancel:active, .del-sheet__ok:active { transform: scale(.96); opacity: .85; }
+.del-sheet__cancel {
+  background: var(--surface3);
+  color: var(--text);
 }
-.ri-del-cancel:hover { background: var(--surface3) !important; }
+html[data-theme="light"] .del-sheet__cancel { background: rgba(0,0,0,.06); }
+.del-sheet__ok {
+  background: rgba(248,113,113,.18);
+  border: 1px solid rgba(248,113,113,.35);
+  color: var(--err);
+}
+.del-sheet__ok:hover { background: rgba(248,113,113,.28); }
 
 /* ================================================================
    RECENT: Empty state

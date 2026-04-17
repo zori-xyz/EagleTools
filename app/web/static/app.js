@@ -730,20 +730,31 @@
       if (!row) return;
       const id = row.dataset.id;
       if (!id) return;
-      // Inline confirm — no browser dialog
-      if (row.querySelector(".ri-del-confirm")) return; // already confirming
-      const confirmEl = document.createElement("div");
-      confirmEl.className = "ri-del-confirm";
-      confirmEl.innerHTML = `
-        <span>${t("confirm_delete") || "Удалить?"}</span>
-        <button class="ri-del-ok">${t("deleted") || "Удалить"}</button>
-        <button class="ri-del-cancel">✕</button>`;
-      row.style.position = "relative";
-      row.appendChild(confirmEl);
-      const cleanup = () => confirmEl.remove();
-      const timer = setTimeout(cleanup, 4000);
-      confirmEl.querySelector(".ri-del-cancel").onclick = () => { clearTimeout(timer); cleanup(); };
-      confirmEl.querySelector(".ri-del-ok").onclick = async () => {
+      if (document.querySelector(".del-sheet")) return; // already showing
+
+      const fileName = row.querySelector(".ri-name")?.textContent?.trim() || "";
+      row.classList.add("is-confirming");
+
+      const sheet = document.createElement("div");
+      sheet.className = "del-sheet";
+      sheet.innerHTML = `
+        <div class="del-sheet__title">${t("confirm_delete") || "Удалить файл?"}</div>
+        <div class="del-sheet__name">${escapeHtml(fileName)}</div>
+        <div class="del-sheet__btns">
+          <button class="del-sheet__cancel" type="button">${t("cancel") || "Отмена"}</button>
+          <button class="del-sheet__ok" type="button">${t("deleted") || "Удалить"}</button>
+        </div>`;
+      document.body.appendChild(sheet);
+
+      const cleanup = (closing) => {
+        row.classList.remove("is-confirming");
+        sheet.classList.add("is-closing");
+        setTimeout(() => sheet.remove(), 220);
+      };
+      const timer = setTimeout(cleanup, 5000);
+
+      sheet.querySelector(".del-sheet__cancel").onclick = () => { clearTimeout(timer); cleanup(); };
+      sheet.querySelector(".del-sheet__ok").onclick = async () => {
         clearTimeout(timer); cleanup();
         deleteRow(row);
         const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
