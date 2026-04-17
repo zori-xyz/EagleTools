@@ -78,10 +78,15 @@
       language: "Язык",
       theme: "Тема",
       help_title: "Помощь",
+      tab_home: "Главная",
       tab_tools: "Инструменты",
       tab_recent: "История",
       tab_profile: "Профиль",
       tab_help: "Помощь",
+      smart_drag: "Перетащи файл или вставь ссылку",
+      smart_paste: "— вставить из буфера —",
+      smart_choose: "Что сделать",
+      load_more: "Загрузить ещё",
       links: "Видео",
       // Help - Mini App
       help_miniapp_title: "Как пользоваться Mini App",
@@ -201,10 +206,15 @@
       language: "Language",
       theme: "Theme",
       help_title: "Help",
+      tab_home: "Home",
       tab_tools: "Tools",
       tab_recent: "Recent",
       tab_profile: "Profile",
       tab_help: "Help",
+      smart_drag: "Drop a file or paste a link",
+      smart_paste: "— paste from clipboard —",
+      smart_choose: "What to do",
+      load_more: "Load more",
       links: "Video",
       // Help - Mini App
       help_miniapp_title: "How to use Mini App",
@@ -465,6 +475,9 @@
 
     const upgradeBtn = document.getElementById("upgradePlanBtn");
     if (upgradeBtn) upgradeBtn.style.display = isPremium ? "none" : "";
+
+    /* Expose quota for Smart Input client-side check */
+    window.__eagleQuota = { used, limit: Number(p.daily_limit || 10), isPremium };
 
     setText("profileRefs", String(refs));
     setText("profileRefLink", p.ref_link || "—");

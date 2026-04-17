@@ -115,9 +115,9 @@
     const titleEl = $("#playerAudioTitle");
     const fullUrl = url.startsWith("http") ? url : window.location.origin + url;
 
-    // stop previous
-    if (video) { video.pause(); video.src = ""; }
-    if (audio) { audio.pause(); audio.src = ""; }
+    // stop previous — fully release memory
+    if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
+    if (audio) { audio.pause(); audio.removeAttribute("src"); audio.load(); }
 
     // Убираем старый image viewer если есть
     const oldImg = document.getElementById("playerImageWrap");
@@ -173,8 +173,8 @@
   function closePlayer() {
     const modal = $("#playerModal");
     const video = $("#playerVideo"), audio = $("#playerAudio");
-    if (video) { video.pause(); video.src = ""; }
-    if (audio) { audio.pause(); audio.src = ""; }
+    if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
+    if (audio) { audio.pause(); audio.removeAttribute("src"); audio.load(); }
     const imgWrap = document.getElementById("playerImageWrap");
     if (imgWrap) imgWrap.remove();
     modal && modal.classList.remove("is-open");
@@ -240,8 +240,7 @@
     const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
     if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
     if (name === "profile") { window.EagleProfile?.renderProfile?.(); window.EagleProfile?.init?.(); syncAllSegmini(); }
-    if (name === "recent") { lastHash = ""; loadRecents(false); }
-    if (name === "help") window.EagleProfile?.init?.();
+    if (name === "recent") { _recentOffset = 0; lastHash = ""; loadRecents(false); }
   }
   window.setTab = setTab;
 
@@ -341,6 +340,7 @@
 
   // ---------- Tools run ----------
   let lastHash = "";
+  Object.defineProperty(window, "__eagleLastHash", { get: () => lastHash, set: v => { lastHash = v; } });
 
   async function runTool(card) {
     const tool = card?.dataset?.tool || "";
@@ -584,6 +584,8 @@
   }
 
   let _recentItems = [];
+  let _recentOffset = 0;
+  let _recentHasMore = false;
 
   function sortItems(items, sortVal) {
     const arr = [...items];
@@ -597,28 +599,50 @@
     }
   }
 
-  function renderRecents(items) {
+  function renderRecents(items, append = false) {
     const list = $("#recentList"); if (!list) return;
-    _recentItems = items || [];
     if (!_recentItems.length) {
       list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
-      return;
+      syncLoadMoreBtn(); return;
     }
     const sortSel = document.getElementById("recentSort");
     const sortVal = sortSel ? sortSel.value : "date_desc";
     const sorted  = sortItems(_recentItems, sortVal);
-    list.innerHTML = sorted.map(recentRow).join("");
+    if (append) {
+      const frag = document.createDocumentFragment();
+      const tmp = document.createElement("div");
+      tmp.innerHTML = sorted.slice(sorted.length - (items?.length || 0)).map(recentRow).join("");
+      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+      list.appendChild(frag);
+    } else {
+      list.innerHTML = sorted.map(recentRow).join("");
+    }
+    syncLoadMoreBtn();
   }
 
-  async function loadRecents(silent = true) {
-    const r = await apiGet("/api/recent");
+  async function loadRecents(silent = true, append = false) {
+    const offset = append ? _recentOffset : 0;
+    const r = await apiGet(`/api/recent?offset=${offset}&limit=20`);
     if (!r || !r.ok) { if (!silent) toast(prettyErr(r), "err", "⛔"); return; }
     const d = r.data || {};
     const items = Array.isArray(d) ? d : Array.isArray(d.items) ? d.items : [];
-    const h = hash(items);
-    if (silent && h === lastHash) return;
-    lastHash = h;
-    renderRecents(items);
+    if (!append) {
+      const h = hash(items);
+      if (silent && h === lastHash) { syncLoadMoreBtn(); return; }
+      lastHash = h;
+      _recentItems = items;
+      _recentOffset = items.length;
+    } else {
+      _recentItems = _recentItems.concat(items);
+      _recentOffset += items.length;
+    }
+    _recentHasMore = !!d.has_more;
+    renderRecents(_recentItems, append);
+  }
+
+  function syncLoadMoreBtn() {
+    const wrap = document.getElementById("recentMoreWrap");
+    if (wrap) wrap.style.display = _recentHasMore ? "" : "none";
   }
 
   // ---------- Actions ----------
@@ -710,15 +734,31 @@
 
     if (action === "recent-del") {
       const row = el.closest(".recentitem");
-      const id = row?.dataset?.id;
+      if (!row) return;
+      const id = row.dataset.id;
       if (!id) return;
-      const ok = confirm(t("confirm_delete") || "Удалить файл?");
-      if (!ok) return;
-      deleteRow(row);
-      const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
-      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
-      lastHash = "";
-      loadRecents(true);
+      // Inline confirm — no browser dialog
+      if (row.querySelector(".ri-del-confirm")) return; // already confirming
+      const confirmEl = document.createElement("div");
+      confirmEl.className = "ri-del-confirm";
+      confirmEl.innerHTML = `
+        <span>${t("confirm_delete") || "Удалить?"}</span>
+        <button class="ri-del-ok">${t("deleted") || "Удалить"}</button>
+        <button class="ri-del-cancel">✕</button>`;
+      row.style.position = "relative";
+      row.appendChild(confirmEl);
+      const cleanup = () => confirmEl.remove();
+      const timer = setTimeout(cleanup, 4000);
+      confirmEl.querySelector(".ri-del-cancel").onclick = () => { clearTimeout(timer); cleanup(); };
+      confirmEl.querySelector(".ri-del-ok").onclick = async () => {
+        clearTimeout(timer); cleanup();
+        deleteRow(row);
+        const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
+        if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
+        lastHash = "";
+        loadRecents(true);
+      };
+      return;
     }
   }
 
@@ -747,9 +787,16 @@
     const sortSel = document.getElementById("recentSort");
     if (sortSel) sortSel.addEventListener("change", () => renderRecents(_recentItems));
 
+    /* Load more button */
+    const moreBtn = document.getElementById("recentMoreBtn");
+    if (moreBtn) moreBtn.addEventListener("click", () => loadRecents(false, true));
+
+    /* Expose for smart-input.js */
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
     window.__eagleToast = toast;
+    window.__eagleLoadRecents = loadRecents;
+    window.__eagleLastHash = "";
     requestAnimationFrame(() => {
       const a = $("[data-tab].is-active");
       if (a) syncIndicator(tabsEl, indEl, a);
