@@ -84,7 +84,9 @@
       tab_profile: "Профиль",
       tab_help: "Помощь",
       smart_drag: "Перетащи файл или вставь ссылку",
+      smart_drag_touch: "Выбери файл или вставь ссылку",
       smart_paste: "— вставить из буфера —",
+      smart_paste_ios: "iOS не разрешает автовставку — вставь ссылку вручную",
       smart_choose: "Что сделать",
       load_more: "Загрузить ещё",
       links: "Видео",
@@ -212,7 +214,9 @@
       tab_profile: "Profile",
       tab_help: "Help",
       smart_drag: "Drop a file or paste a link",
+      smart_drag_touch: "Tap to choose a file or paste a link",
       smart_paste: "— paste from clipboard —",
+      smart_paste_ios: "iOS doesn't allow auto-paste — paste the link manually",
       smart_choose: "What to do",
       load_more: "Load more",
       links: "Video",
@@ -305,11 +309,22 @@
     const L = s.lang;
     document.documentElement.lang = L;
 
-    // Standard data-i18n
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
+    // Standard data-i18n (skip <option> — handled below via .text for reliable repaint)
+    document.querySelectorAll("[data-i18n]:not(option)").forEach((el) => {
       const k = el.getAttribute("data-i18n");
       const txt = dict?.[L]?.[k] ?? dict?.en?.[k];
       if (typeof txt === "string" && txt.length) el.textContent = txt;
+    });
+
+    // Select options — use .text property so the select repaints its current value
+    document.querySelectorAll("select").forEach(sel => {
+      const v = sel.value;
+      sel.querySelectorAll("option[data-i18n]").forEach(o => {
+        const k = o.getAttribute("data-i18n");
+        const txt = dict?.[L]?.[k] ?? dict?.en?.[k];
+        if (typeof txt === "string" && txt.length) o.text = txt;
+      });
+      sel.value = v;
     });
 
     // Help - Mini App steps

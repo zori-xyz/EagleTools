@@ -431,16 +431,6 @@
     toast(t("job_created") || "Задание создано", "ok", "✅");
   }
 
-  function bindToolRuns() {
-    document.addEventListener("click", e => {
-      const btn = e.target.closest("[data-role='run']");
-      if (!btn) return;
-      const card = btn.closest("[data-tool]");
-      if (!card) return;
-      runTool(card).catch(err => toast(String(err?.message || err), "err", "⛔"));
-    }, true);
-  }
-
   // ---------- Recents ----------
   function fmtBytes(n) {
     const v = Number(n);
@@ -606,24 +596,15 @@
     }
   }
 
-  function renderRecents(items, append = false) {
+  function renderRecents() {
     const list = $("#recentList"); if (!list) return;
     if (!_recentItems.length) {
-      list.innerHTML = `<div class="muted small" style="text-align:center;padding:32px 0">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div>`;
+      list.innerHTML = `<div class="recent-empty"><div class="recent-empty__icon">📂</div><div class="recent-empty__text">${escapeHtml(t("recent_empty") || "Нет загрузок")}</div><div class="recent-empty__hint muted small">${escapeHtml(t("recent_empty_hint") || "Вставь ссылку на Главной →")}</div></div>`;
       syncLoadMoreBtn(); return;
     }
     const sortSel = document.getElementById("recentSort");
     const sortVal = sortSel ? sortSel.value : "date_desc";
-    const sorted  = sortItems(_recentItems, sortVal);
-    if (append) {
-      const frag = document.createDocumentFragment();
-      const tmp = document.createElement("div");
-      tmp.innerHTML = sorted.slice(sorted.length - (items?.length || 0)).map(recentRow).join("");
-      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
-      list.appendChild(frag);
-    } else {
-      list.innerHTML = sorted.map(recentRow).join("");
-    }
+    list.innerHTML = sortItems(_recentItems, sortVal).map(recentRow).join("");
     syncLoadMoreBtn();
   }
 
@@ -644,7 +625,7 @@
       _recentOffset += items.length;
     }
     _recentHasMore = !!d.has_more;
-    renderRecents(_recentItems, append);
+    renderRecents();
   }
 
   function syncLoadMoreBtn() {
@@ -787,9 +768,7 @@
 
   // ---------- Init ----------
   function init() {
-    $$("[data-tool]").forEach(resetCardUi);
     bindTabs();
-    bindToolRuns();
     bindGlobalClick();
     initPlayer();
     document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
@@ -797,13 +776,16 @@
     loadRecents(true).catch(() => {});
     /* Сортировка recent */
     const sortSel = document.getElementById("recentSort");
-    if (sortSel) sortSel.addEventListener("change", () => renderRecents(_recentItems));
+    if (sortSel) sortSel.addEventListener("change", () => renderRecents());
 
     /* Load more button */
     const moreBtn = document.getElementById("recentMoreBtn");
     if (moreBtn) moreBtn.addEventListener("click", () => loadRecents(false, true));
 
     /* Expose for smart-input.js */
+    /* Load profile on startup so quota is available immediately */
+    window.EagleProfile?.renderProfile?.().catch?.(() => {});
+
     window.__EAGLE_APP_READY__ = true;
     window.__eagleOpenFile = openFile;
     window.__eagleToast = toast;

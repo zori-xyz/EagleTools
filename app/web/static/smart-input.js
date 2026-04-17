@@ -340,6 +340,10 @@
 
   // ── Init ──
 
+  function isTouchDevice() {
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  }
+
   function init() {
     const drop = $("smartDropzone");
     const fileInput = $("smartFileInput");
@@ -348,6 +352,16 @@
     const urlInput = $("smartUrlInput");
     const urlClear = $("smartUrlClear");
     if (!drop) return;
+
+    /* Adapt text for touch (no drag & drop) */
+    if (isTouchDevice()) {
+      const label = drop.querySelector(".smart-dropzone__label");
+      if (label) {
+        label.setAttribute("data-i18n", "smart_drag_touch");
+        const lang = getLang();
+        label.textContent = lang === "en" ? "Tap to select a file or paste a link" : "Выбери файл или вставь ссылку";
+      }
+    }
 
     // Click on drop zone → open file picker
     drop.addEventListener("click", e => { if (e.target !== fileInput) fileInput.click(); });
@@ -362,13 +376,22 @@
 
     // Paste from clipboard
     pasteBtn.addEventListener("click", async () => {
+      let clipboardFailed = false;
       try {
         const text = await navigator.clipboard.readText();
         if (text && /^https?:\/\//i.test(text.trim())) { handleUrl(text.trim()); return; }
-      } catch {}
-      // Fallback: show URL input
+      } catch { clipboardFailed = true; }
+      // Fallback: show URL input with hint when clipboard API was blocked
       $("smartDropzone").style.display = "none";
       $("smartUrlRow").style.display = "";
+      const hint = $("smartUrlHint");
+      if (hint && clipboardFailed) {
+        const lang = getLang();
+        hint.textContent = lang === "en"
+          ? "iOS doesn't allow auto-paste — paste the link manually"
+          : "iOS не разрешает автовставку — вставь ссылку вручную";
+        hint.style.display = "";
+      }
       urlInput.focus();
     });
 
@@ -388,6 +411,8 @@
     urlClear.addEventListener("click", () => {
       urlInput.value = "";
       $("smartUrlRow").style.display = "none";
+      const hint = $("smartUrlHint");
+      if (hint) hint.style.display = "none";
       $("smartDropzone").style.display = "";
     });
 
