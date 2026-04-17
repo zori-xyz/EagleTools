@@ -281,23 +281,6 @@
     syncSegmini(seg);
   }
 
-  // ---------- Settings modal ----------
-  const modalEl = () => $("#settingsModal");
-  function isModalOpen() { return modalEl()?.classList.contains("is-open"); }
-  function openSettings() {
-    const m = modalEl(); if (!m) return;
-    const s = window.EagleProfile?.settings || { lang: "ru", theme: "dark" };
-    setSegActive($("#langSeg"), s.lang);
-    setSegActive($("#themeSeg"), s.theme);
-    m.classList.add("is-open"); m.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => syncAllSegmini());
-  }
-  function closeSettings() {
-    const m = modalEl(); if (!m) return;
-    m.classList.remove("is-open"); m.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-  }
 
   function getBotUsername() { return window.BOT_USERNAME || "EagleToolsBot"; }
   function openTgLink(url) {
@@ -636,8 +619,7 @@
   // ---------- Actions ----------
   async function onAction(action, el) {
     if (action === "open-profile") return setTab("profile");
-    if (action === "open-settings") { openSettings(); return; }
-    if (action === "close-settings") { closeSettings(); return; }
+    if (action === "open-settings") return setTab("profile");
 
     if (action === "open-upgrade") {
       openTgLink(`https://t.me/${encodeURIComponent(getBotUsername())}?start=premium`);
@@ -645,9 +627,8 @@
       return;
     }
     if (action === "open-support") { openTgLink("https://t.me/zorixyzz"); return; }
-    if (action === "open-tour") {
-      closeSettings();
-      setTimeout(() => { if (typeof window.eagleTourStart === "function") window.eagleTourStart(); }, 320);
+    if (action === "open-tour" || action === "start-tour") {
+      setTimeout(() => { if (typeof window.eagleTourStart === "function") window.eagleTourStart(); }, 50);
       return;
     }
     if (action === "open-privacy") {
@@ -782,7 +763,7 @@
     bindTabs();
     bindGlobalClick();
     initPlayer();
-    document.addEventListener("keydown", e => { if (e.key === "Escape") { if (isModalOpen()) closeSettings(); else closePlayer(); } });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closePlayer(); });
     syncAllSegmini();
     loadRecents(true).catch(() => {});
     /* Сортировка recent */
