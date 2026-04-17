@@ -223,9 +223,19 @@
 
   // ── Run URL job ──
 
+  function haptic(type = "light") {
+    try {
+      const hf = window.Telegram?.WebApp?.HapticFeedback;
+      if (!hf) return;
+      if (type === "success" || type === "error" || type === "warning") hf.notificationOccurred(type);
+      else hf.impactOccurred(type);
+    } catch {}
+  }
+
   async function runUrl(tool) {
     if (running || !currentUrl || !tool) return;
-    if (!checkQuota()) { $("smartQuotaWarn").style.display = ""; return; }
+    if (!checkQuota()) { $("smartQuotaWarn").style.display = ""; haptic("warning"); return; }
+    haptic("medium");
     running = true;
     $("smartActions").style.display = "none";
     let pct = 5; setProgress(pct, tx("starting") || "Загружаю…");
@@ -234,16 +244,18 @@
     clearInterval(timer);
     if (!r?.ok) {
       running = false; hideProgress();
+      haptic("error");
       showResult(errHtml(r, true, () => { $("smartResult").innerHTML = ""; showActions($("smartActionsRow").outerHTML); runUrl(tool); }));
       return;
     }
-    setProgress(100, ""); setTimeout(() => { hideProgress(); renderResult(r.data, tool); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
+    setProgress(100, ""); setTimeout(() => { haptic("success"); hideProgress(); renderResult(r.data, tool); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
   }
 
   // ── Run file conversion ──
 
   async function runFile() {
     if (running || !currentFile || !selectedAction) return;
+    haptic("medium");
     if (!checkQuota()) { $("smartQuotaWarn").style.display = ""; return; }
     running = true;
     $("smartActions").style.display = "none";
@@ -266,11 +278,11 @@
       if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.detail || tx("conv_error") || "Ошибка конвертации"); }
       const data = await resp.json();
       setProgress(100, "");
-      setTimeout(() => { hideProgress(); renderConvResult(data); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
+      setTimeout(() => { haptic("success"); hideProgress(); renderConvResult(data); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
     } catch (e) {
       clearInterval(timer);
-      running = false;
-      hideProgress();
+      running = false; hideProgress();
+      haptic("error");
       showResult(errHtml({ error: e?.message || String(e) }, true));
     }
   }

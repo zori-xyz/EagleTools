@@ -11,6 +11,19 @@
 
   const t = (k) => window.EagleProfile?.t?.(k) || "";
 
+  // ---------- Haptic ----------
+  function haptic(type = "light") {
+    try {
+      const hf = window.Telegram?.WebApp?.HapticFeedback;
+      if (!hf) return;
+      if (type === "success" || type === "error" || type === "warning") {
+        hf.notificationOccurred(type);
+      } else {
+        hf.impactOccurred(type); // "light" | "medium" | "heavy" | "rigid" | "soft"
+      }
+    } catch {}
+  }
+
   // ---------- Toast ----------
   let toastEl = null, toastTimer = null;
   function ensureToast() {
@@ -235,6 +248,7 @@
   // ---------- Tabs ----------
   const tabsEl = $("#tabs"), indEl = $("#tabsIndicator");
   function setTab(name) {
+    haptic("light");
     $$("[data-tab]").forEach(b => b.classList.toggle("is-active", b.dataset.tab === name));
     $$("[data-panel]").forEach(p => p.classList.toggle("is-active", p.dataset.panel === name));
     const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
@@ -488,6 +502,9 @@
 
     return `
       <div class="recentitem ri ${typeClass}" data-id="${escapeHtml(id)}">
+        <div class="ri-del-zone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </div>
         <div class="ri-inner">
           <div class="ri-icon">${icon}</div>
           <div class="ri-info">
@@ -579,6 +596,93 @@
     }
   }
 
+  function triggerDelete(row) {
+    if (!row) return;
+    const id = row.dataset.id;
+    if (!id || document.querySelector(".del-sheet")) return;
+    const fileName = row.querySelector(".ri-name")?.textContent?.trim() || "";
+    row.classList.add("is-confirming");
+    const sheet = document.createElement("div");
+    sheet.className = "del-sheet";
+    sheet.innerHTML = `
+      <div class="del-sheet__title">${t("confirm_delete") || "Удалить файл?"}</div>
+      <div class="del-sheet__name">${escapeHtml(fileName)}</div>
+      <div class="del-sheet__btns">
+        <button class="del-sheet__cancel" type="button">${t("cancel") || "Отмена"}</button>
+        <button class="del-sheet__ok" type="button">${t("deleted") || "Удалить"}</button>
+      </div>`;
+    document.body.appendChild(sheet);
+    const cleanup = () => {
+      row.classList.remove("is-confirming");
+      sheet.classList.add("is-closing");
+      setTimeout(() => sheet.remove(), 220);
+    };
+    const timer = setTimeout(cleanup, 5000);
+    sheet.querySelector(".del-sheet__cancel").onclick = () => { clearTimeout(timer); cleanup(); };
+    sheet.querySelector(".del-sheet__ok").onclick = async () => {
+      clearTimeout(timer); cleanup();
+      haptic("medium");
+      deleteRow(row);
+      const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
+      if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
+      lastHash = ""; loadRecents(true);
+    };
+  }
+
+  function bindSwipeRow(row) {
+    const inner = row.querySelector(".ri-inner");
+    if (!inner) return;
+    let sx = 0, sy = 0, cur = 0, swiping = false, decided = false;
+    const PEEK = 80;
+
+    row.addEventListener("touchstart", e => {
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+      cur = 0; swiping = false; decided = false;
+      inner.style.transition = "none";
+    }, { passive: true });
+
+    row.addEventListener("touchmove", e => {
+      const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+      if (!decided) {
+        if (Math.abs(dy) > Math.abs(dx) + 8) { decided = true; return; }
+        if (Math.abs(dx) > 8) { swiping = dx < 0; decided = true; }
+        return;
+      }
+      if (!swiping) return;
+      cur = Math.min(0, Math.max(dx, -row.offsetWidth * 0.75));
+      inner.style.transform = `translateX(${cur}px)`;
+      const pct = Math.abs(cur) / row.offsetWidth;
+      row.classList.toggle("swipe-on", Math.abs(cur) > 16);
+      row.classList.toggle("swipe-far", pct > 0.42);
+    }, { passive: true });
+
+    row.addEventListener("touchend", () => {
+      if (!swiping) return; swiping = false;
+      inner.style.transition = "transform .3s cubic-bezier(.4,0,.2,1)";
+      const pct = Math.abs(cur) / row.offsetWidth;
+      if (pct > 0.42) {
+        inner.style.transform = ""; row.classList.remove("swipe-on", "swipe-far");
+        haptic("medium");
+        setTimeout(() => triggerDelete(row), 40);
+      } else if (Math.abs(cur) > 24) {
+        inner.style.transform = `translateX(-${PEEK}px)`; haptic("light");
+      } else {
+        inner.style.transform = ""; row.classList.remove("swipe-on", "swipe-far");
+      }
+      cur = 0;
+    });
+
+    // Tap anywhere while peeked → reset
+    row.addEventListener("click", e => {
+      const x = parseFloat(inner.style.transform?.replace("translateX(", "") || "0");
+      if (x < -10 && !e.target.closest("[data-action='recent-del']")) {
+        inner.style.transition = "transform .3s cubic-bezier(.4,0,.2,1)";
+        inner.style.transform = ""; row.classList.remove("swipe-on", "swipe-far");
+        e.stopPropagation();
+      }
+    }, true);
+  }
+
   function renderRecents() {
     const list = $("#recentList"); if (!list) return;
     if (!_recentItems.length) {
@@ -588,6 +692,7 @@
     const sortSel = document.getElementById("recentSort");
     const sortVal = sortSel ? sortSel.value : "date_desc";
     list.innerHTML = sortItems(_recentItems, sortVal).map(recentRow).join("");
+    list.querySelectorAll(".recentitem").forEach(bindSwipeRow);
     syncLoadMoreBtn();
   }
 
@@ -707,42 +812,7 @@
     if (action === "recent-share-old") { await shareFile(el.dataset.url || "", el.dataset.title || ""); return; }
 
     if (action === "recent-del") {
-      const row = el.closest(".recentitem");
-      if (!row) return;
-      const id = row.dataset.id;
-      if (!id) return;
-      if (document.querySelector(".del-sheet")) return; // already showing
-
-      const fileName = row.querySelector(".ri-name")?.textContent?.trim() || "";
-      row.classList.add("is-confirming");
-
-      const sheet = document.createElement("div");
-      sheet.className = "del-sheet";
-      sheet.innerHTML = `
-        <div class="del-sheet__title">${t("confirm_delete") || "Удалить файл?"}</div>
-        <div class="del-sheet__name">${escapeHtml(fileName)}</div>
-        <div class="del-sheet__btns">
-          <button class="del-sheet__cancel" type="button">${t("cancel") || "Отмена"}</button>
-          <button class="del-sheet__ok" type="button">${t("deleted") || "Удалить"}</button>
-        </div>`;
-      document.body.appendChild(sheet);
-
-      const cleanup = (closing) => {
-        row.classList.remove("is-confirming");
-        sheet.classList.add("is-closing");
-        setTimeout(() => sheet.remove(), 220);
-      };
-      const timer = setTimeout(cleanup, 5000);
-
-      sheet.querySelector(".del-sheet__cancel").onclick = () => { clearTimeout(timer); cleanup(); };
-      sheet.querySelector(".del-sheet__ok").onclick = async () => {
-        clearTimeout(timer); cleanup();
-        deleteRow(row);
-        const r = await apiDelete(`/api/recent/${encodeURIComponent(id)}`);
-        if (!r.ok) { toast(prettyErr(r), "err", "⛔"); lastHash = ""; loadRecents(false); return; }
-        lastHash = "";
-        loadRecents(true);
-      };
+      triggerDelete(el.closest(".recentitem"));
       return;
     }
   }

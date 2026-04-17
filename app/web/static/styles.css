@@ -974,10 +974,25 @@ html[data-theme="light"] .ri--video .ri-icon { background: rgba(232,25,90,.08); 
 html[data-theme="light"] .ri--image .ri-icon { background: rgba(5,150,105,.08); }
 html[data-theme="light"] .ri--doc   .ri-icon { background: rgba(99,102,241,.08); }
 
+.ri-del-zone {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 84px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--err); background: rgba(248,113,113,.08);
+  transition: background .18s, color .18s;
+  pointer-events: none;
+}
+.ri-del-zone svg { opacity: 0.5; transition: opacity .18s, transform .18s; }
+.recentitem.swipe-on  .ri-del-zone { background: rgba(248,113,113,.14); }
+.recentitem.swipe-on  .ri-del-zone svg { opacity: 0.8; }
+.recentitem.swipe-far .ri-del-zone { background: rgba(248,113,113,.3); }
+.recentitem.swipe-far .ri-del-zone svg { opacity: 1; transform: scale(1.2); }
+
 .ri-inner {
   padding: 11px 10px 11px 14px;
   display: flex; align-items: center; gap: 10px;
   position: relative; z-index: 1;
+  background: inherit;
+  will-change: transform;
 }
 
 .ri-icon {
@@ -1320,28 +1335,41 @@ html[data-theme="light"] .converter-progress__track { background: rgba(26,22,38,
 .smart-card:hover { border-color: var(--border2); box-shadow: var(--sh-lg); }
 html[data-theme="light"] .smart-card { background: #ffffff; }
 
+@keyframes stripeFlow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
 .smart-card__stripe {
   position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--rose), #7c3aed, #06b6d4);
+  background: linear-gradient(90deg, var(--rose), #7c3aed, #06b6d4, var(--rose));
+  background-size: 200% 100%;
   border-radius: var(--r-lg) var(--r-lg) 0 0;
+  animation: stripeFlow 3s linear infinite;
 }
 
 /* Drop zone */
+@keyframes dzGlow {
+  0%, 100% { border-color: var(--border2); box-shadow: none; }
+  50%       { border-color: rgba(232,25,90,.38); box-shadow: 0 0 16px rgba(232,25,90,.1); }
+}
 .smart-dropzone {
   position: relative;
   margin: 18px 16px 14px;
   border: 1.5px dashed var(--border2);
   border-radius: var(--r-md);
-  padding: 28px 16px 22px;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 32px 16px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
   cursor: pointer;
-  transition: border-color .2s ease, background .2s ease;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
   background: rgba(255,255,255,.015);
   -webkit-tap-highlight-color: transparent;
+  animation: dzGlow 3.5s ease-in-out infinite;
 }
 .smart-dropzone:hover, .smart-dropzone.drag-over {
   border-color: var(--rose);
   background: var(--rose-soft);
+  animation: none;
+  box-shadow: 0 0 24px rgba(232,25,90,.14);
 }
 html[data-theme="light"] .smart-dropzone { background: rgba(0,0,0,.02); }
 html[data-theme="light"] .smart-dropzone:hover { background: var(--rose-soft); }
@@ -1349,19 +1377,24 @@ html[data-theme="light"] .smart-dropzone:hover { background: var(--rose-soft); }
 .smart-dropzone input[type="file"] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
 }
-.smart-dropzone__icon { font-size: 28px; line-height: 1; }
-.smart-dropzone__label { font-size: 14px; font-weight: 600; color: var(--text2); text-align: center; }
+.smart-dropzone__icon { font-size: 36px; line-height: 1; }
+.smart-dropzone__label { font-size: 14px; font-weight: 600; color: var(--text2); text-align: center; line-height: 1.4; }
 
 .smart-dropzone__paste {
-  height: 36px; padding: 0 18px; border-radius: 999px;
-  border: 1px solid var(--border2);
-  background: var(--surface2);
+  height: 38px; padding: 0 20px; border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: linear-gradient(var(--bg3), var(--bg3)) padding-box,
+              linear-gradient(90deg, var(--rose), #7c3aed) border-box;
   color: var(--text2);
   font-family: var(--font); font-weight: 500; font-size: 13px;
-  cursor: pointer; margin-top: 4px;
-  transition: background .15s ease, border-color .15s ease, color .15s ease;
+  cursor: pointer; margin-top: 2px;
+  transition: color .15s ease, opacity .15s;
   display: inline-flex; align-items: center; gap: 7px;
   -webkit-tap-highlight-color: transparent;
+}
+html[data-theme="light"] .smart-dropzone__paste {
+  background: linear-gradient(#fff, #fff) padding-box,
+              linear-gradient(90deg, var(--rose), #7c3aed) border-box;
 }
 .smart-dropzone__paste:hover { background: var(--surface3); border-color: var(--border3); color: var(--text); }
 html[data-theme="light"] .smart-dropzone__paste { background: rgba(255,255,255,.72); }
