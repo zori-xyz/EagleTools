@@ -239,7 +239,14 @@
     $$("[data-panel]").forEach(p => p.classList.toggle("is-active", p.dataset.panel === name));
     const activeBtn = $$("[data-tab]").find(b => b.dataset.tab === name);
     if (tabsEl && indEl && activeBtn) syncIndicator(tabsEl, indEl, activeBtn);
-    if (name === "profile") { window.EagleProfile?.renderProfile?.(); window.EagleProfile?.init?.(); syncAllSegmini(); }
+    if (name === "profile") {
+      window.EagleProfile?.renderProfile?.();
+      window.EagleProfile?.init?.();
+      const s = window.EagleProfile?.settings || { lang: "ru", theme: "dark" };
+      setSegActive($("#langSegProfile"), s.lang);
+      setSegActive($("#themeSegProfile"), s.theme);
+      syncAllSegmini();
+    }
     if (name === "recent") { _recentOffset = 0; lastHash = ""; loadRecents(false); }
   }
   window.setTab = setTab;
@@ -675,15 +682,20 @@
       if (v === "ru" || v === "en") {
         window.EagleProfile?.setLang?.(v);
         setSegActive($("#langSeg"), v);
+        setSegActive($("#langSegProfile"), v);
         const a = $("[data-tab].is-active");
         if (a) syncIndicator(tabsEl, indEl, a);
-        setTimeout(() => window.EagleProfile?.init?.(), 10);
+        setTimeout(() => { window.EagleProfile?.init?.(); syncAllSegmini(); }, 10);
       }
       return;
     }
     if (action === "theme") {
       const v = el.dataset.value;
-      if (v === "dark" || v === "light") { window.EagleProfile?.setTheme?.(v); setSegActive($("#themeSeg"), v); }
+      if (v === "dark" || v === "light") {
+        window.EagleProfile?.setTheme?.(v);
+        setSegActive($("#themeSeg"), v);
+        setSegActive($("#themeSegProfile"), v);
+      }
       return;
     }
 

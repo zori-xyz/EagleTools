@@ -312,17 +312,16 @@
     setTimeout(function() { renderStep(0); }, 100);
   }
 
-  function tryStart() {
-    try { if (localStorage.getItem(STORAGE_KEY)) return; } catch {}
-    setTimeout(start, window.__EAGLE_APP_READY__ ? 500 : 1200);
-  }
-
-  if (document.readyState === "complete") { tryStart(); }
-  else { window.addEventListener("load", tryStart, { once: true }); }
+  // Auto-start disabled: new Smart Input UI has no old tour targets.
+  // Mark as done so returning users don't see broken tour on refresh.
+  try { localStorage.setItem(STORAGE_KEY, "1"); } catch {}
 
   window.eagleTourStart = function() {
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    start();
+    // Tour disabled — new UI has no tool cards to highlight.
+    if (typeof window.__eagleToast === "function") {
+      var lang = getLang();
+      window.__eagleToast(lang === "en" ? "Just paste a link or drop a file!" : "Просто вставь ссылку или брось файл!", "ok", "💡");
+    }
   };
 
 })();

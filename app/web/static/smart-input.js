@@ -232,7 +232,11 @@
     const timer = setInterval(() => { pct = Math.min(pct + Math.random() * 6, 88); setProgress(pct); }, 600);
     const r = await window.EagleAPI?.postJson?.(`/api/save_job?tool=${encodeURIComponent(tool)}`, { url: currentUrl });
     clearInterval(timer);
-    if (!r?.ok) { running = false; hideProgress(); showResult(errHtml(r)); return; }
+    if (!r?.ok) {
+      running = false; hideProgress();
+      showResult(errHtml(r, true, () => { $("smartResult").innerHTML = ""; showActions($("smartActionsRow").outerHTML); runUrl(tool); }));
+      return;
+    }
     setProgress(100, ""); setTimeout(() => { hideProgress(); renderResult(r.data, tool); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
   }
 
@@ -318,9 +322,15 @@
     </div>`;
   }
 
-  function errHtml(r, showRetry) {
+  let _retryFn = null;
+
+  function errHtml(r, showRetry, retryFn) {
     const msg = r?.error || r?.data?.detail || "Ошибка";
-    const retryBtn = showRetry ? `<button class="btn btn--secondary btn--sm" id="smartRetryBtn" type="button" style="margin-top:8px;width:100%">${getLang()==="en"?"Retry":"Повторить"}</button>` : "";
+    if (showRetry && retryFn) _retryFn = retryFn;
+    const retryBtn = showRetry
+      ? `<button class="btn btn--secondary btn--sm" id="smartRetryBtn" type="button"
+           style="margin-top:8px;width:100%">${getLang() === "en" ? "↺ Retry" : "↺ Повторить"}</button>`
+      : "";
     return `<div class="result-file">
       <div class="result-file__top">
         <span class="result-file__icon">⛔</span>
@@ -390,10 +400,8 @@
       if (e.target.closest("#smartRetryBtn")) {
         $("smartResult").innerHTML = "";
         running = false;
-        if (mode === "file" && currentFile) {
-          const ft = detectFileType(currentFile);
-          if (ft) { const lang = getLang(); /* re-render actions */ handleFile(currentFile); }
-        }
+        if (_retryFn) { const fn = _retryFn; _retryFn = null; fn(); return; }
+        if (mode === "file" && currentFile) handleFile(currentFile);
       }
     });
 
