@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260417" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260418" />
   </head>
   <body>
     <div class="app">
@@ -47,25 +47,33 @@
           <div class="smart-card" id="smartCard">
             <div class="smart-card__stripe"></div>
 
-            <!-- Drop zone (initial empty state) -->
-            <div class="smart-dropzone" id="smartDropzone">
-              <input type="file" id="smartFileInput" accept="*/*" />
-              <div class="smart-dropzone__icon">📎</div>
-              <div class="smart-dropzone__label" data-i18n="smart_drag">Перетащи файл или вставь ссылку</div>
-              <button class="smart-dropzone__paste" id="smartPasteBtn" type="button">
-                <span data-i18n="smart_paste">— вставить из буфера —</span>
-              </button>
-            </div>
+            <!-- HERO: URL input — always visible on start -->
+            <div class="smart-hero" id="smartHero">
+              <div class="smart-hero__title" data-i18n="smart_hero_title">Вставь ссылку на видео или трек</div>
 
-            <!-- URL manual input row (shown when typing) -->
-            <div class="smart-url-row" id="smartUrlRow" style="display:none">
-              <div class="smart-url-wrap">
+              <div class="smart-url-wrap smart-url-wrap--hero">
                 <img src="/static/icons/link.svg" class="smart-url-icon icon icon--muted" alt="" />
                 <input class="input smart-url-input" id="smartUrlInput" type="url"
-                  placeholder="https://youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
-                <button class="smart-url-clear" id="smartUrlClear" type="button" aria-label="Clear">✕</button>
+                  placeholder="youtube.com, soundcloud.com..." autocomplete="off" spellcheck="false" enterkeyhint="go" />
+                <button class="smart-paste-btn" id="smartPasteBtn" type="button" aria-label="Paste">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="2" width="10" height="4" rx="1"/><path d="M9 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M13 12h4M13 16h4"/></svg>
+                </button>
               </div>
               <div id="smartUrlHint" class="smart-url-hint" style="display:none"></div>
+
+              <div class="smart-hero__or"><span data-i18n="smart_or">или</span></div>
+
+              <label class="smart-file-label" for="smartFileInput">
+                <input type="file" id="smartFileInput" accept="*/*" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span data-i18n="smart_choose_file">Прикрепить файл</span>
+              </label>
+
+              <div class="smart-hero__platforms">
+                <span class="plat-chip">▶ YouTube</span>
+                <span class="plat-chip">☁ SoundCloud</span>
+                <span class="plat-chip" data-i18n="smart_files_chip">📎 до 100 МБ</span>
+              </div>
             </div>
 
             <!-- Detected chip (shows after URL paste or file select) -->
@@ -89,16 +97,12 @@
               <span>⚠️</span>
               <span data-i18n="limit_reached">Дневной лимит исчерпан</span>
               <button class="btn btn--premium btn--sm" type="button" data-action="open-upgrade"
-                style="margin-left:auto;height:32px;padding:0 12px;font-size:12px;">
-                ⚡️ Premium
-              </button>
+                style="margin-left:auto;height:32px;padding:0 12px;font-size:12px;">⚡️ Premium</button>
             </div>
 
             <!-- Progress -->
             <div class="smart-progress" id="smartProgress" style="display:none">
-              <div class="smart-progress__track">
-                <div class="smart-progress__fill" id="smartProgressFill"></div>
-              </div>
+              <div class="smart-progress__track"><div class="smart-progress__fill" id="smartProgressFill"></div></div>
               <div class="smart-progress__text muted small" id="smartProgressText"></div>
             </div>
 

@@ -112,8 +112,7 @@
   // ── UI helpers ──
 
   function showChip(icon, type, sub) {
-    $("smartDropzone").style.display = "none";
-    $("smartUrlRow") && ($("smartUrlRow").style.display = "none");
+    const hero = $("smartHero"); if (hero) hero.style.display = "none";
     const chip = $("smartChip"); chip.style.display = "";
     $("smartChipIcon").textContent = icon;
     $("smartChipType").textContent = type;
@@ -147,14 +146,14 @@
   function reset() {
     mode = null; currentUrl = ""; urlType = null;
     currentFile = null; fileType = null;
-    selectedTool = null; selectedAction = null; running = false;
-    $("smartDropzone").style.display = "";
+    selectedTool = null; selectedAction = null; running = false; _retryFn = null;
+    const hero = $("smartHero"); if (hero) hero.style.display = "";
     $("smartChip").style.display = "none";
     $("smartActions").style.display = "none";
     $("smartQuotaWarn").style.display = "none";
     hideProgress();
     $("smartResult").innerHTML = "";
-    $("smartUrlRow").style.display = "none";
+    const hint = $("smartUrlHint"); if (hint) hint.style.display = "none";
     const inp = $("smartUrlInput"); if (inp) inp.value = "";
     const fi = $("smartFileInput"); if (fi) fi.value = "";
   }
@@ -352,52 +351,42 @@
 
   // ── Init ──
 
-  function isTouchDevice() {
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0;
-  }
-
   function init() {
-    const drop = $("smartDropzone");
+    const urlInput = $("smartUrlInput");
     const fileInput = $("smartFileInput");
     const pasteBtn = $("smartPasteBtn");
     const chipClear = $("smartChipClear");
-    const urlInput = $("smartUrlInput");
-    const urlClear = $("smartUrlClear");
-    if (!drop) return;
+    const hero = $("smartHero");
+    if (!urlInput) return;
 
-    /* Adapt text for touch (no drag & drop) */
-    if (isTouchDevice()) {
-      const label = drop.querySelector(".smart-dropzone__label");
-      if (label) {
-        label.setAttribute("data-i18n", "smart_drag_touch");
-        const lang = getLang();
-        label.textContent = lang === "en" ? "Tap to select a file or paste a link" : "Выбери файл или вставь ссылку";
-      }
+    // File selected via file label
+    fileInput?.addEventListener("change", () => {
+      if (fileInput.files?.[0]) handleFile(fileInput.files[0]);
+    });
+
+    // Drag & drop on hero
+    if (hero) {
+      hero.addEventListener("dragover", e => { e.preventDefault(); hero.classList.add("drag-over"); });
+      hero.addEventListener("dragleave", e => { if (!hero.contains(e.relatedTarget)) hero.classList.remove("drag-over"); });
+      hero.addEventListener("drop", e => {
+        e.preventDefault(); hero.classList.remove("drag-over");
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+      });
     }
 
-    // Click on drop zone → open file picker
-    drop.addEventListener("click", e => { if (e.target !== fileInput) fileInput.click(); });
-
-    // File selected
-    fileInput.addEventListener("change", () => { if (fileInput.files?.[0]) handleFile(fileInput.files[0]); });
-
-    // Drag & drop
-    drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("drag-over"); });
-    drop.addEventListener("dragleave", () => drop.classList.remove("drag-over"));
-    drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("drag-over"); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
-
-    // Paste from clipboard
-    pasteBtn.addEventListener("click", async () => {
-      let clipboardFailed = false;
+    // Paste button: read clipboard → fill input or show hint
+    pasteBtn?.addEventListener("click", async () => {
+      let failed = false;
       try {
         const text = await navigator.clipboard.readText();
-        if (text && /^https?:\/\//i.test(text.trim())) { handleUrl(text.trim()); return; }
-      } catch { clipboardFailed = true; }
-      // Fallback: show URL input with hint when clipboard API was blocked
-      $("smartDropzone").style.display = "none";
-      $("smartUrlRow").style.display = "";
+        if (text?.trim()) {
+          if (/^https?:\/\//i.test(text.trim())) { handleUrl(text.trim()); return; }
+          urlInput.value = text.trim(); urlInput.focus();
+          return;
+        }
+      } catch { failed = true; }
       const hint = $("smartUrlHint");
-      if (hint && clipboardFailed) {
+      if (hint && failed) {
         const lang = getLang();
         hint.textContent = lang === "en"
           ? "iOS doesn't allow auto-paste — paste the link manually"
@@ -407,29 +396,22 @@
       urlInput.focus();
     });
 
-    // URL input — detect on paste/input
-    urlInput.addEventListener("input", () => {
+    // URL input: auto-detect on type/paste
+    const tryDetect = () => {
       const v = urlInput.value.trim();
       if (v && detectUrlType(v)) handleUrl(v);
-    });
-    urlInput.addEventListener("paste", e => {
-      setTimeout(() => {
+    };
+    urlInput.addEventListener("input", tryDetect);
+    urlInput.addEventListener("paste", () => setTimeout(tryDetect, 50));
+    urlInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
         const v = urlInput.value.trim();
-        if (v && detectUrlType(v)) handleUrl(v);
-      }, 50);
-    });
-
-    // URL clear
-    urlClear.addEventListener("click", () => {
-      urlInput.value = "";
-      $("smartUrlRow").style.display = "none";
-      const hint = $("smartUrlHint");
-      if (hint) hint.style.display = "none";
-      $("smartDropzone").style.display = "";
+        if (v) handleUrl(/^https?:\/\//i.test(v) ? v : "https://" + v);
+      }
     });
 
     // Chip clear → full reset
-    chipClear.addEventListener("click", reset);
+    chipClear?.addEventListener("click", reset);
 
     // Delegate reset/retry buttons in result
     document.addEventListener("click", e => {
@@ -442,13 +424,14 @@
       }
     });
 
-    // Global paste (when on Home tab)
+    // Global paste when on Home tab
     document.addEventListener("paste", e => {
       const active = document.querySelector("[data-panel='home'].is-active");
-      if (!active) return;
-      if (mode !== null) return;
+      if (!active || mode !== null) return;
       const text = e.clipboardData?.getData("text") || "";
-      if (text && /^https?:\/\//i.test(text.trim())) handleUrl(text.trim());
+      if (!text.trim()) return;
+      if (/^https?:\/\//i.test(text.trim())) { handleUrl(text.trim()); return; }
+      urlInput.value = text.trim(); urlInput.focus();
     });
   }
 
