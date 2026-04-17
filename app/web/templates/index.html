@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260361" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260366" />
   </head>
   <body>
     <div class="app">
@@ -33,132 +33,79 @@
         </div>
       </header>
 
-      <!-- TABS -->
+      <!-- TABS: 3 tabs -->
       <nav class="tabs" id="tabs">
         <div class="tabs__indicator" id="tabsIndicator" aria-hidden="true"></div>
-        <button class="tabs__btn is-active" type="button" data-tab="tools" data-i18n="tab_tools">Инструменты</button>
+        <button class="tabs__btn is-active" type="button" data-tab="home" data-i18n="tab_home">Главная</button>
         <button class="tabs__btn" type="button" data-tab="recent" data-i18n="tab_recent">История</button>
         <button class="tabs__btn" type="button" data-tab="profile" data-i18n="tab_profile">Профиль</button>
-        <button class="tabs__btn" type="button" data-tab="help" data-i18n="tab_help">Помощь</button>
       </nav>
 
       <main class="main">
 
-        <!-- ======== TOOLS ======== -->
-        <section class="panel is-active" data-panel="tools">
-          <h1 class="h1" data-i18n="tab_tools">Инструменты</h1>
+        <!-- ======== HOME: Smart Input ======== -->
+        <section class="panel is-active" data-panel="home">
+          <h1 class="h1" data-i18n="tab_home">Главная</h1>
 
-          <!-- CONVERTER CARD -->
-          <div class="converter-card" id="converterCard">
-            <div class="converter-card__header">
-              <div class="converter-card__icon">
-                <img src="/static/icons/fmt-video.svg" class="icon icon--rose" alt="" style="width:22px;height:22px;" />
-              </div>
-              <div class="converter-card__meta">
-                <div class="converter-card__title" data-i18n="conv_title">Конвертер файлов</div>
-                <div class="converter-card__desc" data-i18n="conv_desc">Видео, аудио, фото, PDF, документы</div>
-              </div>
-              <div class="converter-card__badge" data-i18n="conv_badge">SMART</div>
-            </div>
-            <div class="converter-drop" id="convDrop">
-              <input type="file" id="convFileInput" accept="*/*" />
-              <div class="converter-drop__icon">
-                <img src="/static/icons/download.svg" alt="" />
-              </div>
-              <div class="converter-drop__label" data-i18n="conv_drop_label">Выбери файл</div>
-              <div class="converter-drop__sub" data-i18n="conv_drop_sub">или перетащи сюда · до 100 МБ</div>
-            </div>
-            <div class="converter-file" id="convFile">
-              <div class="converter-file__thumb" id="convFileThumb">📄</div>
-              <div class="converter-file__info">
-                <div class="converter-file__name" id="convFileName">—</div>
-                <div class="converter-file__size" id="convFileSize"></div>
-              </div>
-              <button class="converter-file__clear" id="convFileClear" type="button">✕</button>
-            </div>
-            <div class="converter-actions" id="convActions">
-              <div class="converter-actions__label" data-i18n="conv_choose_action">Что сделать с файлом</div>
-              <div class="converter-action-grid" id="convActionGrid"></div>
-            </div>
-            <div class="converter-run-wrap" id="convRunWrap">
-              <button class="btn btn--primary" id="convRunBtn" type="button" style="width:100%;height:48px;font-size:15px;">
-                <img src="/static/icons/fmt-video.svg" class="icon icon--rose" alt="" style="width:18px;height:18px;" />
-                <span data-i18n="conv_btn_run" id="convRunLabel">Конвертировать</span>
+          <div class="smart-card" id="smartCard">
+            <div class="smart-card__stripe"></div>
+
+            <!-- Drop zone (initial empty state) -->
+            <div class="smart-dropzone" id="smartDropzone">
+              <input type="file" id="smartFileInput" accept="*/*" />
+              <div class="smart-dropzone__icon">📎</div>
+              <div class="smart-dropzone__label" data-i18n="smart_drag">Перетащи файл или вставь ссылку</div>
+              <button class="smart-dropzone__paste" id="smartPasteBtn" type="button">
+                <span data-i18n="smart_paste">— вставить из буфера —</span>
               </button>
             </div>
-            <div class="converter-progress" id="convProgress">
-              <div class="converter-progress__track">
-                <div class="converter-progress__fill" id="convProgressFill"></div>
-              </div>
-              <div class="converter-progress__text" id="convProgressText"></div>
-            </div>
-            <div class="converter-result" id="convResult"></div>
-          </div>
 
-          <div class="toolgrid">
-
-            <!-- Video -->
-            <div class="toolcard" data-tool="save">
-              <div class="toolcard__header">
-                <div class="toolcard__icon toolcard__icon--video">
-                  <img src="/static/icons/video.svg" class="icon icon--rose" alt="" />
-                </div>
-                <div class="toolcard__meta">
-                  <div class="toolcard__title" data-i18n="links">Видео</div>
-                  <div class="toolcard__desc" data-i18n="tool_video_desc">YouTube и другие платформы</div>
-                </div>
-                <div class="toolcard__badge toolcard__badge--video">MP4</div>
+            <!-- URL manual input row (shown when typing) -->
+            <div class="smart-url-row" id="smartUrlRow" style="display:none">
+              <div class="smart-url-wrap">
+                <img src="/static/icons/link.svg" class="smart-url-icon icon icon--muted" alt="" />
+                <input class="input smart-url-input" id="smartUrlInput" type="url"
+                  placeholder="https://youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+                <button class="smart-url-clear" id="smartUrlClear" type="button" aria-label="Clear">✕</button>
               </div>
-              <div class="toolcard__input-row">
-                <div class="toolcard__input-wrap">
-                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
-                  <input class="input" data-role="url" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
-                </div>
-                <button class="btn btn--video" data-role="run" type="button">
-                  <img src="/static/icons/download.svg" class="icon" alt="" />
-                  <span data-i18n="btn_download">Скачать</span>
-                </button>
-              </div>
-              <div class="toolcard__progress">
-                <div class="toolcard__progress-track">
-                  <div class="toolcard__progress-fill toolcard__progress-fill--video" data-role="bar"></div>
-                </div>
-                <div class="toolcard__progress-text muted" data-role="progress"></div>
-              </div>
-              <div class="toolcard__result" data-role="result"></div>
             </div>
 
-            <!-- Audio -->
-            <div class="toolcard" data-tool="audio">
-              <div class="toolcard__header">
-                <div class="toolcard__icon toolcard__icon--audio">
-                  <img src="/static/icons/music.svg" class="icon icon--violet" alt="" />
-                </div>
-                <div class="toolcard__meta">
-                  <div class="toolcard__title">SoundCloud</div>
-                  <div class="toolcard__desc" data-i18n="tool_audio_desc">Треки и плейлисты</div>
-                </div>
-                <div class="toolcard__badge toolcard__badge--audio">MP3</div>
+            <!-- Detected chip (shows after URL paste or file select) -->
+            <div class="smart-chip" id="smartChip" style="display:none">
+              <div class="smart-chip__icon" id="smartChipIcon">📎</div>
+              <div class="smart-chip__info">
+                <div class="smart-chip__type" id="smartChipType"></div>
+                <div class="smart-chip__sub muted" id="smartChipSub"></div>
               </div>
-              <div class="toolcard__input-row">
-                <div class="toolcard__input-wrap">
-                  <img src="/static/icons/link.svg" class="toolcard__input-icon icon icon--muted" alt="" />
-                  <input class="input" data-role="url" type="url" placeholder="https://soundcloud.com/..." autocomplete="off" />
-                </div>
-                <button class="btn btn--audio-orange" data-role="run" type="button">
-                  <img src="/static/icons/music.svg" class="icon" alt="" />
-                  <span data-i18n="btn_make_mp3">MP3</span>
-                </button>
-              </div>
-              <div class="toolcard__progress">
-                <div class="toolcard__progress-track">
-                  <div class="toolcard__progress-fill toolcard__progress-fill--audio" data-role="bar"></div>
-                </div>
-                <div class="toolcard__progress-text muted" data-role="progress"></div>
-              </div>
-              <div class="toolcard__result" data-role="result"></div>
+              <button class="smart-chip__clear" id="smartChipClear" type="button" aria-label="Clear">✕</button>
             </div>
 
+            <!-- Action buttons -->
+            <div class="smart-actions" id="smartActions" style="display:none">
+              <div class="smart-actions__label" data-i18n="smart_choose">Что сделать</div>
+              <div class="smart-actions__row" id="smartActionsRow"></div>
+            </div>
+
+            <!-- Quota warning -->
+            <div class="smart-quota-warn" id="smartQuotaWarn" style="display:none">
+              <span>⚠️</span>
+              <span data-i18n="limit_reached">Дневной лимит исчерпан</span>
+              <button class="btn btn--premium btn--sm" type="button" data-action="open-upgrade"
+                style="margin-left:auto;height:32px;padding:0 12px;font-size:12px;">
+                ⚡️ Premium
+              </button>
+            </div>
+
+            <!-- Progress -->
+            <div class="smart-progress" id="smartProgress" style="display:none">
+              <div class="smart-progress__track">
+                <div class="smart-progress__fill" id="smartProgressFill"></div>
+              </div>
+              <div class="smart-progress__text muted small" id="smartProgressText"></div>
+            </div>
+
+            <!-- Result -->
+            <div id="smartResult"></div>
           </div>
         </section>
 
@@ -178,6 +125,10 @@
             </div>
           </div>
           <div id="recentList" class="recentlist"></div>
+          <div id="recentMoreWrap" style="display:none;text-align:center;padding:14px 0 4px">
+            <button class="btn btn--secondary" id="recentMoreBtn" type="button" style="min-width:160px"
+              data-i18n="load_more">Загрузить ещё</button>
+          </div>
         </section>
 
         <!-- ======== PROFILE ======== -->
@@ -269,91 +220,50 @@
               </div>
             </div>
 
-          </div>
-        </section>
-
-        <!-- ======== HELP ======== -->
-        <section class="panel" data-panel="help">
-          <h1 class="h1" data-i18n="help_title">Помощь</h1>
-          <div class="help-page">
-
-            <div class="card help-section">
-              <div class="help-section__title">
-                <span class="help-section__title-icon"><img src="/static/icons/wrench.svg" class="icon icon--muted" style="width:17px;height:17px;" alt="" /></span>
-                <span data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
+            <!-- SETTINGS CARD (visible in profile) -->
+            <div class="card settings-inline">
+              <div class="settings-inline__head">
+                <img src="/static/icons/settings.svg" class="icon icon--muted" style="width:18px;height:18px;" alt="" />
+                <span class="settings-inline__title" data-i18n="settings">Настройки</span>
               </div>
-              <div class="help-steps">
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma1">Открой вкладку <b>Инструменты</b> — вставь ссылку на видео или аудио</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma2">Поддерживаются <b>YouTube</b>, <b>SoundCloud</b> и другие публичные сайты</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma3">Нажми <b>Скачать</b> для видео (mp4) или <b>MP3</b> для аудио</div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma4">После загрузки нажми <b>Открыть</b> или <b>Поделиться</b></div></div>
-                <div class="help-step"><div class="help-step__dot"></div><div class="help-step__text" id="hma5">Все файлы видны во вкладке <b>История</b></div></div>
-              </div>
-            </div>
-
-            <div class="card help-section">
-              <div class="help-section__title">
-                <span class="help-section__title-icon">🤖</span>
-                <span data-i18n="help_bot_title">Функции бота в Telegram</span>
-              </div>
-              <div class="help-feature-grid">
-                <div class="help-feature">
-                  <div class="help-feature__icon">
-                    <img src="/static/icons/music.svg" class="icon icon--violet icon--lg" alt="" />
-                  </div>
-                  <div class="help-feature__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
-                  <div class="help-feature__desc" data-i18n="help_bot_audio_desc">Отправь аудио, видео или голосовое — бот конвертирует в mp3, wav или другой формат</div>
+              <div class="setting-row">
+                <div class="setting-row__label">
+                  <img src="/static/icons/globe.svg" class="icon icon--muted setting-row__icon" alt="" />
+                  <span data-i18n="language">Язык</span>
                 </div>
-                <div class="help-feature">
-                  <div class="help-feature__icon"><img src="/static/icons/microphone.svg" class="icon icon--rose icon--lg" alt="" /></div>
-                  <div class="help-feature__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
-                  <div class="help-feature__desc" data-i18n="help_bot_stt_desc">Отправь голосовое или аудио — бот расшифрует текст с помощью Whisper AI</div>
+                <div class="segmini" id="langSegProfile">
+                  <div class="segmini__indicator" aria-hidden="true"></div>
+                  <button class="segmini__btn" type="button" data-action="lang" data-value="ru">RU</button>
+                  <button class="segmini__btn" type="button" data-action="lang" data-value="en">EN</button>
                 </div>
               </div>
-            </div>
-
-            <div class="card help-section">
-              <div class="help-section__title">
-                <span class="help-section__title-icon">⚡️</span>
-                <span data-i18n="help_premium_title">Преимущества Premium</span>
+              <div class="setting-row">
+                <div class="setting-row__label">
+                  <img src="/static/icons/palette.svg" class="icon icon--muted setting-row__icon" alt="" />
+                  <span data-i18n="theme">Тема</span>
+                </div>
+                <div class="segmini" id="themeSegProfile">
+                  <div class="segmini__indicator" aria-hidden="true"></div>
+                  <button class="segmini__btn" type="button" data-action="theme" data-value="dark">Dark</button>
+                  <button class="segmini__btn" type="button" data-action="theme" data-value="light">Light</button>
+                </div>
               </div>
-              <div class="help-prem-list">
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_1">Безлимитные загрузки — без суточного лимита</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_2">Приоритетная обработка заданий</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_3">Доступ ко всем будущим функциям</span></div>
-                <div class="help-prem-item"><span class="help-prem-check">✓</span><span data-i18n="help_prem_4">Поддержка развития проекта</span></div>
+              <div class="settings-inline__links">
+                <button class="modal__link" type="button" data-action="open-support">
+                  <span class="modal__linkIcon">
+                    <img src="/static/icons/message-circle.svg" class="icon icon--rose" alt="" />
+                  </span>
+                  <span class="modal__linkText" data-i18n="support">Поддержка</span>
+                  <span class="modal__chev">›</span>
+                </button>
+                <button class="modal__link" type="button" data-action="open-privacy">
+                  <span class="modal__linkIcon">
+                    <img src="/static/icons/shield.svg" class="icon icon--ok" alt="" />
+                  </span>
+                  <span class="modal__linkText" data-i18n="privacy_policy">Политика конфиденциальности</span>
+                  <span class="modal__chev">›</span>
+                </button>
               </div>
-              <div style="margin-top:14px">
-                <button class="btn btn--premium" type="button" data-action="open-upgrade">⚡️ <span data-i18n="upgrade_premium">Получить Premium</span></button>
-              </div>
-            </div>
-
-            <div class="card help-section">
-              <div class="help-section__title">
-                <span class="help-section__title-icon">🎁</span>
-                <span data-i18n="help_ref_title">Реферальная система</span>
-              </div>
-              <div class="help-ref-steps">
-                <div class="help-ref-step"><div class="help-ref-step__num">1</div><div class="help-ref-step__text" id="hrf1">Скопируй реферальную ссылку во вкладке Профиль</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">2</div><div class="help-ref-step__text" id="hrf2">Поделись с друзьями — пусть запустят бота по ней</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">3</div><div class="help-ref-step__text" id="hrf3">За каждого друга получишь <b>+5 загрузок</b> в день</div></div>
-                <div class="help-ref-step"><div class="help-ref-step__num">4</div><div class="help-ref-step__text" id="hrf4">Каждые <b>3 приглашённых</b> дают Premium +3 дня</div></div>
-              </div>
-            </div>
-
-            <div class="card help-section">
-              <div class="help-section__title">
-                <img src="/static/icons/shield.svg" class="icon icon--ok help-section__title-icon" alt="" />
-                <span data-i18n="help_privacy_title">Конфиденциальность</span>
-              </div>
-              <div class="help-privacy-note">
-                <span class="help-privacy-note__icon">🛡</span>
-                <span id="hpriv">Мы не храним твои файлы. Все загруженные файлы автоматически удаляются после скачивания.</span>
-              </div>
-              <button class="btn help-btn-privacy" type="button" data-action="open-privacy">
-                <img src="/static/icons/shield.svg" class="icon icon--sm" alt="" />
-                <span data-i18n="privacy_policy">Политика конфиденциальности</span>
-              </button>
             </div>
 
           </div>
@@ -362,7 +272,7 @@
       </main>
     </div>
 
-    <!-- SETTINGS MODAL -->
+    <!-- SETTINGS MODAL (opened from header icon) -->
     <div class="modal" id="settingsModal" aria-hidden="true">
       <div class="modal__backdrop" data-action="close-settings" aria-hidden="true"></div>
       <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
@@ -400,13 +310,6 @@
             </div>
           </div>
           <div class="modal__links">
-            <button class="modal__link" type="button" data-action="open-tour">
-              <span class="modal__linkIcon">
-                <img src="/static/icons/wrench.svg" class="icon icon--muted" alt="" />
-              </span>
-              <span class="modal__linkText" data-i18n="tour_btn">Повторить тур по приложению</span>
-              <span class="modal__chev">›</span>
-            </button>
             <button class="modal__link" type="button" data-action="open-support">
               <span class="modal__linkIcon">
                 <img src="/static/icons/message-circle.svg" class="icon icon--rose" alt="" />
@@ -478,10 +381,10 @@
       </div>
     </div>
 
-    <script src="/static/api.js?v=20260361"></script>
-    <script src="/static/profile.js?v=20260361"></script>
-    <script src="/static/app.js?v=20260361"></script>
-    <script src="/static/converter.js?v=20260361"></script>
-    <script src="/static/onboarding.js?v=20260361"></script>
+    <script src="/static/api.js?v=20260366"></script>
+    <script src="/static/profile.js?v=20260366"></script>
+    <script src="/static/app.js?v=20260366"></script>
+    <script src="/static/converter.js?v=20260366"></script>
+    <script src="/static/onboarding.js?v=20260366"></script>
   </body>
 </html>
