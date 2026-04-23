@@ -62,19 +62,19 @@ def build_premium_menu_text(lang: str) -> str:
     s = t(lang)
     lines = [s.premium_menu_header]
     for tier in TIERS:
-        lines.append(f"• <b>{tier.label}</b> — ⭐ {tier.stars_price} Stars  |  💎 {tier.ton_price} TON")
+        lines.append(f"• <b>{tier.localized_label(lang)}</b> — ⭐ {tier.stars_price} Stars  |  💎 {tier.ton_price} TON")
     lines.append(s.premium_menu_features)
     return "\n".join(lines)
 
 
 def _build_tier_text(tier_key: str, lang: str) -> str:
     tier = TIER_BY_KEY[tier_key]
-    return t(lang).premium_tier_text(tier.label, tier.stars_price, tier.ton_price)
+    return t(lang).premium_tier_text(tier.localized_label(lang), tier.stars_price, tier.ton_price)
 
 
-def _invoice_cancel_kb(tier_key: str, invoice_msg_id: int) -> InlineKeyboardMarkup:
+def _invoice_cancel_kb(tier_key: str, invoice_msg_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Отменить", callback_data=f"premium:invoice_cancel:{tier_key}:{invoice_msg_id}")],
+        [InlineKeyboardButton(text=t(lang).btn_cancel, callback_data=f"premium:invoice_cancel:{tier_key}:{invoice_msg_id}")],
     ])
 
 
@@ -132,16 +132,16 @@ async def cb_pay_stars(cb: CallbackQuery) -> None:
     await cb.answer()
 
     invoice_msg = await cb.message.answer_invoice(
-        title=s.premium_invoice_title(tier.label),
-        description=s.premium_invoice_desc(tier.label),
+        title=s.premium_invoice_title(tier.localized_label(lang)),
+        description=s.premium_invoice_desc(tier.localized_label(lang)),
         payload=f"premium_stars_{tier_key}",
         currency="XTR",
-        prices=[LabeledPrice(label=f"Premium {tier.label}", amount=tier.stars_price)],
+        prices=[LabeledPrice(label=f"Premium {tier.localized_label(lang)}", amount=tier.stars_price)],
     )
 
     cancel_msg = await cb.message.answer(
-        "Передумал? Отмени платёж:",
-        reply_markup=_invoice_cancel_kb(tier_key, invoice_msg.message_id),
+        s.btn_changed_mind,
+        reply_markup=_invoice_cancel_kb(tier_key, invoice_msg.message_id, lang),
     )
 
     async with SessionMaker() as session:
@@ -235,7 +235,7 @@ async def on_successful_payment(message: Message) -> None:
         ref = await safe_edit_or_send(
             bot=message.bot,
             chat_id=message.chat.id,
-            text=s.premium_activated(tier.label, until),
+            text=s.premium_activated(tier.localized_label(lang), until),
             reply_markup=None,
             current=current,
             parse_mode="HTML",
@@ -269,7 +269,7 @@ async def cb_pay_ton(cb: CallbackQuery) -> None:
 
     tg_id = cb.from_user.id
     payload = f"premium_{tier_key}_{tg_id}"
-    desc = f"EagleTools Premium — {tier.label}"
+    desc = f"EagleTools Premium — {tier.localized_label(lang)}"
 
     try:
         client = CryptoBotClient(token)
@@ -291,13 +291,14 @@ async def cb_pay_ton(cb: CallbackQuery) -> None:
     check_label = s.cryptobot_check_label
     back_label  = s.btn_back_premium
 
+    lbl = tier.localized_label(lang)
     text = (
-        f"💎 <b>Оплата TON — {tier.label}</b>\n\n"
+        f"💎 <b>Оплата TON — {lbl}</b>\n\n"
         f"Сумма: <b>{tier.ton_price} TON</b>\n\n"
         "Нажми кнопку ниже — откроется CryptoBot с готовым счётом.\n"
         "После оплаты нажми <b>Проверить оплату</b>."
     ) if lang == "ru" else (
-        f"💎 <b>TON Payment — {tier.label}</b>\n\n"
+        f"💎 <b>TON Payment — {lbl}</b>\n\n"
         f"Amount: <b>{tier.ton_price} TON</b>\n\n"
         "Press the button below — CryptoBot will open with a ready invoice.\n"
         "After payment press <b>Check payment</b>."
@@ -361,7 +362,7 @@ async def cb_ton_check(cb: CallbackQuery) -> None:
         ref = await safe_edit_or_send(
             bot=cb.bot,
             chat_id=cb.message.chat.id,
-            text=s.premium_activated(tier.label, until),
+            text=s.premium_activated(tier.localized_label(lang), until),
             reply_markup=None,
             current=current,
             parse_mode="HTML",

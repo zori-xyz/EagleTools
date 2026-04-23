@@ -67,20 +67,20 @@ async def build_profile_text(tg_id: int, lang: str = "ru") -> str:
         # Реф бонус для премиума — +3 дня за каждые 3 реферала
         need = 3 - (referrals % 3)
         if need == 3:
-            lines.append(s.profile_premium_bonus_ready())
+            lines.append(s.profile_premium_bonus_ready)
         else:
             lines.append(s.profile_premium_bonus_need(need))
         lines.append("")
-        lines.append(s.profile_ref_link_label())
+        lines.append(s.profile_ref_link_label)
         lines.append(f"<code>{link}</code>")
     else:
-        lines.append(s.profile_plan_free())
+        lines.append(s.profile_plan_free)
         lines.append(s.profile_downloads_left(used, limit, left))
         lines.append(s.profile_referrals(referrals))
         lines.append("")
         # Реф бонус для фри — +5 загрузок за каждого друга
-        lines.append(s.profile_ref_hint())
-        lines.append(s.profile_ref_link_label())
+        lines.append(s.profile_ref_hint)
+        lines.append(s.profile_ref_link_label)
         lines.append(f"<code>{link}</code>")
 
     return "\n".join(lines)

@@ -22,7 +22,9 @@ def admin_main_kb() -> InlineKeyboardMarkup:
 
 def admin_stats_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔄 Обновить", callback_data="admin:stats:refresh")],
+        [
+            InlineKeyboardButton(text="🔄 Обновить", callback_data="admin:stats:refresh"),
+        ],
         [
             InlineKeyboardButton(text="◀️ Назад", callback_data="admin:main"),
             InlineKeyboardButton(text="✖️ Закрыть", callback_data="admin:close"),
@@ -32,7 +34,10 @@ def admin_stats_kb() -> InlineKeyboardMarkup:
 
 def admin_users_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚡️ Выдать Premium", callback_data="admin:grant")],
+        [
+            InlineKeyboardButton(text="🔍 Найти пользователя", callback_data="admin:user_search"),
+            InlineKeyboardButton(text="⚡️ Выдать Premium", callback_data="admin:grant"),
+        ],
         [
             InlineKeyboardButton(text="◀️ Назад", callback_data="admin:main"),
             InlineKeyboardButton(text="✖️ Закрыть", callback_data="admin:close"),

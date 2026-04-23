@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import shutil
+import tempfile
+import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -182,3 +188,162 @@ async def stats(
         "is_unlimited": bool(st.is_unlimited),
         "referrals": int(st.referrals),
     }
+
+
+# ─────────────────────────────────────────────
+# Bot media download (anti-ban architecture)
+# Bot calls this → server downloads → returns file_id
+# ─────────────────────────────────────────────
+
+_RESULTS_DIR = Path(settings.data_dir) / "results"
+_TMP_DIR = Path(settings.data_dir) / "tmp" / "bot_dl"
+_MAX_FILE_BYTES = 200 * 1024 * 1024  # 200 MB
+
+
+class BotSaveIn(BaseModel):
+    url: HttpUrl
+    action: Literal["video", "audio"] = "video"
+
+
+class BotSaveOut(BaseModel):
+    ok: bool = True
+    file_id: str
+    title: str | None = None
+    extractor: str | None = None
+    size_bytes: int | None = None
+    ext: str | None = None
+
+
+async def _run_yt_dlp(cmd: list[str], timeout: int = 300) -> tuple[bytes, bytes]:
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        raise HTTPException(status_code=504, detail="download_timeout")
+    if proc.returncode != 0:
+        msg = (stderr or b"").decode("utf-8", errors="ignore")[:500]
+        raise HTTPException(status_code=422, detail=f"download_failed:{msg}")
+    return stdout, stderr
+
+
+async def _save_video(url: str) -> BotSaveOut:
+    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    _TMP_DIR.mkdir(parents=True, exist_ok=True)
+    out_id = uuid.uuid4().hex
+    out_path = _RESULTS_DIR / f"{out_id}.mp4"
+    cmd = [
+        "yt-dlp",
+        "--no-playlist", "--geo-bypass", "--no-warnings",
+        "--no-check-certificate",
+        "--print-json",
+        "--user-agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+        "-f", "bv*[filesize<180M]+ba/b[filesize<180M]/bv*+ba/b",
+        "--merge-output-format", "mp4",
+        "-o", str(out_path),
+        url,
+    ]
+    stdout, _ = await _run_yt_dlp(cmd)
+    if not out_path.exists() or out_path.stat().st_size == 0:
+        raise HTTPException(status_code=422, detail="download_empty")
+    if out_path.stat().st_size > _MAX_FILE_BYTES:
+        out_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail="file_too_large")
+
+    meta: dict = {}
+    try:
+        import json
+        lines = stdout.decode("utf-8", errors="ignore").strip().split("\n")
+        for line in reversed(lines):
+            if line.strip().startswith("{"):
+                meta = json.loads(line)
+                break
+    except Exception:
+        pass
+
+    return BotSaveOut(
+        file_id=out_path.name,
+        title=meta.get("title") or meta.get("fulltitle"),
+        extractor=meta.get("extractor") or meta.get("extractor_key"),
+        size_bytes=out_path.stat().st_size,
+        ext="mp4",
+    )
+
+
+async def _save_audio(url: str) -> BotSaveOut:
+    _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    _TMP_DIR.mkdir(parents=True, exist_ok=True)
+    out_id = uuid.uuid4().hex
+    tmp_dir = _TMP_DIR / out_id
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        tmp_out = tmp_dir / "audio.%(ext)s"
+        cmd = [
+            "yt-dlp",
+            "--no-playlist", "--geo-bypass", "--no-warnings",
+            "--no-check-certificate",
+            "--print-json",
+            "--user-agent",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+            "-x", "--audio-format", "mp3", "--audio-quality", "192k",
+            "-o", str(tmp_out),
+            url,
+        ]
+        stdout, _ = await _run_yt_dlp(cmd)
+
+        # Find the output file
+        candidates = list(tmp_dir.glob("audio.*"))
+        if not candidates:
+            raise HTTPException(status_code=422, detail="download_empty")
+        src = candidates[0]
+        if src.stat().st_size == 0:
+            raise HTTPException(status_code=422, detail="download_empty")
+        if src.stat().st_size > _MAX_FILE_BYTES:
+            raise HTTPException(status_code=422, detail="file_too_large")
+
+        dest_name = f"{out_id}{src.suffix}"
+        dest = _RESULTS_DIR / dest_name
+        src.rename(dest)
+
+        meta: dict = {}
+        try:
+            import json
+            lines = stdout.decode("utf-8", errors="ignore").strip().split("\n")
+            for line in reversed(lines):
+                if line.strip().startswith("{"):
+                    meta = json.loads(line)
+                    break
+        except Exception:
+            pass
+
+        return BotSaveOut(
+            file_id=dest.name,
+            title=meta.get("title") or meta.get("fulltitle"),
+            extractor=meta.get("extractor") or meta.get("extractor_key"),
+            size_bytes=dest.stat().st_size,
+            ext=dest.suffix.lstrip(".") or "mp3",
+        )
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@router.post("/bot/save", response_model=BotSaveOut)
+async def bot_save(
+    payload: BotSaveIn,
+    _: None = Depends(_require_api_key),
+) -> BotSaveOut:
+    """
+    Called by the Telegram bot to download media from a URL.
+    Bot → this endpoint (our server) → yt-dlp → file in results dir.
+    Bot reads the file by file_id from shared storage and uploads to Telegram.
+    This keeps yt-dlp off the bot process, reducing ban risk.
+    """
+    url = str(payload.url)
+    if payload.action == "audio":
+        return await _save_audio(url)
+    return await _save_video(url)

@@ -83,13 +83,9 @@ async def _delete_job(db: AsyncSession, *, job_id: int, user_id: int) -> int:
 
 @router.get("/recent")
 async def recent_list(
-    offset: int = 0,
-    limit: int = 20,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    limit = min(max(1, limit), 50)
-    offset = max(0, offset)
     t = Job.__table__
     cols = list(t.c)
 
@@ -98,21 +94,16 @@ async def recent_list(
         .select_from(t)
         .where(t.c.user_id == int(user.id))
         .order_by(t.c.id.desc())
-        .offset(offset)
-        .limit(limit + 1)
+        .limit(50)
     )
     res = await db.execute(q)
 
-    rows = res.mappings().all()
-    has_more = len(rows) > limit
-    rows = rows[:limit]
-
     items: list[dict[str, Any]] = []
-    for row in rows:
+    for row in res.mappings().all():
         d = {k: _jsonify(v) for k, v in row.items()}
         items.append(_to_item(d))
 
-    return {"items": items, "offset": offset, "limit": limit, "has_more": has_more}
+    return {"items": items}
 
 
 @router.post("/recent/clear")

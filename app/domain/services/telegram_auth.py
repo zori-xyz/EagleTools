@@ -24,7 +24,7 @@ def verify_init_data(init_data: str) -> dict[str, Any]:
     # data_check_string
     check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
 
-    secret_key = hmac.new(b"WebAppData", settings.bot_token.encode(), hashlib.sha256).digest()
+    secret_key = hashlib.sha256(settings.bot_token.encode()).digest()
     calculated_hash = hmac.new(
         secret_key,
         check_string.encode(),

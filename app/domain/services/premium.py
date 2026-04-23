@@ -21,16 +21,20 @@ FOREVER_DAYS = 36500  # 100 лет = "навсегда"
 @dataclass(frozen=True)
 class PlanTier:
     key: str          # "1m" | "3m" | "forever"
-    label: str        # "1 месяц"
+    label: str        # "1 месяц" (RU)
+    label_en: str     # "1 month" (EN)
     days: int
     stars_price: int  # Telegram Stars
     ton_price: float  # TON
 
+    def localized_label(self, lang: str) -> str:
+        return self.label_en if (lang or "").startswith("en") else self.label
+
 
 TIERS: list[PlanTier] = [
-    PlanTier("1m",      "1 месяц",   30,           149, 1.5),
-    PlanTier("3m",      "3 месяца",  90,           349, 3.5),
-    PlanTier("forever", "Навсегда",  FOREVER_DAYS, 999, 9.9),
+    PlanTier("1m",      "1 месяц",   "1 month",  30,           149, 1.5),
+    PlanTier("3m",      "3 месяца",  "3 months", 90,           349, 3.5),
+    PlanTier("forever", "Навсегда",  "Forever",  FOREVER_DAYS, 999, 9.9),
 ]
 
 TIER_BY_KEY: dict[str, PlanTier] = {t.key: t for t in TIERS}
