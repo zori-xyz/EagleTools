@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>EagleTools</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260418" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260423" />
   </head>
   <body>
     <div class="app">
@@ -135,48 +135,40 @@
 
         <!-- ======== PROFILE ======== -->
         <section class="panel" data-panel="profile">
-          <h1 class="h1" data-i18n="profile_title">Профиль</h1>
           <div class="profile">
 
+            <!-- HERO CARD -->
             <div class="card profile-hero">
               <div class="profile-hero__bg" id="profileHeroBg"></div>
               <div class="profile-hero__content">
                 <div class="profile-hero__avatar" id="profileAvatar">👤</div>
                 <div class="profile-hero__name" id="profileName">User</div>
-                <div class="profile-hero__username muted" id="profileUsername">@username</div>
-                <div class="profile-hero__badge" id="profilePlanBadge">FREE</div>
+                <div class="profile-hero__meta">
+                  <span class="profile-hero__username" id="profileUsername">@username</span>
+                  <span class="profile-hero__dot" aria-hidden="true">·</span>
+                  <span class="profile-hero__badge" id="profilePlanBadge">FREE</span>
+                </div>
+              </div>
+              <div class="profile-hero__foot">
+                <div class="profile-hero__bar-row">
+                  <span class="profile-hero__bar-label">
+                    <span id="profileUsed">0</span><span class="profile-hero__bar-sep">/</span><span id="profileLimit">10</span>
+                    <span class="profile-hero__bar-unit" data-i18n="requests_today">запросов</span>
+                  </span>
+                  <span class="profile-hero__bar-right">
+                    <span data-i18n="remaining">Осталось</span>&nbsp;<strong id="profileLeft">10</strong>
+                  </span>
+                </div>
+                <div class="usage-progress__track">
+                  <div class="usage-progress__fill" id="profileBarFill"></div>
+                </div>
+                <button class="btn btn--premium profile-upgrade-btn" type="button" id="upgradePlanBtn" data-action="open-upgrade">
+                  ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
+                </button>
               </div>
             </div>
 
-            <div class="card usage-card">
-              <div class="usage-card__header">
-                <div class="usage-card__icon"><img src="/static/icons/chart-bar.svg" class="icon icon--rose" style="width:20px;height:20px;" alt="" /></div>
-                <div class="usage-card__title" data-i18n="usage_title">Использование</div>
-              </div>
-              <div class="usage-stats">
-                <div class="usage-stats__main">
-                  <div class="usage-stats__value">
-                    <span id="profileUsed">0</span>
-                    <span class="usage-stats__divider">/</span>
-                    <span id="profileLimit" class="muted">10</span>
-                  </div>
-                  <div class="usage-stats__label muted" data-i18n="requests_today">запросов сегодня</div>
-                </div>
-                <div class="usage-progress">
-                  <div class="usage-progress__track">
-                    <div class="usage-progress__fill" id="profileBarFill"></div>
-                  </div>
-                  <div class="usage-progress__label">
-                    <span data-i18n="remaining">Осталось</span>
-                    <span id="profileLeft" class="usage-progress__count">10</span>
-                  </div>
-                </div>
-              </div>
-              <button class="btn btn--premium" type="button" id="upgradePlanBtn" data-action="open-upgrade">
-                ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
-              </button>
-            </div>
-
+            <!-- PREMIUM ACTIVE (only when premium) -->
             <div class="card premium-card" id="premiumCard" style="display:none;">
               <div class="premium-card__glow"></div>
               <div class="premium-card__content">
@@ -189,6 +181,7 @@
               </div>
             </div>
 
+            <!-- REFERRALS CARD -->
             <div class="card refs-card">
               <div class="refs-card__header">
                 <div class="refs-card__icon">🎁</div>
@@ -222,136 +215,135 @@
               </div>
             </div>
 
-            <!-- SETTINGS CARD (visible in profile) -->
-            <div class="card settings-inline">
-              <div class="settings-inline__head">
-                <img src="/static/icons/settings.svg" class="icon icon--muted" style="width:18px;height:18px;" alt="" />
-                <span class="settings-inline__title" data-i18n="settings">Настройки</span>
-              </div>
-              <div class="setting-row">
-                <div class="setting-row__label">
-                  <img src="/static/icons/globe.svg" class="icon icon--muted setting-row__icon" alt="" />
-                  <span data-i18n="language">Язык</span>
+            <!-- SETTINGS -->
+            <div class="profile-section">
+              <div class="profile-section__label" data-i18n="settings">Настройки</div>
+              <div class="card settings-card">
+                <div class="setting-row">
+                  <div class="setting-row__label">
+                    <span class="setting-row__ibox setting-row__ibox--gray">
+                      <img src="/static/icons/globe.svg" class="icon setting-row__img" alt="" />
+                    </span>
+                    <span data-i18n="language">Язык</span>
+                  </div>
+                  <div class="segmini" id="langSegProfile">
+                    <div class="segmini__indicator" aria-hidden="true"></div>
+                    <button class="segmini__btn" type="button" data-action="lang" data-value="ru">RU</button>
+                    <button class="segmini__btn" type="button" data-action="lang" data-value="en">EN</button>
+                  </div>
                 </div>
-                <div class="segmini" id="langSegProfile">
-                  <div class="segmini__indicator" aria-hidden="true"></div>
-                  <button class="segmini__btn" type="button" data-action="lang" data-value="ru">RU</button>
-                  <button class="segmini__btn" type="button" data-action="lang" data-value="en">EN</button>
+                <div class="setting-row">
+                  <div class="setting-row__label">
+                    <span class="setting-row__ibox setting-row__ibox--gray">
+                      <img src="/static/icons/palette.svg" class="icon setting-row__img" alt="" />
+                    </span>
+                    <span data-i18n="theme">Тема</span>
+                  </div>
+                  <div class="segmini" id="themeSegProfile">
+                    <div class="segmini__indicator" aria-hidden="true"></div>
+                    <button class="segmini__btn" type="button" data-action="theme" data-value="dark">Dark</button>
+                    <button class="segmini__btn" type="button" data-action="theme" data-value="light">Light</button>
+                  </div>
                 </div>
-              </div>
-              <div class="setting-row">
-                <div class="setting-row__label">
-                  <img src="/static/icons/palette.svg" class="icon icon--muted setting-row__icon" alt="" />
-                  <span data-i18n="theme">Тема</span>
-                </div>
-                <div class="segmini" id="themeSegProfile">
-                  <div class="segmini__indicator" aria-hidden="true"></div>
-                  <button class="segmini__btn" type="button" data-action="theme" data-value="dark">Dark</button>
-                  <button class="segmini__btn" type="button" data-action="theme" data-value="light">Light</button>
-                </div>
-              </div>
-              <div class="settings-inline__links">
-                <button class="modal__link" type="button" data-action="open-support">
-                  <span class="modal__linkIcon">
-                    <img src="/static/icons/message-circle.svg" class="icon icon--rose" alt="" />
-                  </span>
-                  <span class="modal__linkText" data-i18n="support">Поддержка</span>
-                  <span class="modal__chev">›</span>
+                <button class="setting-row setting-row--btn" type="button" data-action="open-support">
+                  <div class="setting-row__label">
+                    <span class="setting-row__ibox setting-row__ibox--rose">
+                      <img src="/static/icons/message-circle.svg" class="icon setting-row__img" alt="" />
+                    </span>
+                    <span data-i18n="support">Поддержка</span>
+                  </div>
+                  <svg class="setting-row__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
-                <button class="modal__link" type="button" data-action="open-privacy">
-                  <span class="modal__linkIcon">
-                    <img src="/static/icons/shield.svg" class="icon icon--ok" alt="" />
-                  </span>
-                  <span class="modal__linkText" data-i18n="privacy_policy">Политика конфиденциальности</span>
-                  <span class="modal__chev">›</span>
+                <button class="setting-row setting-row--btn" type="button" data-action="open-privacy">
+                  <div class="setting-row__label">
+                    <span class="setting-row__ibox setting-row__ibox--ok">
+                      <img src="/static/icons/shield.svg" class="icon setting-row__img" alt="" />
+                    </span>
+                    <span data-i18n="privacy_policy">Политика конфиденциальности</span>
+                  </div>
+                  <svg class="setting-row__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
                 </button>
               </div>
             </div>
 
-            <!-- HELP ACCORDION -->
-            <div class="card help-section">
-              <div class="help-section__head">
-                <span class="help-section__icon">📖</span>
-                <span class="help-section__title" data-i18n="help_title">Помощь</span>
+            <!-- HELP / FAQ -->
+            <div class="profile-section">
+              <div class="profile-section__label" data-i18n="help_title">Помощь</div>
+              <div class="card help-section">
+
+                <details class="help-item">
+                  <summary class="help-item__head">
+                    <span class="help-item__ibox help-item__ibox--blue">📱</span>
+                    <span class="help-item__label" data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
+                    <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
+                  </summary>
+                  <div class="help-item__body">
+                    <ol class="help-steps">
+                      <li id="hma1"></li><li id="hma2"></li><li id="hma3"></li><li id="hma4"></li><li id="hma5"></li>
+                    </ol>
+                  </div>
+                </details>
+
+                <details class="help-item">
+                  <summary class="help-item__head">
+                    <span class="help-item__ibox help-item__ibox--purple">🤖</span>
+                    <span class="help-item__label" data-i18n="help_bot_title">Функции бота</span>
+                    <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
+                  </summary>
+                  <div class="help-item__body">
+                    <div class="help-bot-row">
+                      <div class="help-bot-row__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
+                      <div class="help-bot-row__desc muted" data-i18n="help_bot_audio_desc"></div>
+                    </div>
+                    <div class="help-bot-row">
+                      <div class="help-bot-row__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
+                      <div class="help-bot-row__desc muted" data-i18n="help_bot_stt_desc"></div>
+                    </div>
+                  </div>
+                </details>
+
+                <details class="help-item">
+                  <summary class="help-item__head">
+                    <span class="help-item__ibox help-item__ibox--amber">⚡️</span>
+                    <span class="help-item__label" data-i18n="help_premium_title">Premium</span>
+                    <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
+                  </summary>
+                  <div class="help-item__body">
+                    <ul class="help-list">
+                      <li data-i18n="help_prem_1"></li><li data-i18n="help_prem_2"></li>
+                      <li data-i18n="help_prem_3"></li><li data-i18n="help_prem_4"></li>
+                    </ul>
+                    <button class="btn btn--premium help-upgrade-btn" type="button" data-action="open-upgrade">
+                      ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
+                    </button>
+                  </div>
+                </details>
+
+                <details class="help-item">
+                  <summary class="help-item__head">
+                    <span class="help-item__ibox help-item__ibox--ok">🎁</span>
+                    <span class="help-item__label" data-i18n="help_ref_title">Реферальная программа</span>
+                    <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
+                  </summary>
+                  <div class="help-item__body">
+                    <ol class="help-steps">
+                      <li id="hrf1"></li><li id="hrf2"></li><li id="hrf3"></li><li id="hrf4"></li>
+                    </ol>
+                  </div>
+                </details>
+
+                <details class="help-item">
+                  <summary class="help-item__head">
+                    <span class="help-item__ibox help-item__ibox--gray">🔒</span>
+                    <span class="help-item__label" data-i18n="help_privacy_title">Конфиденциальность</span>
+                    <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
+                  </summary>
+                  <div class="help-item__body">
+                    <p id="hpriv" class="muted" style="font-size:13px;line-height:1.55;margin:0;"></p>
+                  </div>
+                </details>
+
               </div>
-
-              <details class="help-item">
-                <summary class="help-item__head">
-                  <span class="help-item__icon">📱</span>
-                  <span class="help-item__label" data-i18n="help_miniapp_title">Как пользоваться Mini App</span>
-                  <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
-                </summary>
-                <div class="help-item__body">
-                  <ol class="help-steps">
-                    <li id="hma1"></li><li id="hma2"></li><li id="hma3"></li><li id="hma4"></li><li id="hma5"></li>
-                  </ol>
-                </div>
-              </details>
-
-              <details class="help-item">
-                <summary class="help-item__head">
-                  <span class="help-item__icon">🤖</span>
-                  <span class="help-item__label" data-i18n="help_bot_title">Функции бота</span>
-                  <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
-                </summary>
-                <div class="help-item__body">
-                  <div class="help-bot-row">
-                    <div class="help-bot-row__title" data-i18n="help_bot_audio_title">Конвертер аудио</div>
-                    <div class="help-bot-row__desc muted" data-i18n="help_bot_audio_desc"></div>
-                  </div>
-                  <div class="help-bot-row">
-                    <div class="help-bot-row__title" data-i18n="help_bot_stt_title">Распознавание речи</div>
-                    <div class="help-bot-row__desc muted" data-i18n="help_bot_stt_desc"></div>
-                  </div>
-                </div>
-              </details>
-
-              <details class="help-item">
-                <summary class="help-item__head">
-                  <span class="help-item__icon">⚡️</span>
-                  <span class="help-item__label" data-i18n="help_premium_title">Premium</span>
-                  <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
-                </summary>
-                <div class="help-item__body">
-                  <ul class="help-list">
-                    <li data-i18n="help_prem_1"></li><li data-i18n="help_prem_2"></li>
-                    <li data-i18n="help_prem_3"></li><li data-i18n="help_prem_4"></li>
-                  </ul>
-                  <button class="btn btn--premium help-upgrade-btn" type="button" data-action="open-upgrade">
-                    ⚡️ <span data-i18n="upgrade_premium">Получить Premium</span>
-                  </button>
-                </div>
-              </details>
-
-              <details class="help-item">
-                <summary class="help-item__head">
-                  <span class="help-item__icon">🎁</span>
-                  <span class="help-item__label" data-i18n="help_ref_title">Реферальная программа</span>
-                  <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
-                </summary>
-                <div class="help-item__body">
-                  <ol class="help-steps">
-                    <li id="hrf1"></li><li id="hrf2"></li><li id="hrf3"></li><li id="hrf4"></li>
-                  </ol>
-                </div>
-              </details>
-
-              <details class="help-item">
-                <summary class="help-item__head">
-                  <span class="help-item__icon">🔒</span>
-                  <span class="help-item__label" data-i18n="help_privacy_title">Конфиденциальность</span>
-                  <svg class="help-item__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="m9 18 6-6-6-6"/></svg>
-                </summary>
-                <div class="help-item__body">
-                  <p id="hpriv" class="muted" style="font-size:13px;line-height:1.55;margin:0;"></p>
-                </div>
-              </details>
-
-              <button class="help-tour-btn" type="button" data-action="start-tour">
-                <span>🗺️</span>
-                <span data-i18n="tour_btn">Повторить тур по приложению</span>
-                <span class="modal__chev">›</span>
-              </button>
             </div>
 
           </div>
