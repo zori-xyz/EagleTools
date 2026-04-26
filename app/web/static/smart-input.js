@@ -166,6 +166,7 @@
     if (!u) return;
     const t = detectUrlType(u);
     if (!t) { window.__eagleToast?.(tx("err_bad_url") || "Неверная ссылка", "warn", "⚠️"); return; }
+    running = false;
     currentUrl = u; urlType = t; mode = "url";
     const lang = getLang();
     const chipName = t === "youtube" ? "YouTube" : t === "soundcloud" ? "SoundCloud" : (lang === "en" ? "URL" : "Ссылка");
@@ -192,6 +193,7 @@
     if (!file) return;
     const MAX = 100 * 1024 * 1024;
     if (file.size > MAX) { window.__eagleToast?.(tx("conv_too_big") || "Файл слишком большой (макс. 100 МБ)", "warn", "⚠️"); return; }
+    running = false;
     currentFile = file; fileType = detectFileType(file); mode = "file";
     const typeEmoji = { video:"🎬", audio:"🎵", image:"🖼", pdf:"📑", document:"📄" };
     showChip(typeEmoji[fileType] || "📄", file.name, fmtSize(file.size));
@@ -237,7 +239,7 @@
       showResult(errHtml(r, true, () => { $("smartResult").innerHTML = ""; showActions($("smartActionsRow").outerHTML); runUrl(tool); }));
       return;
     }
-    setProgress(100, ""); setTimeout(() => { hideProgress(); renderResult(r.data, tool); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
+    setProgress(100, ""); setTimeout(() => { running = false; haptic("success"); hideProgress(); renderResult(r.data, tool); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
   }
 
   // ── Run file conversion ──
@@ -266,7 +268,7 @@
       if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.detail || tx("conv_error") || "Ошибка конвертации"); }
       const data = await resp.json();
       setProgress(100, "");
-      setTimeout(() => { hideProgress(); renderConvResult(data); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
+      setTimeout(() => { running = false; haptic("success"); hideProgress(); renderConvResult(data); window.__eagleLastHash = ""; window.__eagleLoadRecents?.(true); }, 300);
     } catch (e) {
       clearInterval(timer);
       running = false;

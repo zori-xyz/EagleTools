@@ -93,6 +93,9 @@ async def recent_list(
     t = Job.__table__
     cols = list(t.c)
 
+    # fetch one extra row to detect whether there are more pages
+    fetch_limit = min(max(1, limit), 100) + 1
+
     q = (
         select(*cols)
         .select_from(t)
@@ -102,8 +105,8 @@ async def recent_list(
         .limit(limit + 1)
     )
     res = await db.execute(q)
-
     rows = res.mappings().all()
+
     has_more = len(rows) > limit
     rows = rows[:limit]
 
@@ -112,7 +115,7 @@ async def recent_list(
         d = {k: _jsonify(v) for k, v in row.items()}
         items.append(_to_item(d))
 
-    return {"items": items, "offset": offset, "limit": limit, "has_more": has_more}
+    return {"items": items, "has_more": has_more}
 
 
 @router.post("/recent/clear")
